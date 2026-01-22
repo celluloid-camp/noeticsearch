@@ -3,10 +3,8 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import VideoCatalog from '@/components/VideoCatalog'
-import ChatPanel from '@/components/ChatPanel'
-import SavedConversations from '@/components/SavedConversations'
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarRail, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar'
-import { Video, SearchResult, SavedConversation, Subtitle } from '@/lib/types'
+import type { Video, Subtitle } from '@/lib/types'
+import { useSearch } from '@/contexts/SearchContext'
 import Loading from './loading'
 
 const DEFAULT_PUBLIC_VIDEOS: Video[] = [
@@ -131,8 +129,8 @@ async function fetchPeertubeMetadata(rawUrl: string): Promise<{ title: string; t
     const captionsRes = await fetch(`${url.origin}/api/v1/videos/${videoId}/captions`)
     if (captionsRes.ok) {
       const captionsJson: { data?: unknown[] } | unknown[] = await captionsRes.json()
-      const list: unknown[] = Array.isArray((captionsJson as any)?.data)
-        ? ((captionsJson as any).data as unknown[])
+      const list: unknown[] = Array.isArray((captionsJson as { data?: unknown[] })?.data)
+        ? ((captionsJson as { data: unknown[] }).data as unknown[])
         : Array.isArray(captionsJson)
           ? captionsJson
           : []
@@ -162,8 +160,7 @@ async function fetchPeertubeMetadata(rawUrl: string): Promise<{ title: string; t
 export default function Home() {
   const router = useRouter()
   const [videos, setVideos] = useState<Video[]>(DEFAULT_PUBLIC_VIDEOS)
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([])
+  const { searchResults, clearSearchResults } = useSearch()
   const [filterTab, setFilterTab] = useState<'all' | 'public' | 'my'>('all')
 
   const handleAddVideo = (video: Video) => {
@@ -173,46 +170,6 @@ export default function Home() {
     localStorage.setItem('videos', JSON.stringify(newVideos))
   }
 
-  const handleSearch = (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([])
-      localStorage.removeItem('currentSearchResults')
-      return
-    }
-
-    const results: SearchResult[] = []
-    videos.forEach((video) => {
-      if (video.subtitles) {
-        video.subtitles.forEach((subtitle) => {
-          if (subtitle.text.toLowerCase().includes(query.toLowerCase())) {
-            results.push({
-              videoId: video.id,
-              videoTitle: video.title,
-              videoThumbnail: video.thumbnail,
-              subtitle: subtitle.text,
-              timestamp: subtitle.timestamp,
-              startTime: subtitle.startTime,
-              endTime: subtitle.endTime,
-            })
-          }
-        })
-      }
-    })
-    setSearchResults(results)
-    // Save search results to localStorage
-    localStorage.setItem('currentSearchResults', JSON.stringify(results))
-  }
-
-  const handlePlayVideo = (result: SearchResult) => {
-    const video = videos.find((v) => v.id === result.videoId)
-    if (video) {
-      // Store videos in localStorage before navigation
-      localStorage.setItem('videos', JSON.stringify(videos))
-      // Navigate to video page with result as query param
-      const resultParam = encodeURIComponent(JSON.stringify(result))
-      router.push(`/video/${video.id}?result=${resultParam}`)
-    }
-  }
 
   const handleVideoThumbnailClick = (video: Video) => {
     // Store videos in localStorage before navigation
@@ -220,21 +177,9 @@ export default function Home() {
     router.push(`/video/${video.id}`)
   }
 
-  const handleSaveConversation = (conversation: SavedConversation) => {
-    setSavedConversations([...savedConversations, conversation])
-  }
-
-  const handleLoadSavedResults = (results: SearchResult[]) => {
-    setSearchResults(results)
-  }
-
-  const handleDeleteConversation = (id: string) => {
-    setSavedConversations(savedConversations.filter((c) => c.id !== id))
-  }
 
   const handleClearSearch = () => {
-    setSearchResults([])
-    localStorage.removeItem('currentSearchResults')
+    clearSearchResults()
   }
 
   // On first load, fetch real metadata for the default PeerTube video
@@ -300,112 +245,53 @@ export default function Home() {
     }
   }, [])
 
-  // Restore search results from localStorage on mount
+
+  // Load filterTab from localStorage on mount and sync with changes
   useEffect(() => {
-    const storedResults = localStorage.getItem('currentSearchResults')
-    if (storedResults) {
-      try {
-        const parsedResults: SearchResult[] = JSON.parse(storedResults)
-        setSearchResults(parsedResults)
-      } catch (error) {
-        console.error('Error parsing stored search results:', error)
+    const stored = localStorage.getItem('filterTab')
+    if (stored && (stored === 'all' || stored === 'public' || stored === 'my')) {
+      setFilterTab(stored as 'all' | 'public' | 'my')
+    }
+
+    // Listen for filterTab changes from AppLayout
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'filterTab' && e.newValue) {
+        if (e.newValue === 'all' || e.newValue === 'public' || e.newValue === 'my') {
+          setFilterTab(e.newValue as 'all' | 'public' | 'my')
+        }
       }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also listen for custom events (for same-tab updates)
+    const handleFilterTabChange = () => {
+      const stored = localStorage.getItem('filterTab')
+      if (stored && (stored === 'all' || stored === 'public' || stored === 'my')) {
+        setFilterTab(stored as 'all' | 'public' | 'my')
+      }
+    }
+
+    window.addEventListener('filterTabChanged', handleFilterTabChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('filterTabChanged', handleFilterTabChange)
     }
   }, [])
 
   return (
-    <SidebarProvider className="flex h-full w-full" style={{ minHeight: 0 }}>
-      <Sidebar side="left" collapsible="icon" variant="inset">
-        <SidebarHeader>
-          <p className="text-xs font-semibold text-sidebar-foreground/70 px-1">Library</p>
-        </SidebarHeader>
-        <SidebarContent className="p-0 flex flex-col h-full">
-          {/* Video Filters */}
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={filterTab === 'all'}
-                onClick={() => setFilterTab('all')}
-              >
-                <span>All Videos</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={filterTab === 'public'}
-                onClick={() => setFilterTab('public')}
-              >
-                <span>Public Videos</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={filterTab === 'my'}
-                onClick={() => setFilterTab('my')}
-              >
-                <span>My Videos</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-          {/* My Searches */}
-          <SidebarGroup className="border-t border-border">
-            <SidebarGroupLabel className="px-1">
-              <p className="text-xs font-semibold text-sidebar-foreground/70">My search</p>
-            </SidebarGroupLabel>
-            <div className="overflow-y-auto">
-              <SavedConversations
-                conversations={savedConversations}
-                onLoadResults={handleLoadSavedResults}
-                onDelete={handleDeleteConversation}
-              />
-            </div>
-          </SidebarGroup>
-          {/* Public Searches */}
-          <SidebarGroup className="flex-1 overflow-y-auto border-t border-border">
-            <SidebarGroupLabel className="px-1">
-              <p className="text-xs font-semibold text-sidebar-foreground/70">Public search</p>
-            </SidebarGroupLabel>
-            <div className="flex-1 overflow-y-auto">
-              <SavedConversations
-                conversations={savedConversations.filter((c) => c.isPublic)}
-                onLoadResults={handleLoadSavedResults}
-                onDelete={handleDeleteConversation}
-              />
-            </div>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
-      <SidebarRail />
-      <SidebarInset className="flex flex-col overflow-hidden">
-        {/* Main Content */}
-        <div className="flex flex-1 gap-4 overflow-hidden p-4">
-          {/* Center: Video Catalog */}
-          <div className="flex-1 flex flex-col gap-4 min-w-0">
-            <Suspense fallback={<Loading />}>
-              <VideoCatalog
-                videos={videos}
-                filterTab={filterTab}
-                onAddVideo={handleAddVideo}
-                onVideoClick={handleVideoThumbnailClick}
-                searchResults={searchResults}
-                onClearSearch={handleClearSearch}
-              />
-            </Suspense>
-          </div>
-
-          {/* Right: Chat Panel */}
-          <div className="w-96 flex flex-col min-w-0">
-            <Suspense fallback={<Loading />}>
-              <ChatPanel
-                onSearch={handleSearch}
-                searchResults={searchResults}
-                onPlayVideo={handlePlayVideo}
-                onSaveConversation={handleSaveConversation}
-              />
-            </Suspense>
-          </div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="flex flex-col gap-4 min-w-0">
+      <Suspense fallback={<Loading />}>
+        <VideoCatalog
+          videos={videos}
+          filterTab={filterTab}
+          onAddVideo={handleAddVideo}
+          onVideoClick={handleVideoThumbnailClick}
+          searchResults={searchResults}
+          onClearSearch={handleClearSearch}
+        />
+      </Suspense>
+    </div>
   )
 }

@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, Suspense, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
 import VideoChatPanel from '@/components/VideoChatPanel'
 import type { Video, SearchResult, SavedConversation } from '@/lib/types'
 import type { MediaChromePlayerRef } from '@/components/MediaChromePlayer'
+import { useSearch } from '@/contexts/SearchContext'
 import Loading from '@/app/loading'
 
 export default function VideoPage() {
@@ -15,10 +16,11 @@ export default function VideoPage() {
   const videoId = params.id as string
   const [video, setVideo] = useState<Video | null>(null)
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null)
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const { searchResults, setSearchResults } = useSearch()
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
   const playerRef = useRef<MediaChromePlayerRef | null>(null)
+
 
   useEffect(() => {
     // Get video from localStorage (stored by home page)
@@ -138,7 +140,7 @@ export default function VideoPage() {
       })
     }
     setSearchResults(results)
-    // Save search results to localStorage with video-specific key
+    // Also save to video-specific key for VideoChatPanel
     localStorage.setItem(`currentSearchResults_${videoId}`, JSON.stringify(results))
   }
 
@@ -154,6 +156,8 @@ export default function VideoPage() {
     const savedConversations: SavedConversation[] = stored ? JSON.parse(stored) : []
     savedConversations.push(conversation)
     localStorage.setItem('savedConversations', JSON.stringify(savedConversations))
+    // Dispatch event to notify AppLayout
+    window.dispatchEvent(new CustomEvent('conversationSaved'))
   }
 
   // Load search results from localStorage on mount
@@ -169,7 +173,7 @@ export default function VideoPage() {
         }
       }
     }
-  }, [video, videoId])
+  }, [video, videoId, setSearchResults])
 
   if (loading) {
     return <Loading />
@@ -193,7 +197,7 @@ export default function VideoPage() {
   }
 
   return (
-    <div className="flex h-full bg-background">
+    <div className="flex flex-1 gap-4 overflow-hidden">
       {/* Video Player */}
       <div className="flex-1 flex flex-col min-w-0">
         <VideoPlayer 
@@ -205,7 +209,7 @@ export default function VideoPage() {
         />
       </div>
 
-      {/* Right: Search Assistant */}
+      {/* Middle: Transcript Panel */}
       <div className="w-96 flex flex-col min-w-0 border-l border-border">
         <Suspense fallback={<Loading />}>
           <VideoChatPanel
@@ -226,6 +230,7 @@ export default function VideoPage() {
           />
         </Suspense>
       </div>
+      {/* Note: ChatPanel is already in the global layout on the right */}
     </div>
   )
 }

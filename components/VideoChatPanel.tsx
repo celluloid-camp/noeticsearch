@@ -2,9 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import type React from 'react'
-import { SearchResult, ChatMessage, SavedConversation, Video, Subtitle } from '@/lib/types'
-import { Send, Save, Bookmark, BookmarkCheck } from 'lucide-react'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import type { SearchResult, SavedConversation, Video, Subtitle } from '@/lib/types'
+import { Bookmark, BookmarkCheck } from 'lucide-react'
 
 interface VideoChatPanelProps {
   videoId: string
@@ -31,7 +30,6 @@ export default function VideoChatPanel({
   playerRef,
   onSeek
 }: VideoChatPanelProps) {
-  const [activeTab, setActiveTab] = useState('assistant')
   const [transcriptSearchQuery, setTranscriptSearchQuery] = useState('')
   const [showMarkedOnly, setShowMarkedOnly] = useState(false)
   const subtitleRefs = useRef<Record<number, HTMLButtonElement | null>>({})
@@ -119,7 +117,7 @@ export default function VideoChatPanel({
 
   // Auto-scroll to current subtitle while playing or when selectedResult changes
   useEffect(() => {
-    if (activeTab === 'transcript' && currentFilteredIndex !== -1) {
+    if (currentFilteredIndex !== -1) {
       // Use a small delay to ensure the element is rendered
       const timeoutId = setTimeout(() => {
         const subtitleElement = subtitleRefs.current[currentFilteredIndex]
@@ -133,7 +131,7 @@ export default function VideoChatPanel({
       return () => clearTimeout(timeoutId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFilteredIndex, activeTab, currentSubtitleIndex, selectedResult]) // Depend on selectedResult to trigger when URL timestamp changes
+  }, [currentFilteredIndex, currentSubtitleIndex]) // Depend on selectedResult to trigger when URL timestamp changes
 
   const handleSubtitleClick = (subtitle: Subtitle) => {
     if (playerRef?.current) {
@@ -141,365 +139,9 @@ export default function VideoChatPanel({
       onSeek?.(subtitle.startTime)
     }
   }
-  // Get video-specific localStorage key
-  const getMessagesKey = () => `currentChatMessages_${videoId}`
-
-  // Default messages
-  const defaultMessages: ChatMessage[] = [
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hi! I can search within this video\'s subtitles. Ask me to find words or phrases, like "find mentions of javascript" or "search for tutorial".',
-      timestamp: new Date(),
-    },
-  ]
-
-  const [messages, setMessages] = useState<ChatMessage[]>(defaultMessages)
-  
-  // Load messages from localStorage on client side only
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const key = getMessagesKey()
-    const stored = localStorage.getItem(key)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        const loadedMessages = parsed.map((msg: { timestamp: string | Date; [key: string]: unknown }) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }))
-        setMessages(loadedMessages)
-      } catch {
-        // Fall back to default if parsing fails
-      }
-    }
-  }, [videoId])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [lastQuery, setLastQuery] = useState('')
-  const [showSavePrompt, setShowSavePrompt] = useState(false)
-  const [conversationName, setConversationName] = useState('')
-  const [isConversationPublic, setIsConversationPublic] = useState(true)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  // Reload messages when videoId changes (client side only)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const key = getMessagesKey()
-    const stored = localStorage.getItem(key)
-    let newMessages: ChatMessage[]
-    
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        newMessages = parsed.map((msg: { timestamp: string | Date; [key: string]: unknown }) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }))
-      } catch {
-        // Fall back to default if parsing fails
-        newMessages = [
-          {
-            id: '1',
-            role: 'assistant',
-            content: 'Hi! I can search within this video\'s subtitles. Ask me to find words or phrases, like "find mentions of javascript" or "search for tutorial".',
-            timestamp: new Date(),
-          },
-        ]
-      }
-    } else {
-      newMessages = [
-        {
-          id: '1',
-          role: 'assistant',
-          content: 'Hi! I can search within this video\'s subtitles. Ask me to find words or phrases, like "find mentions of javascript" or "search for tutorial".',
-          timestamp: new Date(),
-        },
-      ]
-    }
-    setMessages(newMessages)
-  }, [videoId])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  // Save messages to localStorage whenever they change (client side only)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (messages.length > 0) {
-      const key = getMessagesKey()
-      localStorage.setItem(key, JSON.stringify(messages))
-    }
-  }, [messages, videoId])
-
-  const extractSearchQuery = (text: string): string => {
-    // Extract search terms using common patterns
-    const patterns = [
-      /find\s+(?:mentions?\s+of\s+)?["']?(.+?)["']?(?:\?|$)/i,
-      /search\s+for\s+["']?(.+?)["']?(?:\?|$)/i,
-      /look\s+for\s+["']?(.+?)["']?(?:\?|$)/i,
-      /show\s+me\s+["']?(.+?)["']?(?:\?|$)/i,
-      /find\s+["']?(.+?)["']?(?:\?|$)/i,
-      /["'](.+?)["']/, // Quoted text
-      /(?:search|find|look)\s+(.+?)(?:\?|$)/i, // Fallback pattern
-      /(.+?)(?:\?|$)/, // Last resort - everything before ?
-    ]
-
-    for (const pattern of patterns) {
-      const match = text.match(pattern)
-      if (match && match[1]) {
-        return match[1].trim().replace(/\s+/g, ' ')
-      }
-    }
-
-    return text.trim()
-  }
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInput('')
-    setLoading(true)
-
-    try {
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 600))
-
-      const searchQuery = extractSearchQuery(input)
-      setLastQuery(searchQuery)
-      onSearch(searchQuery)
-
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          searchResults.length > 0
-            ? `I searched this video's subtitles and found ${searchResults.length} result${
-                searchResults.length !== 1 ? 's' : ''
-              } for "${searchQuery}". Click a result below to jump to that moment.`
-            : `I searched this video's subtitles but found no matches for "${searchQuery}". Try a different word or phrase.`,
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-    } finally {
-      setLoading(false)
-      inputRef.current?.focus()
-    }
-  }
-
-  const handleSaveConversation = () => {
-    if (!conversationName.trim() || searchResults.length === 0) return
-
-    const savedConversation: SavedConversation = {
-      id: Date.now().toString(),
-      query: lastQuery,
-      results: searchResults,
-      timestamp: new Date(),
-      name: conversationName,
-      isPublic: isConversationPublic,
-    }
-
-    onSaveConversation(savedConversation)
-    setConversationName('')
-    setIsConversationPublic(true)
-    setShowSavePrompt(false)
-
-    const confirmMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: `Saved search "${conversationName}" with ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''}.`,
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, confirmMessage])
-  }
 
   return (
     <div className="flex flex-col h-full bg-card border border-border rounded-lg">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <div className="p-4 border-b border-border">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="assistant">Assistant</TabsTrigger>
-            <TabsTrigger value="transcript">Transcript</TabsTrigger>
-          </TabsList>
-        </div>
-
-        {/* Assistant Tab */}
-        <TabsContent value="assistant" className="flex-1 flex flex-col min-h-0 m-0">
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                message.role === 'user'
-                  ? 'bg-primary text-primary-foreground rounded-br-none'
-                  : 'bg-secondary text-foreground rounded-bl-none'
-              }`}
-            >
-              {message.content}
-            </div>
-          </div>
-        ))}
-
-        {/* Search Results Display */}
-        {searchResults.length > 0 && (
-          <div className="mt-2 flex flex-col gap-2">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-xs font-semibold text-muted-foreground">Results:</p>
-              {!showSavePrompt && (
-                <button
-                  type="button"
-                  onClick={() => setShowSavePrompt(true)}
-                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-                >
-                  <Save className="w-3 h-3" />
-                  Save
-                </button>
-              )}
-            </div>
-
-            {showSavePrompt && (
-              <div className="p-2 bg-secondary/50 border border-border rounded flex gap-2">
-                <div className="flex-1 flex flex-col gap-2">
-                  <input
-                    type="text"
-                    value={conversationName}
-                    onChange={(e) => setConversationName(e.target.value)}
-                    placeholder="Name this search..."
-                    className="w-full px-2 py-1 text-xs bg-background border border-input rounded focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground">Visibility:</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setIsConversationPublic(true)}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                          isConversationPublic
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background text-foreground border-border hover:bg-secondary/60'
-                        }`}
-                      >
-                        Public
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsConversationPublic(false)}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-                          !isConversationPublic
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background text-foreground border-border hover:bg-secondary/60'
-                        }`}
-                      >
-                        Private
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={handleSaveConversation}
-                    disabled={!conversationName.trim()}
-                    className="px-2 py-1 bg-primary text-primary-foreground text-xs rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
-                  >
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSavePrompt(false)
-                      setConversationName('')
-                      setIsConversationPublic(true)
-                    }}
-                    className="px-2 py-1 bg-secondary text-foreground text-xs rounded hover:bg-secondary/80 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Display results - simplified since all are from the same video */}
-            <div className="flex flex-col gap-1">
-              {searchResults.slice(0, 10).map((result, idx) => (
-                <button
-                  key={`${result.startTime}-${result.endTime}-${idx}`}
-                  type="button"
-                  onClick={() => onPlayVideo(result)}
-                  className="text-left p-1.5 bg-background/50 hover:bg-background border border-border rounded cursor-pointer transition-colors text-xs"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="font-mono text-[10px] text-muted-foreground mt-0.5 shrink-0">
-                      {result.timestamp}
-                    </span>
-                    <p className="text-muted-foreground truncate flex-1">{result.subtitle}</p>
-                  </div>
-                </button>
-              ))}
-              {searchResults.length > 10 && (
-                <p className="text-xs text-muted-foreground px-1.5">
-                  +{searchResults.length - 10} more match{searchResults.length - 10 !== 1 ? 'es' : ''}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-secondary text-foreground rounded-lg rounded-bl-none px-3 py-2">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100" />
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200" />
-              </div>
-            </div>
-          </div>
-        )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Input */}
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-border flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Search for text..."
-              disabled={loading}
-              className="flex-1 px-3 py-2 border border-input rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="p-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </form>
-        </TabsContent>
-
-        {/* Transcript Tab */}
-        <TabsContent value="transcript" className="flex-1 flex flex-col min-h-0 m-0">
           <div className="flex-1 flex flex-col bg-secondary rounded-lg border border-border overflow-hidden min-h-0">
             {/* Controls */}
             <div className="shrink-0 p-3 border-b border-border space-y-2">
@@ -621,8 +263,6 @@ export default function VideoChatPanel({
               )}
             </div>
           </div>
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }

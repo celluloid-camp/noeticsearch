@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import ReactPlayer from 'react-player/file'
 import {
   MediaController,
   MediaControlBar,
@@ -14,7 +15,6 @@ import {
   MediaFullscreenButton,
   MediaCaptionsButton,
 } from 'media-chrome/react'
-import Hls from 'hls.js'
 import type { Subtitle } from '@/lib/types'
 
 // PeerTube URL pattern matcher
@@ -49,14 +49,14 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
   onProgress,
   onSeek,
 }, ref) {
+  const playerRef = useRef<ReactPlayer>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const hlsRef = useRef<Hls | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [vttUrl, setVttUrl] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
   const currentTimeRef = useRef(0)
-  const isSeekingRef = useRef(false)
-  const pendingSeekRef = useRef<number | null>(null)
+  const durationRef = useRef(0)
   const onReadyRef = useRef(onReady)
   const onSeekRef = useRef(onSeek)
   
@@ -66,59 +66,15 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
     onSeekRef.current = onSeek
   }, [onReady, onSeek])
   
-  // Check video ready state periodically as fallback (for non-HLS streams)
-  useEffect(() => {
-    if (!videoSrc || isReady) return
-    
-    // Skip polling for HLS streams (handled by HLS.js events)
-    if (videoSrc.endsWith('.m3u8')) return
-    
-    let interval: NodeJS.Timeout | null = null
-    let checkCount = 0
-    const maxChecks = 100 // Check for up to 20 seconds (100 * 200ms)
-    
-    const checkVideoReady = () => {
-      checkCount++
-      const video = videoRef.current
-      if (video) {
-        // Check if video has metadata or duration (indicates it's loaded)
-        if (video.readyState >= 1 || video.duration > 0) {
-          console.log('📹 Video ready detected via polling, readyState:', video.readyState, 'duration:', video.duration, 'checks:', checkCount)
-          setIsReady(true)
-          onReady?.()
-          if (interval) {
-            clearInterval(interval)
-            interval = null
-          }
-        } else if (checkCount % 5 === 0) { // Log every 5 checks (every second)
-          console.log('📹 Polling: video not ready yet, readyState:', video.readyState, 'duration:', video.duration, 'checks:', checkCount)
-        }
-      }
-      
-      // Stop checking after max attempts
-      if (checkCount >= maxChecks && interval) {
-        console.warn('📹 Polling stopped: video did not become ready after', maxChecks, 'checks')
-        clearInterval(interval)
-        interval = null
-      }
-    }
-    
-    // Check immediately
-    checkVideoReady()
-    
-    // Check periodically
-    interval = setInterval(checkVideoReady, 200) // Check every 200ms
-    
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [videoSrc, isReady, onReady])
-  
   // Fetch video source from PeerTube API
   useEffect(() => {
     const fetchVideoSource = async () => {
       const match = MATCH_URL.exec(url)
-      if (!match) return
+      if (!match) {
+        // If not a PeerTube URL, use the URL directly
+        setVideoSrc(url)
+        return
+      }
       
       const [, protocol, domain, , videoId] = match
       if (!videoId) {
@@ -142,9 +98,8 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
           playlistsCount: data.streamingPlaylists?.length || 0
         })
         
-        // Prefer direct file URLs over HLS playlists (better browser compatibility)
+        // Prefer direct file URLs over HLS playlists
         // Get the best quality video source
-        // PeerTube API returns files array with different qualities
         let selectedSource: string | null = null
         
         if (data.files && data.files.length > 0) {
@@ -171,12 +126,13 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
         }
         
         // Fallback to HLS playlist if no direct file available
+        // react-player can handle HLS natively in supported browsers
         if (!selectedSource && data.streamingPlaylists && data.streamingPlaylists.length > 0) {
           const playlist = data.streamingPlaylists[0]
           if (playlist.playlistUrl) {
             selectedSource = playlist.playlistUrl
             console.log('✅ Using HLS playlist (fallback):', selectedSource)
-            console.warn('⚠️ HLS streams may not work in all browsers without hls.js')
+            console.log('ℹ️ Using react-player which supports HLS natively in supported browsers')
           }
         }
         
@@ -188,7 +144,6 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
         }
       } catch (error) {
         console.error('❌ Error fetching video source:', error)
-        // Don't fallback to embed URL - that won't work with Media Chrome
         setVideoSrc(null)
       }
     }
@@ -197,499 +152,203 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url])
 
-  // Handle HLS streams with hls.js
+  // Get video element from react-player and connect to media-chrome
   useEffect(() => {
-    if (!videoSrc || !videoSrc.endsWith('.m3u8')) {
-      // Clean up HLS if videoSrc is no longer an HLS stream
-      if (hlsRef.current) {
-        console.log('🧹 Cleaning up HLS instance (not HLS stream anymore)')
-        hlsRef.current.destroy()
-        hlsRef.current = null
-      }
-      return
-    }
-    
-    const video = videoRef.current
-    if (!video) return
-    
-    // Check if HLS is supported natively (Safari)
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      console.log('📹 Browser supports HLS natively, using native playback')
-      // Clean up any existing HLS instance
-      if (hlsRef.current) {
-        console.log('🧹 Cleaning up HLS instance (native support)')
-        hlsRef.current.destroy()
-        hlsRef.current = null
-      }
-      return
-    }
-    
-    // Check if hls.js is supported
-    if (!Hls.isSupported()) {
-      console.error('❌ HLS.js is not supported in this browser')
-      return
-    }
-    
-    // If HLS is already initialized with the same source and video element, don't re-initialize
-    // Also check if the source URL matches to avoid re-initializing with the same source
-    if (hlsRef.current && hlsRef.current.media === video) {
-      const currentSource = hlsRef.current.url || ''
-      if (currentSource === videoSrc) {
-        console.log('📹 HLS already initialized with same source and video element, skipping re-initialization')
-        return
-      } else {
-        console.log('📹 HLS source changed, will re-initialize:', currentSource, '->', videoSrc)
-      }
-    }
-    
-    console.log('📹 Initializing HLS.js for HLS stream:', videoSrc)
-    
-    // Store current time before reloading (if we have one)
-    const savedCurrentTime = pendingSeekRef.current ?? (video.currentTime > 0 ? video.currentTime : null)
-    if (savedCurrentTime) {
-      console.log('💾 Saving current time before HLS reload:', savedCurrentTime)
-    }
-    
-    // Clean up existing HLS instance
-    if (hlsRef.current) {
-      console.log('🧹 Cleaning up existing HLS instance')
-      hlsRef.current.destroy()
-      hlsRef.current = null
-    }
-    
-    // Create new HLS instance
-    const hls = new Hls({
-      enableWorker: true,
-      lowLatencyMode: false,
-      backBufferLength: 90,
-    })
-    
-    hlsRef.current = hls
-    
-    // Load the source
-    hls.loadSource(videoSrc)
-    hls.attachMedia(video)
-    
-    // Handle HLS events
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      console.log('📹 HLS manifest parsed')
-      // Wait for video to have duration and be seekable before marking as ready
-      const checkReady = () => {
-        if (video.duration > 0 && video.readyState >= 2) {
-          console.log('📹 HLS video ready, duration:', video.duration, 'readyState:', video.readyState)
-          setIsReady(true)
-          onReadyRef.current?.()
+    if (!playerRef.current || !videoSrc || !containerRef.current) return
+
+    const findAndConnectVideo = () => {
+      try {
+        // Get the internal player (video element) from react-player
+        const internalPlayer = playerRef.current?.getInternalPlayer?.()
+        
+        if (internalPlayer instanceof HTMLVideoElement) {
+          videoRef.current = internalPlayer
           
-          // Restore saved current time or execute pending seek
-          const seekTime = pendingSeekRef.current ?? savedCurrentTime
-          if (seekTime !== null && !isSeekingRef.current) {
-            console.log('📹 Restoring seek position after HLS manifest parsed:', seekTime)
-            pendingSeekRef.current = null
-            setTimeout(() => {
-              if (videoRef.current && videoRef.current.readyState >= 2) {
-                isSeekingRef.current = true
-                videoRef.current.currentTime = seekTime
-                currentTimeRef.current = seekTime
-                onSeekRef.current?.(seekTime)
-                console.log('✅ HLS seek restored to:', seekTime, 'actual:', videoRef.current.currentTime)
-                setTimeout(() => {
-                  isSeekingRef.current = false
-                  // Verify the seek worked
-                  const actualTime = videoRef.current?.currentTime ?? 0
-                  if (Math.abs(actualTime - seekTime) > 0.5) {
-                    console.warn('⚠️ HLS seek verification failed, retrying...')
-                    if (videoRef.current) {
-                      videoRef.current.currentTime = seekTime
-                    }
-                  }
-                }, 500)
-              }
-            }, 300)
-          }
-        } else {
-          // Retry after a short delay
-          setTimeout(checkReady, 100)
-        }
-      }
-      checkReady()
-    })
-    
-    // Also listen for video loadeddata event (more reliable than loadedmetadata for HLS)
-    const handleHlsLoadedData = () => {
-      if (video.duration > 0 && video.readyState >= 2) {
-        console.log('📹 HLS video loadeddata, duration:', video.duration, 'readyState:', video.readyState)
-        setIsReady(true)
-        onReadyRef.current?.()
-        
-        // If there's a pending seek, execute it now
-        if (pendingSeekRef.current !== null && !isSeekingRef.current) {
-          const seekTime = pendingSeekRef.current
-          console.log('📹 Executing pending seek after HLS loadeddata:', seekTime)
-          pendingSeekRef.current = null
-          setTimeout(() => {
-            if (videoRef.current && videoRef.current.readyState >= 2) {
-              isSeekingRef.current = true
-              videoRef.current.currentTime = seekTime
-              currentTimeRef.current = seekTime
-              onSeekRef.current?.(seekTime)
-              setTimeout(() => {
-                isSeekingRef.current = false
-              }, 500)
+          // Set up the video element for media-chrome
+          internalPlayer.setAttribute('slot', 'media')
+          internalPlayer.style.width = '100%'
+          internalPlayer.style.height = '100%'
+          
+          // Find the MediaController and add the video to it
+          const mediaController = containerRef.current?.querySelector('media-controller')
+          if (mediaController && !mediaController.contains(internalPlayer)) {
+            // Remove any existing video element
+            const existingVideo = mediaController.querySelector('video[slot="media"]')
+            if (existingVideo && existingVideo !== internalPlayer) {
+              existingVideo.remove()
             }
-          }, 200)
+            // Add react-player's video to media-chrome
+            mediaController.appendChild(internalPlayer)
+            // Update videoRef to point to the connected video
+            videoRef.current = internalPlayer
+          }
+          
+          console.log('✅ Connected react-player video to media-chrome')
+          return true
         }
-        
-        video.removeEventListener('loadeddata', handleHlsLoadedData)
+      } catch (error) {
+        console.error('Error connecting video:', error)
       }
+      return false
     }
-    video.addEventListener('loadeddata', handleHlsLoadedData)
-    
-    hls.on(Hls.Events.ERROR, (_event, data) => {
-      if (data.fatal) {
-        console.error('❌ HLS fatal error:', data)
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            console.error('💡 Network error, trying to recover...')
-            hls.startLoad()
-            break
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            console.error('💡 Media error, trying to recover...')
-            hls.recoverMediaError()
-            break
-          default:
-            console.error('💡 Fatal error, destroying HLS instance')
-            hls.destroy()
-            hlsRef.current = null
-            break
-        }
-      } else {
-        console.warn('⚠️ HLS non-fatal error:', data)
+
+    // Try to find and connect video element with retries
+    let attempts = 0
+    const maxAttempts = 50
+    const interval = setInterval(() => {
+      attempts++
+      if (findAndConnectVideo() || attempts >= maxAttempts) {
+        clearInterval(interval)
       }
-    })
-    
-    // Cleanup - only clean up event listeners, NOT HLS instance
-    // HLS instance cleanup is handled by the effect when videoSrc changes
-    return () => {
-      if (video) {
-        video.removeEventListener('loadeddata', handleHlsLoadedData)
-      }
-      // Don't destroy HLS here - let the effect handle it when videoSrc changes
-      // This prevents unnecessary re-initialization during re-renders
-    }
-    // Only depend on videoSrc - not onReady/onSeek to prevent unnecessary re-initialization
+    }, 100)
+
+    return () => clearInterval(interval)
   }, [videoSrc])
-  
-  // Handle video events - wait for video element to be available
+
+  // Handle video ready state
   useEffect(() => {
-    if (!videoSrc) return
-    
-    // Skip event setup for HLS streams (hls.js handles it)
-    if (videoSrc.endsWith('.m3u8')) return
-    
-    let cleanup: (() => void) | null = null
-    let retryTimeout: NodeJS.Timeout | null = null
-    
-    // Wait for video element to be available (Media Chrome might render it asynchronously)
-    const setupVideoEvents = () => {
-      const video = videoRef.current
-      if (!video) {
-        console.log('⚠️ Video element not found, will retry...')
-        // Retry after a short delay
-        retryTimeout = setTimeout(setupVideoEvents, 100)
-        return
-      }
+    const video = videoRef.current
+    if (!video || isReady) return
 
-      console.log('📹 Setting up video event listeners, video.readyState:', video.readyState)
-
-      const handleLoadedMetadata = () => {
-        console.log('📹 Video loadedmetadata event fired, video.readyState:', video.readyState, 'video.duration:', video.duration)
+    const handleReady = () => {
+      const currentVideo = videoRef.current
+      if (currentVideo && currentVideo.duration > 0) {
+        console.log('📹 Video ready, duration:', currentVideo.duration)
         setIsReady(true)
-        console.log('📹 Calling onReady callback')
-        onReady?.()
-        
-        // If there's a pending seek, execute it now
-        if (pendingSeekRef.current !== null && !isSeekingRef.current) {
-          const seekTime = pendingSeekRef.current
-          console.log('📹 Executing pending seek after loadedmetadata:', seekTime)
-          pendingSeekRef.current = null
-          setTimeout(() => {
-            if (videoRef.current) {
-              isSeekingRef.current = true
-              videoRef.current.currentTime = seekTime
-              currentTimeRef.current = seekTime
-              onSeek?.(seekTime)
-              setTimeout(() => {
-                isSeekingRef.current = false
-              }, 500)
-            }
-          }, 100)
-        }
-      }
-      
-      const handleLoadedData = () => {
-        console.log('📹 Video loadeddata event fired, video.readyState:', video.readyState)
-        // Also set ready on loadeddata as a fallback
-        setIsReady((prev) => {
-          if (!prev) {
-            console.log('📹 Setting ready from loadeddata event')
-            onReady?.()
-            return true
-          }
-          return prev
-        })
-      }
-      
-      const handleCanPlay = () => {
-        console.log('📹 Video canplay event fired, video.readyState:', video.readyState)
-        // Also set ready on canplay as a fallback
-        setIsReady((prev) => {
-          if (!prev) {
-            console.log('📹 Setting ready from canplay event')
-            onReady?.()
-            return true
-          }
-          return prev
-        })
-      }
-
-      const handleTimeUpdate = () => {
-        currentTimeRef.current = video.currentTime
-        onProgress?.({ playedSeconds: video.currentTime })
-      }
-
-      const handlePlay = () => {
-        onPlay?.()
-      }
-
-      const handlePause = () => {
-        onPause?.()
-      }
-
-      // Check if video is already loaded
-      if (video.readyState >= 1) {
-        console.log('📹 Video already has metadata, setting ready immediately')
-        setIsReady(true)
-        onReady?.()
-        
-        // If there's a pending seek, execute it now
-        if (pendingSeekRef.current !== null && !isSeekingRef.current) {
-          const seekTime = pendingSeekRef.current
-          console.log('📹 Executing pending seek (video already loaded):', seekTime)
-          pendingSeekRef.current = null
-          setTimeout(() => {
-            if (videoRef.current) {
-              isSeekingRef.current = true
-              videoRef.current.currentTime = seekTime
-              currentTimeRef.current = seekTime
-              onSeek?.(seekTime)
-              setTimeout(() => {
-                isSeekingRef.current = false
-              }, 500)
-            }
-          }, 100)
-        }
-      }
-
-      video.addEventListener('loadedmetadata', handleLoadedMetadata)
-      video.addEventListener('loadeddata', handleLoadedData)
-      video.addEventListener('canplay', handleCanPlay)
-      video.addEventListener('timeupdate', handleTimeUpdate)
-      video.addEventListener('play', handlePlay)
-      video.addEventListener('pause', handlePause)
-
-      cleanup = () => {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata)
-        video.removeEventListener('loadeddata', handleLoadedData)
-        video.removeEventListener('canplay', handleCanPlay)
-        video.removeEventListener('timeupdate', handleTimeUpdate)
-        video.removeEventListener('play', handlePlay)
-        video.removeEventListener('pause', handlePause)
+        durationRef.current = currentVideo.duration
+        onReadyRef.current?.()
       }
     }
-    
-    // Start setup
-    setupVideoEvents()
-    
-    // Return cleanup function
+
+    const handleLoadedMetadata = () => {
+      handleReady()
+    }
+
+    const handleLoadedData = () => {
+      handleReady()
+    }
+
+    const handleCanPlay = () => {
+      handleReady()
+    }
+
+    // Check if already ready
+    if (video.duration > 0) {
+      handleReady()
+    }
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('loadeddata', handleLoadedData)
+    video.addEventListener('canplay', handleCanPlay)
+
     return () => {
-      if (retryTimeout) clearTimeout(retryTimeout)
-      if (cleanup) cleanup()
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      video.removeEventListener('loadeddata', handleLoadedData)
+      video.removeEventListener('canplay', handleCanPlay)
     }
-  }, [onReady, onPlay, onPause, onProgress, videoSrc, onSeek])
+  }, [isReady])
 
-  // Handle play/pause
+  // Handle time updates
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
-    // Try to play even if not ready (for auto-play on seek)
-    if (playing) {
-      const playPromise = video.play()
-      if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          console.error('Error playing video:', error)
-        })
+    const handleTimeUpdate = () => {
+      const currentVideo = videoRef.current
+      if (currentVideo) {
+        currentTimeRef.current = currentVideo.currentTime
+        onProgress?.({ playedSeconds: currentVideo.currentTime })
       }
+    }
+
+    video.addEventListener('timeupdate', handleTimeUpdate)
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+    }
+  }, [onProgress])
+
+  // Handle play/pause events
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handlePlay = () => {
+      onPlay?.()
+    }
+
+    const handlePause = () => {
+      onPause?.()
+    }
+
+    video.addEventListener('play', handlePlay)
+    video.addEventListener('pause', handlePause)
+
+    return () => {
+      video.removeEventListener('play', handlePlay)
+      video.removeEventListener('pause', handlePause)
+    }
+  }, [onPlay, onPause])
+
+  // Handle play/pause prop changes
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !isReady) return
+
+    if (playing) {
+      video.play().catch((error) => {
+        console.error('Error playing video:', error)
+      })
     } else {
       video.pause()
     }
-  }, [playing])
+  }, [playing, isReady])
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     seekTo: (seconds: number) => {
       const video = videoRef.current
-      console.log('🎯 MediaChromePlayer.seekTo called:', seconds, 'isReady:', isReady, 'video:', !!video)
+      const player = playerRef.current
       
-      if (!video) {
-        console.error('❌ Video element not found!')
-        return
-      }
+      console.log('🎯 MediaChromePlayer.seekTo called:', seconds, 'isReady:', isReady, 'video:', !!video, 'player:', !!player)
       
-      const isHls = hlsRef.current !== null
-      console.log('📹 Video state:', {
-        readyState: video.readyState,
-        duration: video.duration,
-        currentTime: video.currentTime,
-        paused: video.paused,
-        isHls
-      })
-      
-      // Function to actually perform the seek
-      const performSeek = () => {
-        try {
-          // Prevent multiple simultaneous seeks
-          if (isSeekingRef.current) {
-            console.log('⏳ Seek already in progress, storing for later:', seconds)
-            pendingSeekRef.current = seconds
-            return
-          }
-          
-          // Ensure we have enough data loaded (readyState >= 2 means HAVE_CURRENT_DATA)
-          if (video.readyState < 2) {
-            console.log('⏳ Video not ready for seeking, readyState:', video.readyState, 'storing for later')
-            pendingSeekRef.current = seconds
-            return
-          }
-          
-          // Set seeking flag
-          isSeekingRef.current = true
-          
-          // Video is ready, perform seek
-          console.log('🎯 Performing seek to:', seconds, 'currentTime before:', video.currentTime)
-          video.currentTime = seconds
-          currentTimeRef.current = seconds
-          onSeek?.(seconds)
-          console.log('✅ Seeked to:', seconds, 'video.currentTime after seek:', video.currentTime)
-          
-          // Clear seeking flag after a delay
-          setTimeout(() => {
-            isSeekingRef.current = false
-            
-            // Verify the seek worked
-            const actualTime = video.currentTime
-            const diff = Math.abs(actualTime - seconds)
-            console.log('⏱️ Seek verification - actual:', actualTime, 'expected:', seconds, 'diff:', diff)
-            if (diff > 0.5) {
-              console.warn('⚠️ Seek may have failed! Retrying...')
-              if (video.readyState >= 2) {
-                video.currentTime = seconds
-                currentTimeRef.current = seconds
-              } else {
-                // Store for retry when ready
-                pendingSeekRef.current = seconds
-              }
-            }
-          }, 500)
-        } catch (error) {
-          console.error('❌ Error seeking:', error)
-          isSeekingRef.current = false
-        }
-      }
-      
-      // Check if video is ready to seek
-      if (video.readyState >= 2 && video.duration > 0) {
-        console.log('✅ Video ready, seeking immediately')
-        performSeek()
-      } else if (video.readyState >= 1 || video.duration > 0) {
-        // Has metadata but not enough data, wait a bit
-        console.log('⏳ Video has metadata but not enough data, waiting...')
-        const waitForData = () => {
-          if (video.readyState >= 2) {
-            performSeek()
-          } else {
-            setTimeout(waitForData, 100)
-          }
-        }
-        waitForData()
-      } else {
-        // Wait for metadata - listen to multiple events
-        console.log('⏳ Waiting for video metadata...', 'readyState:', video.readyState, 'duration:', video.duration)
-        
-        let seeked = false
-        const performSeekOnce = () => {
-          if (!seeked && video.readyState >= 2 && video.duration > 0) {
-            seeked = true
-            console.log('✅ Metadata loaded, performing seek')
-            performSeek()
-          }
-        }
-        
-        const handleLoadedData = () => {
-          performSeekOnce()
-          video.removeEventListener('loadeddata', handleLoadedData)
-        }
-        
-        const handleCanPlay = () => {
-          performSeekOnce()
-          video.removeEventListener('canplay', handleCanPlay)
-        }
-        
-        const handleCanPlayThrough = () => {
-          performSeekOnce()
-          video.removeEventListener('canplaythrough', handleCanPlayThrough)
-        }
-        
-        video.addEventListener('loadeddata', handleLoadedData)
-        video.addEventListener('canplay', handleCanPlay)
-        video.addEventListener('canplaythrough', handleCanPlayThrough)
-        
-        // Also check periodically as fallback
-        let checkCount = 0
-        const maxChecks = 100 // 10 seconds
-        const checkInterval = setInterval(() => {
-          checkCount++
-          if (video.readyState >= 2 && video.duration > 0) {
-            clearInterval(checkInterval)
-            performSeekOnce()
-          } else if (checkCount >= maxChecks) {
-            clearInterval(checkInterval)
-            console.warn('⚠️ Timeout waiting for video to be ready, attempting seek anyway')
-            performSeek()
-          }
-        }, 100)
-        
-        // Cleanup after timeout
-        setTimeout(() => {
-          clearInterval(checkInterval)
-          video.removeEventListener('loadeddata', handleLoadedData)
-          video.removeEventListener('canplay', handleCanPlay)
-          video.removeEventListener('canplaythrough', handleCanPlayThrough)
-        }, 10000)
+      if (player) {
+        // Use react-player's seekTo method
+        player.seekTo(seconds, 'seconds')
+        currentTimeRef.current = seconds
+        onSeekRef.current?.(seconds)
+      } else if (video) {
+        // Fallback to direct video seek
+        video.currentTime = seconds
+        currentTimeRef.current = seconds
+        onSeekRef.current?.(seconds)
       }
     },
     getCurrentTime: () => {
       const video = videoRef.current
-      if (video) {
+      const player = playerRef.current
+      
+      if (player) {
+        return player.getCurrentTime() || currentTimeRef.current
+      } else if (video) {
         currentTimeRef.current = video.currentTime
+        return video.currentTime
       }
       return currentTimeRef.current
     },
     getDuration: () => {
       const video = videoRef.current
-      return video?.duration || 0
+      const player = playerRef.current
+      
+      if (player) {
+        return player.getDuration() || durationRef.current
+      } else if (video) {
+        durationRef.current = video.duration
+        return video.duration
+      }
+      return durationRef.current
     },
-  }), [isReady, onSeek])
+  }), [isReady])
 
   // Convert subtitles to WebVTT format
   useEffect(() => {
@@ -725,6 +384,30 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
     }
   }, [subtitles])
 
+  // Add VTT track to video when available
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !vttUrl) return
+
+    // Check if track already exists
+    const existingTrack = video.querySelector(`track[src="${vttUrl}"]`)
+    if (existingTrack) return
+
+    const track = document.createElement('track')
+    track.kind = 'captions'
+    track.srclang = 'en'
+    track.label = 'English'
+    track.src = vttUrl
+    track.default = true
+    video.appendChild(track)
+
+    return () => {
+      if (track.parentNode) {
+        track.parentNode.removeChild(track)
+      }
+    }
+  }, [vttUrl])
+
   if (!videoSrc) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-black text-white">
@@ -737,12 +420,73 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
   }
 
   return (
-    <div className="w-full h-full bg-black flex flex-col relative overflow-visible">
+    <div ref={containerRef} className="w-full h-full bg-black flex flex-col relative overflow-visible">
       <MediaController style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
+        {/* React Player - we'll extract its video element for media-chrome */}
+        <div style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
+          <ReactPlayer
+            ref={playerRef}
+            url={videoSrc}
+            playing={playing}
+            controls={false}
+            width="100%"
+            height="100%"
+            config={{
+              attributes: {
+                crossOrigin: 'anonymous',
+                preload: 'auto',
+                playsInline: true,
+              },
+            }}
+            onReady={() => {
+              console.log('📹 React-player ready')
+              // Video element should be available now
+              setTimeout(() => {
+                const internalPlayer = playerRef.current?.getInternalPlayer?.()
+                if (internalPlayer instanceof HTMLVideoElement) {
+                  videoRef.current = internalPlayer
+                  // Connect to media-chrome
+                  internalPlayer.setAttribute('slot', 'media')
+                  const mediaController = containerRef.current?.querySelector('media-controller')
+                  if (mediaController) {
+                    // Remove placeholder video if exists
+                    const placeholder = mediaController.querySelector('video[slot="media"]:not([data-react-player])')
+                    if (placeholder) {
+                      placeholder.remove()
+                    }
+                    // Add react-player's video
+                    if (!mediaController.contains(internalPlayer)) {
+                      mediaController.appendChild(internalPlayer)
+                    }
+                    internalPlayer.setAttribute('data-react-player', 'true')
+                  }
+                }
+              }, 100)
+            }}
+            onProgress={(state) => {
+              currentTimeRef.current = state.playedSeconds
+              onProgress?.(state)
+            }}
+            onPlay={() => {
+              onPlay?.()
+            }}
+            onPause={() => {
+              onPause?.()
+            }}
+            onDuration={(duration) => {
+              durationRef.current = duration
+              if (duration > 0 && !isReady) {
+                setIsReady(true)
+                onReadyRef.current?.()
+              }
+            }}
+          />
+        </div>
+        
+        {/* Placeholder video for media-chrome - will be replaced by react-player's video */}
         <video
-          ref={videoRef}
           slot="media"
-          src={videoSrc && !videoSrc.endsWith('.m3u8') ? videoSrc : undefined}
+          src={videoSrc}
           className="w-full h-full"
           crossOrigin="anonymous"
           preload="auto"
@@ -750,130 +494,7 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
           autoPlay={false}
           muted={false}
           aria-label="Video player"
-          onLoadStart={() => {
-            console.log('📹 onLoadStart fired, src:', videoSrc, 'isSeeking:', isSeekingRef.current)
-            // Don't reset if we're in the middle of a seek or have a pending seek
-            if (!isSeekingRef.current && pendingSeekRef.current === null) {
-              console.log('📹 Video source loading, resetting ready state')
-              setIsReady(false)
-            } else {
-              console.log('📹 Video source loading but seek in progress, keeping ready state')
-            }
-          }}
-          onLoadedMetadata={() => {
-            const video = videoRef.current
-            console.log('📹 onLoadedMetadata (inline handler) fired', {
-              readyState: video?.readyState,
-              duration: video?.duration,
-              currentTime: video?.currentTime,
-              videoWidth: video?.videoWidth,
-              videoHeight: video?.videoHeight
-            })
-            // Prevent resetting currentTime if we have a pending seek
-            if (pendingSeekRef.current !== null && video) {
-              console.log('📹 Preventing currentTime reset, pending seek:', pendingSeekRef.current)
-              // The seek will be handled by the event listeners
-            }
-          }}
-          onLoadedData={() => {
-            const video = videoRef.current
-            console.log('📹 onLoadedData (inline handler) fired', {
-              readyState: video?.readyState,
-              duration: video?.duration,
-              currentTime: video?.currentTime,
-              isSeeking: isSeekingRef.current,
-              pendingSeek: pendingSeekRef.current
-            })
-            // Don't execute seek here if HLS is active - let HLS handle it
-            // This prevents conflicts with HLS.js seeking
-            if (hlsRef.current) {
-              console.log('📹 HLS is active, skipping seek in onLoadedData (HLS will handle it)')
-              return
-            }
-            // If we have a pending seek and video is ready, execute it (for non-HLS streams)
-            if (pendingSeekRef.current !== null && video && video.readyState >= 2 && !isSeekingRef.current) {
-              const seekTime = pendingSeekRef.current
-              console.log('📹 Executing pending seek from onLoadedData:', seekTime)
-              pendingSeekRef.current = null
-              isSeekingRef.current = true
-              video.currentTime = seekTime
-              currentTimeRef.current = seekTime
-              onSeek?.(seekTime)
-              setTimeout(() => {
-                isSeekingRef.current = false
-                console.log('📹 Seek completed, currentTime:', video.currentTime)
-              }, 500)
-            }
-          }}
-          onCanPlay={() => {
-            const video = videoRef.current
-            console.log('📹 onCanPlay (inline handler) fired', {
-              readyState: video?.readyState,
-              duration: video?.duration
-            })
-          }}
-          onError={() => {
-            const video = videoRef.current
-            const errorInfo: Record<string, unknown> = {
-              src: videoSrc,
-              networkState: video?.networkState,
-              readyState: video?.readyState,
-            }
-            
-            if (video?.error) {
-              errorInfo.errorCode = video.error.code
-              errorInfo.errorMessage = video.error.message
-              
-              // Map error codes to human-readable messages
-              const errorMessages: Record<number, string> = {
-                1: 'MEDIA_ERR_ABORTED - The user aborted the video',
-                2: 'MEDIA_ERR_NETWORK - A network error occurred',
-                3: 'MEDIA_ERR_DECODE - The video could not be decoded',
-                4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - The video source is not supported',
-              }
-              errorInfo.errorDescription = errorMessages[video.error.code] || 'Unknown error'
-            }
-            
-            // Log network state
-            const networkStates: Record<number, string> = {
-              0: 'NETWORK_EMPTY - No data',
-              1: 'NETWORK_IDLE - Network is idle',
-              2: 'NETWORK_LOADING - Loading',
-              3: 'NETWORK_NO_SOURCE - No source',
-            }
-            errorInfo.networkStateDescription = networkStates[video?.networkState ?? -1] || 'Unknown'
-            
-            console.error('❌ Video error:', errorInfo)
-            
-            // Check if it's an HLS stream
-            if (videoSrc?.endsWith('.m3u8')) {
-              console.error('💡 HLS stream detected (.m3u8). Browsers may not support HLS natively.')
-              console.error('   Consider using hls.js library for HLS playback.')
-            }
-            
-            // If it's a source not supported error, try to provide helpful info
-            if (video?.error?.code === 4) {
-              console.error('💡 Video source may not be supported. Try checking:')
-              console.error('   - Is the URL accessible?')
-              console.error('   - Does it require CORS headers?')
-              console.error('   - Is it an HLS stream that needs hls.js?')
-              console.error('   - Video format:', videoSrc?.split('.').pop())
-            } else if (!video?.error) {
-              console.error('💡 Video error object is null. Possible causes:')
-              console.error('   - CORS issue preventing video load')
-              console.error('   - Video format not supported by browser')
-              console.error('   - Network error (check browser network tab)')
-            }
-          }}
-        >
-          <track 
-            kind="captions" 
-            srcLang="en" 
-            label="English" 
-            src={vttUrl || ''} 
-            default={!!vttUrl}
-          />
-        </video>
+        />
         
         {controls && (
           <MediaControlBar>
@@ -889,9 +510,17 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
           </MediaControlBar>
         )}
       </MediaController>
-      
     </div>
   )
 })
 
-export default MediaChromePlayer
+// Static method for react-player compatibility
+const MediaChromePlayerWithCanPlay = MediaChromePlayer as typeof MediaChromePlayer & {
+  canPlay: (url: string) => boolean
+}
+
+MediaChromePlayerWithCanPlay.canPlay = (url: string) => {
+  return MATCH_URL.test(url) || url.startsWith('http') || url.startsWith('/')
+}
+
+export default MediaChromePlayerWithCanPlay

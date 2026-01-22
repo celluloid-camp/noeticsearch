@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import type { Video, SearchResult } from '@/lib/types'
-import { ArrowLeft } from 'lucide-react'
 import MediaChromePlayer, { type MediaChromePlayerRef } from './MediaChromePlayer'
 
 interface VideoPlayerProps {
@@ -21,7 +19,6 @@ export default function VideoPlayer({
   onCurrentTimeChange,
   playerRef: externalPlayerRef
 }: VideoPlayerProps) {
-  const router = useRouter()
   const internalPlayerRef = useRef<MediaChromePlayerRef>(null)
   const playerRef = externalPlayerRef || internalPlayerRef
   const [isPlaying, setIsPlaying] = useState(false)
@@ -96,20 +93,7 @@ export default function VideoPlayer({
       {/* Content */}
       <div className="flex-1 overflow-hidden p-4 min-h-0">
         <div className="bg-card rounded-lg w-full h-full flex flex-col border border-border overflow-hidden">
-          <div className="flex-1 overflow-hidden flex flex-col gap-4 p-4 min-h-0">
-            {/* Back Button */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                router.back()
-              }}
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              <span>Back to search results</span>
-            </button>
-
+          <div className="flex-1 overflow-y-auto flex flex-col gap-4 p-4 min-h-0">
             {/* Video Area */}
             <div className="flex flex-col gap-4 min-w-0">
             {/* Embedded Player */}
