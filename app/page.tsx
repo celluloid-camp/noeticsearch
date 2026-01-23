@@ -4,7 +4,6 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import VideoCatalog from '@/components/VideoCatalog'
 import type { Video, Subtitle } from '@/lib/types'
-import { useSearch } from '@/contexts/SearchContext'
 import Loading from './loading'
 
 const DEFAULT_PUBLIC_VIDEOS: Video[] = [
@@ -21,6 +20,42 @@ const DEFAULT_PUBLIC_VIDEOS: Video[] = [
     id: 'default-peertube-video-3',
     title: 'PeerTube – Third Public Video',
     url: 'https://video.mshparisnord.fr/w/6fXFgBZgaC9PXDX83ZsiXF',
+    thumbnail: '/placeholder.svg',
+    subtitles: [],
+    addedDate: new Date(),
+    isPublic: true,
+  },
+  {
+    id: 'default-peertube-video-4',
+    title: 'Séminaire Pharmakon / édition 2020 séance 5 / Exorganologie III. Remondialisation, localités et modernité',
+    url: 'https://video.mshparisnord.fr/w/eiPkiGskftKSD1a7GimFS7',
+    thumbnail: '/placeholder.svg',
+    subtitles: [],
+    addedDate: new Date(),
+    isPublic: true,
+  },
+  {
+    id: 'default-peertube-video-5',
+    title: 'Séminaire Pharmakon / édition 2019 séance 7 / Exorganologie II, Remondialisation et internation',
+    url: 'https://video.mshparisnord.fr/w/h87RD24r5BFFsfpZG39ygf',
+    thumbnail: '/placeholder.svg',
+    subtitles: [],
+    addedDate: new Date(),
+    isPublic: true,
+  },
+  {
+    id: 'default-peertube-video-6',
+    title: 'Séminaire Pharmakon / édition 2020 séance 6 / Exorganologie III. Remondialisation, localités et modernité',
+    url: 'https://video.mshparisnord.fr/w/mBbPr21isuiXvwE28h2yq5',
+    thumbnail: '/placeholder.svg',
+    subtitles: [],
+    addedDate: new Date(),
+    isPublic: true,
+  },
+  {
+    id: 'default-peertube-video-7',
+    title: 'Pharmakon / Cours 2013-2014 séance 1',
+    url: 'https://video.mshparisnord.fr/w/o7NSYoKFWjFXPDSFQ1ATLK',
     thumbnail: '/placeholder.svg',
     subtitles: [],
     addedDate: new Date(),
@@ -160,7 +195,6 @@ async function fetchPeertubeMetadata(rawUrl: string): Promise<{ title: string; t
 export default function Home() {
   const router = useRouter()
   const [videos, setVideos] = useState<Video[]>(DEFAULT_PUBLIC_VIDEOS)
-  const { searchResults, clearSearchResults } = useSearch()
   const [filterTab, setFilterTab] = useState<'all' | 'public' | 'my'>('all')
 
   const handleAddVideo = (video: Video) => {
@@ -178,9 +212,6 @@ export default function Home() {
   }
 
 
-  const handleClearSearch = () => {
-    clearSearchResults()
-  }
 
   // On first load, fetch real metadata for the default PeerTube video
   useEffect(() => {
@@ -281,15 +312,13 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-4 min-w-0">
+    <div className="flex flex-col gap-4 min-w-0 h-full overflow-hidden">
       <Suspense fallback={<Loading />}>
         <VideoCatalog
           videos={videos}
           filterTab={filterTab}
           onAddVideo={handleAddVideo}
           onVideoClick={handleVideoThumbnailClick}
-          searchResults={searchResults}
-          onClearSearch={handleClearSearch}
         />
       </Suspense>
     </div>

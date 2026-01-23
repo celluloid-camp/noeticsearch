@@ -12,9 +12,11 @@ interface ChatPanelProps {
   searchResults: SearchResult[]
   onPlayVideo: (result: SearchResult) => void
   onSaveConversation: (conversation: SavedConversation) => void
+  externalMessage?: string
+  onExternalMessageProcessed?: () => void
 }
 
-export default function ChatPanel({ onSearch, searchResults, onPlayVideo, onSaveConversation }: ChatPanelProps) {
+export default function ChatPanel({ onSearch, searchResults, onPlayVideo, onSaveConversation, externalMessage, onExternalMessageProcessed }: ChatPanelProps) {
   const router = useRouter()
   
   // Initialize messages with default (will load from localStorage on client)
@@ -64,6 +66,71 @@ export default function ChatPanel({ onSearch, searchResults, onPlayVideo, onSave
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Handle external message from search page
+  useEffect(() => {
+    if (externalMessage && externalMessage.trim()) {
+      const userMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: externalMessage,
+        timestamp: new Date(),
+      }
+
+      setMessages((prev) => [...prev, userMessage])
+      setLoading(true)
+
+      // Extract search query and run search
+      const searchQuery = extractSearchQuery(externalMessage)
+      setLastQuery(searchQuery)
+      onSearch(searchQuery)
+
+      // Notify parent that message was processed (this clears externalMessage)
+      onExternalMessageProcessed?.()
+      
+      // Clear loading if search results are already available (edge case)
+      // The main loading clear happens in the searchResults effect
+    }
+  }, [externalMessage, onSearch, onExternalMessageProcessed])
+
+  // Update assistant message when search results change (for external messages only)
+  useEffect(() => {
+    if (lastQuery && loading) {
+      // Small delay to ensure search has completed
+      const timer = setTimeout(() => {
+        setLoading(false)
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content:
+            searchResults.length > 0
+              ? `I searched your video subtitles and found ${searchResults.length} result${
+                  searchResults.length !== 1 ? 's' : ''
+                } for "${lastQuery}". Click a result below to play the video at that moment.`
+              : `I searched your video subtitles but found no matches for "${lastQuery}". Try a different word or phrase.`,
+          timestamp: new Date(),
+        }
+
+        setMessages((prev) => {
+          // Remove any existing assistant message for this query
+          const filtered = prev.filter((msg) => !(msg.role === 'assistant' && msg.content.includes(`"${lastQuery}"`)))
+          return [...filtered, assistantMessage]
+        })
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [searchResults, lastQuery, loading])
+
+  // Fallback: Clear loading state if it's been stuck for too long
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        setLoading(false)
+      }, 5000) // Clear loading after 5 seconds max
+      return () => clearTimeout(timeout)
+    }
+  }, [loading])
 
   // Save messages to localStorage whenever they change (client side only)
   useEffect(() => {

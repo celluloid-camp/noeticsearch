@@ -1,14 +1,14 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { Search } from 'lucide-react'
 
 interface HeaderProps {
-  onAddVideoClick: () => void
+  onNewSearchClick: () => void
   onAvatarClick: () => void
   isLoggedIn: boolean
 }
 
-export default function Header({ onAddVideoClick, onAvatarClick, isLoggedIn }: HeaderProps) {
+export default function Header({ onNewSearchClick, onAvatarClick, isLoggedIn }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-12 items-center justify-between px-6 gap-4">
@@ -40,17 +40,19 @@ export default function Header({ onAddVideoClick, onAvatarClick, isLoggedIn }: H
 
         {/* Right Section */}
         <div className="flex items-center gap-4">
-          {/* Add New Video Button */}
+          {/* New Search Button */}
           <button
-            onClick={onAddVideoClick}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
+            type="button"
+            onClick={onNewSearchClick}
+            className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium text-sm"
           >
-            <Plus className="w-4 h-4" />
-            Add Video
+            <Search className="w-4 h-4" />
+            New search
           </button>
 
           {/* Avatar/Login */}
           <button
+            type="button"
             onClick={onAvatarClick}
             className="w-10 h-10 rounded-full bg-secondary border-2 border-border hover:border-primary transition-colors flex items-center justify-center text-foreground font-semibold text-sm"
           >

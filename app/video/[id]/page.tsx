@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import VideoPlayer from '@/components/VideoPlayer'
-import VideoChatPanel from '@/components/VideoChatPanel'
+import TranscriptionPanel from '@/components/TranscriptionPanel'
 import type { Video, SearchResult, SavedConversation } from '@/lib/types'
 import type { MediaChromePlayerRef } from '@/components/MediaChromePlayer'
 import { useSearch } from '@/contexts/SearchContext'
@@ -140,7 +140,7 @@ export default function VideoPage() {
       })
     }
     setSearchResults(results)
-    // Also save to video-specific key for VideoChatPanel
+    // Also save to video-specific key for TranscriptionPanel
     localStorage.setItem(`currentSearchResults_${videoId}`, JSON.stringify(results))
   }
 
@@ -197,9 +197,9 @@ export default function VideoPage() {
   }
 
   return (
-    <div className="flex flex-1 gap-4 overflow-hidden">
+    <div className="flex flex-1 gap-4 overflow-hidden h-full">
       {/* Video Player */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <VideoPlayer 
           video={video} 
           onClose={handleBack} 
@@ -210,9 +210,9 @@ export default function VideoPage() {
       </div>
 
       {/* Middle: Transcript Panel */}
-      <div className="w-96 flex flex-col min-w-0 border-l border-border">
+      <div className="w-96 flex flex-col min-w-0 overflow-hidden h-full">
         <Suspense fallback={<Loading />}>
-          <VideoChatPanel
+          <TranscriptionPanel
             videoId={videoId}
             video={video}
             onSearch={handleSearch}
@@ -221,8 +221,9 @@ export default function VideoPage() {
             onSaveConversation={handleSaveConversation}
             selectedResult={selectedResult}
             currentTime={currentTime}
-            playerRef={playerRef as React.RefObject<{ seekTo: (time: number) => void }>}
+            playerRef={playerRef as React.RefObject<{ seekTo: (time: number) => void } | null>}
             onSeek={(time) => {
+              console.log('🎯 onSeek called from TranscriptionPanel:', time)
               if (playerRef.current) {
                 playerRef.current.seekTo(time)
               }

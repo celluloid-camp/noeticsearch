@@ -166,6 +166,7 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
           
           // Set up the video element for media-chrome
           internalPlayer.setAttribute('slot', 'media')
+          internalPlayer.setAttribute('data-react-player', 'true')
           internalPlayer.style.width = '100%'
           internalPlayer.style.height = '100%'
           
@@ -384,29 +385,70 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
     }
   }, [subtitles])
 
-  // Add VTT track to video when available
+  // Enable captions by default when track is loaded
   useEffect(() => {
-    const video = videoRef.current
-    if (!video || !vttUrl) return
+    if (!vttUrl || !isReady) return
 
-    // Check if track already exists
-    const existingTrack = video.querySelector(`track[src="${vttUrl}"]`)
-    if (existingTrack) return
-
-    const track = document.createElement('track')
-    track.kind = 'captions'
-    track.srclang = 'en'
-    track.label = 'English'
-    track.src = vttUrl
-    track.default = true
-    video.appendChild(track)
-
-    return () => {
-      if (track.parentNode) {
-        track.parentNode.removeChild(track)
+    // Function to get the actual react-player video element
+    const getReactPlayerVideo = (): HTMLVideoElement | null => {
+      // First try to get from react-player directly
+      const internalPlayer = playerRef.current?.getInternalPlayer?.()
+      if (internalPlayer instanceof HTMLVideoElement) {
+        // Make sure it's the one connected to media-chrome
+        const mediaController = containerRef.current?.querySelector('media-controller')
+        if (mediaController?.contains(internalPlayer)) {
+          return internalPlayer
+        }
       }
+      
+      // Fallback: find video element with data-react-player attribute
+      const mediaController = containerRef.current?.querySelector('media-controller')
+      if (mediaController) {
+        const video = mediaController.querySelector('video[data-react-player="true"]') as HTMLVideoElement
+        if (video) {
+          return video
+        }
+        // Or find any video with slot="media"
+        const videos = mediaController.querySelectorAll('video[slot="media"]')
+        for (const vid of videos) {
+          if (vid instanceof HTMLVideoElement) {
+            return vid
+          }
+        }
+      }
+      
+      return null
     }
-  }, [vttUrl])
+
+    // Enable text tracks when they're loaded
+    const enableTracks = () => {
+      const video = getReactPlayerVideo()
+      if (!video) return false
+
+      console.log('📝 Enabling captions. textTracks.length:', video.textTracks.length)
+      
+      // Wait for text tracks to be available
+      if (video.textTracks.length > 0) {
+        const firstTrack = video.textTracks[0]
+        if (firstTrack) {
+          console.log('📝 Setting track mode to showing:', firstTrack.label, 'current mode:', firstTrack.mode)
+          firstTrack.mode = 'showing'
+          console.log('✅ Track mode set to:', firstTrack.mode)
+          return true
+        }
+      }
+      return false
+    }
+
+    // Try to enable tracks multiple times to ensure they're registered
+    // The track should already be added as a child of ReactPlayer
+    const enableAttempts = [100, 300, 500, 1000, 2000]
+    enableAttempts.forEach(delay => {
+      setTimeout(() => {
+        enableTracks()
+      }, delay)
+    })
+  }, [vttUrl, isReady])
 
   if (!videoSrc) {
     return (
@@ -480,7 +522,18 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
                 onReadyRef.current?.()
               }
             }}
-          />
+          >
+            {/* Add track as child of ReactPlayer - this is the proper way */}
+            {vttUrl && (
+              <track
+                kind="captions"
+                srcLang="en"
+                label="English"
+                src={vttUrl}
+                default
+              />
+            )}
+          </ReactPlayer>
         </div>
         
         {/* Placeholder video for media-chrome - will be replaced by react-player's video */}
@@ -494,7 +547,18 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
           autoPlay={false}
           muted={false}
           aria-label="Video player"
-        />
+        >
+          {/* Also add track to placeholder in case it's used */}
+          {vttUrl && (
+            <track
+              kind="captions"
+              srcLang="en"
+              label="English"
+              src={vttUrl}
+              default
+            />
+          )}
+        </video>
         
         {controls && (
           <MediaControlBar>
@@ -505,7 +569,7 @@ const MediaChromePlayer = forwardRef<MediaChromePlayerRef, MediaChromePlayerProp
             <MediaTimeDisplay showDuration />
             <MediaMuteButton />
             <MediaVolumeRange />
-            {vttUrl && <MediaCaptionsButton />}
+            <MediaCaptionsButton />
             <MediaFullscreenButton />
           </MediaControlBar>
         )}

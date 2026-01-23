@@ -9,8 +9,8 @@ interface VideoCatalogProps {
   videos: Video[]
   onAddVideo: (video: Video) => void
   onVideoClick: (video: Video) => void
-  searchResults: SearchResult[]
-  onClearSearch: () => void
+  searchResults?: SearchResult[]
+  onClearSearch?: () => void
   filterTab: 'all' | 'public' | 'my'
 }
 
@@ -31,9 +31,9 @@ export default function VideoCatalog({
     return true
   })
 
-  const hasActiveSearch = searchResults.length > 0
+  const hasActiveSearch = searchResults && searchResults.length > 0
 
-  const groupedResults = hasActiveSearch
+  const groupedResults = hasActiveSearch && searchResults
     ? searchResults.reduce<Record<string, { video: Video | undefined; matches: SearchResult[] }>>(
         (acc, result) => {
           if (!acc[result.videoId]) {
@@ -51,38 +51,16 @@ export default function VideoCatalog({
 
   return (
     <div className="flex flex-col gap-4 h-full min-w-0">
-      {/* Search Header */}
-      <div className="bg-card rounded-lg p-4 border border-border">
-        {hasActiveSearch ? (
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-foreground">Search Results</h3>
-              <p className="text-xs text-muted-foreground">
-                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
-              </p>
-            </div>
-            <button
-              onClick={onClearSearch}
-              className="px-3 py-1 text-xs bg-secondary text-foreground hover:bg-secondary/80 rounded-lg transition-colors"
-            >
-              Clear Search
-            </button>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Browse your videos or start a search in the assistant.</p>
-        )}
-      </div>
-
       {/* Video Grid or Search Results Grid */}
       <div className="flex-1 overflow-y-auto">
         {hasActiveSearch ? (
           // Search Results Display (grouped by video)
-          searchResults.length === 0 ? (
+          !searchResults || searchResults.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-muted-foreground">
               <p>No results found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 pr-2">
+            <div className="grid grid-cols-3 gap-4 pr-2">
               {Object.entries(groupedResults).map(([videoId, group]) => {
                 const video = group.video
                 if (!video) return null
@@ -119,6 +97,9 @@ export default function VideoCatalog({
                       </div>
                     </div>
                     <p className="mt-2 font-medium text-foreground text-sm truncate">{video.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {video.addedDate ? new Date(video.addedDate).toLocaleDateString() : ''}
+                    </p>
                     <div className="mt-1 space-y-1 max-h-32 overflow-y-auto pr-1">
                       {group.matches.map((match, idx) => (
                         <button
@@ -152,7 +133,7 @@ export default function VideoCatalog({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 pr-2">
+            <div className="grid grid-cols-4 gap-4 pr-2">
               {filteredVideos.map((video) => (
                 <div
                   key={video.id}
@@ -184,7 +165,7 @@ export default function VideoCatalog({
                   </div>
                   <p className="mt-2 font-medium text-foreground text-sm truncate">{video.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {video.subtitles?.length || 0} subtitles
+                    {video.addedDate ? new Date(video.addedDate).toLocaleDateString() : ''}
                   </p>
                 </div>
               ))}
