@@ -1,65 +1,154 @@
-'use client'
+"use client";
 
-import { Search } from 'lucide-react'
+import { LogOut, Search, Video } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { signOut, useSession } from "@/lib/auth-client";
+import { Button } from "./ui/button";
 
-interface HeaderProps {
-  onNewSearchClick: () => void
-  onAvatarClick: () => void
-  isLoggedIn: boolean
-}
+export default function Header() {
+	const router = useRouter();
+	const { data: session, isPending } = useSession();
+	const [showMenu, setShowMenu] = useState(false);
 
-export default function Header({ onNewSearchClick, onAvatarClick, isLoggedIn }: HeaderProps) {
-  return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-12 items-center justify-between px-6 gap-4">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-primary-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold text-foreground">VisionSearch</h1>
-        </div>
+	const isLoggedIn = !!session?.user;
 
-        {/* Right Section */}
-        <div className="flex items-center gap-4">
-          {/* New Search Button */}
-          <button
-            type="button"
-            onClick={onNewSearchClick}
-            className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium text-sm"
-          >
-            <Search className="w-4 h-4" />
-            New search
-          </button>
+	const handleAvatarClick = () => {
+		if (isLoggedIn) {
+			setShowMenu(!showMenu);
+		} else {
+			router.push("/sign-in");
+		}
+	};
 
-          {/* Avatar/Login */}
-          <button
-            type="button"
-            onClick={onAvatarClick}
-            className="w-10 h-10 rounded-full bg-secondary border-2 border-border hover:border-primary transition-colors flex items-center justify-center text-foreground font-semibold text-sm"
-          >
-            {isLoggedIn ? 'U' : 'L'}
-          </button>
-        </div>
-      </div>
-    </header>
-  )
+	const handleNewSearchClick = () => {
+		router.push("/search?new=true");
+	};
+
+	const handleSignUpClick = () => {
+		router.push("/sign-up");
+	};
+
+	const handleSignOut = async () => {
+		await signOut();
+		setShowMenu(false);
+		router.push("/");
+		router.refresh();
+	};
+
+	const getInitials = () => {
+		if (session?.user?.name) {
+			return session.user.name.charAt(0).toUpperCase();
+		}
+		if (session?.user?.email) {
+			return session.user.email.charAt(0).toUpperCase();
+		}
+		return "U";
+	};
+
+	return (
+		<>
+			<header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+				<div className="flex h-12 items-center justify-between px-6 gap-4">
+					{/* Logo */}
+					<div className="flex items-center gap-2">
+						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+							<svg
+								className="w-5 h-5 text-primary-foreground"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+								aria-hidden="true"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+								/>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+								/>
+							</svg>
+						</div>
+						<h1 className="text-xl font-bold text-foreground">VisionSearch</h1>
+					</div>
+
+					{/* Right Section */}
+					<div className="flex items-center gap-4">
+						{isLoggedIn ? (
+							<>
+								{/* New Search Button */}
+								<button
+									type="button"
+									onClick={handleNewSearchClick}
+									className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium text-sm"
+								>
+									<Search className="w-4 h-4" />
+									New search
+								</button>
+
+								<Link href="/import">
+									<Button type="button">
+										<Video className="w-4 h-4" />
+										Import video
+									</Button>
+								</Link>
+
+								{/* Avatar */}
+								<button
+									type="button"
+									onClick={handleAvatarClick}
+									className="w-10 h-10 rounded-full bg-secondary border-2 border-border hover:border-primary transition-colors flex items-center justify-center text-foreground font-semibold text-sm overflow-hidden"
+								>
+									{session?.user?.image ? (
+										<img
+											src={session.user.image}
+											alt=""
+											className="w-full h-full object-cover"
+										/>
+									) : (
+										getInitials()
+									)}
+								</button>
+							</>
+						) : (
+							/* Sign Up Button */
+							<button
+								type="button"
+								onClick={handleSignUpClick}
+								className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
+							>
+								Sign up
+							</button>
+						)}
+					</div>
+				</div>
+			</header>
+			{showMenu && isLoggedIn && (
+				<div className="absolute right-6 top-12 mt-2 w-48 rounded-md border border-border bg-background shadow-lg z-50">
+					<div className="p-3 border-b border-border">
+						<p className="text-sm font-medium">
+							{session?.user?.name || "User"}
+						</p>
+						<p className="text-xs text-muted-foreground truncate">
+							{session?.user?.email}
+						</p>
+					</div>
+					<button
+						type="button"
+						onClick={handleSignOut}
+						className="flex w-full items-center gap-2 p-3 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+					>
+						<LogOut className="w-4 h-4" />
+						Sign out
+					</button>
+				</div>
+			)}
+		</>
+	);
 }
