@@ -1,6 +1,8 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import AppLayoutClient from "@/components/app-layout-client";
 import Header from "@/components/header";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,8 +10,17 @@ import "./globals.css";
 import { Agentation } from "agentation";
 import { TRPCProvider } from "@/lib/trpc/provider";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-sans" });
+
+const geistSans = Geist({
+	variable: "--font-geist-sans",
+	subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+	variable: "--font-geist-mono",
+	subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
 	title: "VisionSearch - Video Subtitle Search Platform",
@@ -35,27 +46,31 @@ export const metadata: Metadata = {
 	},
 };
 
-export default function RootLayout({
+export default async function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const locale = await getLocale();
+	const messages = await getMessages();
+
 	return (
-		<html lang="en">
+		<html lang={locale} className={publicSans.variable}>
 			<body
-				className={`font-sans antialiased`}
-				style={{ "--header-height": "3rem" } as React.CSSProperties}
+				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<TRPCProvider>
-					<TooltipProvider>
-						<div className="flex flex-col h-screen bg-background">
-							<Header />
-							<div className="flex-1 overflow-hidden relative">
-								<AppLayoutClient>{children}</AppLayoutClient>
+				<NextIntlClientProvider locale={locale} messages={messages}>
+					<TRPCProvider>
+						<TooltipProvider>
+							<div className="flex flex-col h-screen bg-background">
+								<Header />
+								<div className="flex-1 overflow-hidden relative">
+									<AppLayoutClient>{children}</AppLayoutClient>
+								</div>
 							</div>
-						</div>
-					</TooltipProvider>
-				</TRPCProvider>
+						</TooltipProvider>
+					</TRPCProvider>
+				</NextIntlClientProvider>
 				<Analytics />
 				{process.env.NODE_ENV === "development" && <Agentation />}
 			</body>

@@ -3,12 +3,16 @@
 import { LogOut, Search, Video } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { signOut, useSession } from "@/lib/auth-client";
+import { LocaleSwitcher } from "./locale-switcher";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 
 export default function Header() {
 	const router = useRouter();
+	const t = useTranslations();
 	const { data: session, isPending } = useSession();
 	const [showMenu, setShowMenu] = useState(false);
 
@@ -80,51 +84,52 @@ export default function Header() {
 
 					{/* Right Section */}
 					<div className="flex items-center gap-4">
+						<LocaleSwitcher />
 						{isLoggedIn ? (
 							<>
 								{/* New Search Button */}
-								<button
+								<Button
 									type="button"
+									variant="secondary"
 									onClick={handleNewSearchClick}
-									className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors font-medium text-sm"
 								>
 									<Search className="w-4 h-4" />
 									New search
-								</button>
+								</Button>
 
 								<Link href="/import">
 									<Button type="button">
 										<Video className="w-4 h-4" />
-										Import video
+										{t("video.import")}
 									</Button>
 								</Link>
 
 								{/* Avatar */}
-								<button
+								<Button
 									type="button"
+									variant="ghost"
+									size="icon-lg"
+									className="rounded-full"
 									onClick={handleAvatarClick}
-									className="w-10 h-10 rounded-full bg-secondary border-2 border-border hover:border-primary transition-colors flex items-center justify-center text-foreground font-semibold text-sm overflow-hidden"
 								>
-									{session?.user?.image ? (
-										<img
-											src={session.user.image}
-											alt=""
-											className="w-full h-full object-cover"
-										/>
-									) : (
-										getInitials()
-									)}
-								</button>
+									<Avatar className="size-10 border-2 border-border">
+										{session?.user?.image ? (
+											<AvatarImage
+												src={session.user.image}
+												alt=""
+												className="object-cover"
+											/>
+										) : null}
+										<AvatarFallback className="bg-secondary text-foreground font-semibold text-sm">
+											{getInitials()}
+										</AvatarFallback>
+									</Avatar>
+								</Button>
 							</>
 						) : (
-							/* Sign Up Button */
-							<button
-								type="button"
-								onClick={handleSignUpClick}
-								className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
-							>
+							<Button type="button" onClick={handleSignUpClick}>
 								Sign up
-							</button>
+							</Button>
 						)}
 					</div>
 				</div>
@@ -139,14 +144,15 @@ export default function Header() {
 							{session?.user?.email}
 						</p>
 					</div>
-					<button
+					<Button
 						type="button"
+						variant="ghost"
+						className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
 						onClick={handleSignOut}
-						className="flex w-full items-center gap-2 p-3 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
 					>
 						<LogOut className="w-4 h-4" />
 						Sign out
-					</button>
+					</Button>
 				</div>
 			)}
 		</>
