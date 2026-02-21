@@ -23,7 +23,7 @@ export default function Header() {
 	};
 
 	const handleNewSearchClick = () => {
-		router.push("/search?new=true");
+		router.push("/search");
 	};
 
 	const handleSignUpClick = () => {

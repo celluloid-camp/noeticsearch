@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
 	integer,
 	jsonb,
@@ -21,3 +22,10 @@ export const subtitleTable = pgTable("subtitles", {
 	raw: jsonb("raw").notNull(),
 	createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const subtitleRelations = relations(subtitleTable, ({ one }) => ({
+	video: one(videoTable, {
+		fields: [subtitleTable.videoId],
+		references: [videoTable.id],
+	}),
+}));

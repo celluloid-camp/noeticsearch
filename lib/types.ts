@@ -13,6 +13,7 @@ export interface Video {
   subtitles: Subtitle[]
   addedDate: Date
   isPublic: boolean
+  canEdit?: boolean
 }
 
 export interface SearchResult {

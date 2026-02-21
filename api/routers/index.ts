@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
+import { searchRouter } from "./search";
 import { videoRouter } from "./video";
 
 export const appRouter = router({
@@ -11,6 +12,7 @@ export const appRouter = router({
 		.input(z.object({}))
 		.output(z.string())
 		.query(() => "yay!"),
+	search: searchRouter,
 	video: videoRouter,
 });
 

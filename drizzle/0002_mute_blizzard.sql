@@ -1,0 +1,1 @@
+ALTER TABLE "search_history" ALTER COLUMN "id" SET DATA TYPE text;

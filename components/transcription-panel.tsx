@@ -300,19 +300,28 @@ export default function TranscriptionPanel({
                   const isMarked = markedSubtitles.has(originalIndex)
 
                   return (
-                    <button
-                      type="button"
+                    <div
                       key={`${subtitle.startTime}-${subtitle.endTime}-${originalIndex}`}
                       ref={(el) => {
                         // Use filteredIndex for refs so scrolling works correctly
                         subtitleRefs.current[filteredIndex] = el
                       }}
                       onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
+                        // Only handle click if not clicking the bookmark button
+                        if ((e.target as HTMLElement).closest('button')) {
+                          return
+                        }
                         handleSubtitleClick(subtitle, e)
                       }}
                       className={`p-3 rounded-lg cursor-pointer transition-all text-xs text-left w-full ${highlightClass} relative group`}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleSubtitleClick(subtitle, e)
+                        }
+                      }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -321,7 +330,10 @@ export default function TranscriptionPanel({
                         </div>
                         <button
                           type="button"
-                          onClick={(e) => toggleMarkSubtitle(originalIndex, e)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleMarkSubtitle(originalIndex, e)
+                          }}
                           className={`shrink-0 p-1 rounded transition-colors ${
                             isMarked
                               ? 'text-yellow-500 hover:text-yellow-600'
@@ -336,7 +348,7 @@ export default function TranscriptionPanel({
                           )}
                         </button>
                       </div>
-                    </button>
+                    </div>
                   )
                 })
               ) : (

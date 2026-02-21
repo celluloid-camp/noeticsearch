@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { userTable } from "./auth";
 
@@ -13,3 +14,10 @@ export const videoTable = pgTable("videos", {
 	isPublic: boolean("is_public").notNull().default(false),
 	createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const videoRelations = relations(videoTable, ({ one }) => ({
+	user: one(userTable, {
+		fields: [videoTable.userId],
+		references: [userTable.id],
+	}),
+}));

@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from '@/components/ui/sidebar'
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar'
 import { Video, Globe, User } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { SearchHistorySidebar } from '@/components/search-history-sidebar'
 
 interface AppLayoutClientProps {
   children: React.ReactNode
@@ -43,34 +44,40 @@ export default function AppLayoutClient({ children }: AppLayoutClientProps) {
                 <SidebarTrigger />
               </div>
             </SidebarHeader>
-            <SidebarContent className="p-0 flex flex-col h-full">
+            <SidebarContent className="p-0 flex flex-col h-full overflow-y-auto">
               {/* Video Filters */}
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={activeTab === 'all'} tooltip="All Videos">
-                    <Link href="/">
-                      <Video className="size-4" />
-                      <span>All Videos</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={activeTab === 'public'} tooltip="Public Videos">
-                    <Link href="/public">
-                      <Globe className="size-4" />
-                      <span>Public Videos</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={activeTab === 'mine'} tooltip="My Videos">
-                    <Link href="/mine">
-                      <User className="size-4" />
-                      <span>My Videos</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
+              <SidebarGroup>
+                <SidebarGroupLabel>Library</SidebarGroupLabel>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={activeTab === 'all'} tooltip="All Videos">
+                      <Link href="/">
+                        <Video className="size-4" />
+                        <span>All Videos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={activeTab === 'public'} tooltip="Public Videos">
+                      <Link href="/public">
+                        <Globe className="size-4" />
+                        <span>Public Videos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={activeTab === 'mine'} tooltip="My Videos">
+                      <Link href="/mine">
+                        <User className="size-4" />
+                        <span>My Videos</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroup>
+
+              {/* Search History */}
+              <SearchHistorySidebar />
             </SidebarContent>
           </Card>
         </Sidebar>

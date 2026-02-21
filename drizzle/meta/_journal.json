@@ -8,6 +8,34 @@
       "when": 1771519882092,
       "tag": "0000_dear_the_initiative",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771598322821,
+      "tag": "0001_narrow_dreaming_celestial",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771598728917,
+      "tag": "0002_mute_blizzard",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771604744867,
+      "tag": "0003_spooky_leech",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771605884191,
+      "tag": "0004_bright_vengeance",
+      "breakpoints": true
     }
   ]
 }

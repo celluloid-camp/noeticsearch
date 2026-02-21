@@ -1,8 +1,12 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { Settings, Trash2 } from 'lucide-react'
 import type { Video, SearchResult } from '@/lib/types'
 import MediaChromePlayer, { type MediaChromePlayerRef } from './media-chrome-player'
+import { Button } from '@/components/ui/button'
+import EditVideoDialog from './edit-video-dialog'
+import DeleteVideoDialog from './delete-video-dialog'
 
 interface VideoPlayerProps {
   video: Video
@@ -10,15 +14,21 @@ interface VideoPlayerProps {
   selectedResult?: SearchResult | null
   onCurrentTimeChange?: (time: number) => void
   playerRef?: React.RefObject<MediaChromePlayerRef>
+  onVideoUpdated?: () => void
+  onVideoDeleted?: () => void
 }
 
 export default function VideoPlayer({ 
   video, 
-  onClose, 
+  onClose: _onClose, 
   selectedResult,
   onCurrentTimeChange,
-  playerRef: externalPlayerRef
+  playerRef: externalPlayerRef,
+  onVideoUpdated,
+  onVideoDeleted
 }: VideoPlayerProps) {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const internalPlayerRef = useRef<MediaChromePlayerRef>(null)
   const playerRef = externalPlayerRef || internalPlayerRef
   const [isPlaying, setIsPlaying] = useState(false)
@@ -29,9 +39,6 @@ export default function VideoPlayer({
 
   // Unified seek handler - handles both pending seeks and selectedResult changes
   useEffect(() => {
-    const player = playerRef.current
-    if (!player) return
-    
     // Get timestamp from selectedResult or pending seek
     const timestamp = selectedResult?.startTime ?? pendingSeekRef.current
     
@@ -40,6 +47,8 @@ export default function VideoPlayer({
       return
     }
     
+    // Capture player ref at effect execution time
+    const player = playerRef.current
     console.log('🎯 Seek requested:', {
       timestamp,
       isPlayerReady,
@@ -48,15 +57,17 @@ export default function VideoPlayer({
     })
     
     // If player is ready, seek immediately
-    if (isPlayerReady) {
+    if (isPlayerReady && player) {
       console.log('✅ Player ready, seeking to:', timestamp)
       // Clear pending seek
       pendingSeekRef.current = null
       
       // Use a delay to ensure video element is fully ready (especially for HLS)
       const seekTimeout = setTimeout(() => {
-        if (playerRef.current && timestamp !== null) {
-          playerRef.current.seekTo(timestamp)
+        // Access ref again inside timeout to get latest value
+        const currentPlayer = playerRef.current
+        if (currentPlayer && timestamp !== null) {
+          currentPlayer.seekTo(timestamp)
           setCurrentTime(timestamp)
           onCurrentTimeChange?.(timestamp)
           
@@ -74,8 +85,8 @@ export default function VideoPlayer({
       console.log('⏳ Player not ready, storing timestamp for later:', timestamp)
       pendingSeekRef.current = timestamp
     }
+    // playerRef is a ref object - refs don't change identity so they don't need to be in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // playerRef.current is a ref and doesn't need to be in dependencies
   }, [selectedResult, isPlayerReady, onCurrentTimeChange])
 
   // Cleanup interval on unmount
@@ -154,13 +165,61 @@ export default function VideoPlayer({
 
             {/* Video Title */}
             <div className="flex flex-col gap-1">
-              <h2 className="text-xl font-bold text-foreground">{video.title}</h2>
-              <p className="text-xs text-muted-foreground">PeerTube Video</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold text-foreground">{video.title}</h2>
+                  <p className="text-xs text-muted-foreground">PeerTube Video</p>
+                </div>
+                {video.canEdit && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsEditDialogOpen(true)}
+                      title="Edit video"
+                    >
+                      <Settings className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      title="Delete video"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      {video.canEdit && (
+        <>
+          <EditVideoDialog
+            video={video}
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSuccess={() => {
+              setIsEditDialogOpen(false)
+              onVideoUpdated?.()
+            }}
+          />
+          <DeleteVideoDialog
+            video={video}
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            onSuccess={() => {
+              setIsDeleteDialogOpen(false)
+              onVideoDeleted?.()
+            }}
+          />
+        </>
+      )}
     </div>
   )
 }

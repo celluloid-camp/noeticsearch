@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, or } from "drizzle-orm";
+import { asc, desc, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { subtitleTable, videoTable } from "@/db/schema";
 import {
@@ -68,7 +68,7 @@ export const videoRouter = router({
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input, ctx }) => {
 			const videoId = parseInt(input.id, 10);
-			if (isNaN(videoId)) {
+			if (Number.isNaN(videoId)) {
 				throw new Error("Invalid video ID");
 			}
 
@@ -102,6 +102,7 @@ export const videoRouter = router({
 				})),
 				addedDate: video.createdAt,
 				isPublic: video.isPublic,
+				canEdit: video.userId === ctx.user?.id || ctx.user?.role === "admin",
 			};
 		}),
 
@@ -118,7 +119,7 @@ export const videoRouter = router({
 			const userId = ctx.user?.id;
 
 			// Build query conditions based on filter
-			let whereCondition;
+			let whereCondition: ReturnType<typeof eq> | ReturnType<typeof or> | undefined;
 			if (filter === "public") {
 				whereCondition = eq(videoTable.isPublic, true);
 			} else if (filter === "mine") {
@@ -159,6 +160,65 @@ export const videoRouter = router({
 			});
 
 			return { videos: transformedVideos };
+		}),
+	delete: protectedProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ input, ctx }) => {
+			const videoId = parseInt(input.id, 10);
+			if (Number.isNaN(videoId)) {
+				throw new Error("Invalid video ID");
+			}
+
+			const [video] = await ctx.db
+				.select()
+				.from(videoTable)
+				.where(eq(videoTable.id, videoId))
+				.limit(1);
+
+			if (!video) {
+				throw new Error("Video not found");
+			}
+
+			// Check if user owns the video or is an admin
+			if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+				throw new Error("You don't have permission to delete this video");
+			}
+
+			await ctx.db
+				.delete(videoTable)
+				.where(eq(videoTable.id, videoId));
+			return { success: true };
+		}),
+	update: protectedProcedure
+		.input(
+			z.object({ id: z.string(), title: z.string(), isPublic: z.boolean() }),
+		)
+		.mutation(async ({ input, ctx }) => {
+			const videoId = parseInt(input.id, 10);
+			if (Number.isNaN(videoId)) {
+				throw new Error("Invalid video ID");
+			}
+
+			const [video] = await ctx.db
+				.select()
+				.from(videoTable)
+				.where(eq(videoTable.id, videoId))
+				.limit(1);
+
+			if (!video) {
+				throw new Error("Video not found");
+			}
+
+			// Check if user owns the video or is an admin
+			if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+				throw new Error("You don't have permission to update this video");
+			}
+
+			await ctx.db
+				.update(videoTable)
+				.set({ title: input.title, isPublic: input.isPublic })
+				.where(eq(videoTable.id, videoId));
+			return { success: true };
 		}),
 });
 
