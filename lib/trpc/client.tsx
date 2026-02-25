@@ -3,6 +3,7 @@
  * Client-side utilities for making type-safe API calls
  */
 
+import type { inferRouterOutputs } from "@trpc/server";
 import { createTRPCContext } from "@trpc/tanstack-react-query";
 import type { AppRouter } from "@/api";
 
@@ -11,4 +12,8 @@ import type { AppRouter } from "@/api";
  * Using @trpc/tanstack-react-query for optimal integration
  */
 export const { TRPCProvider, useTRPC, useTRPCClient } =
-	createTRPCContext<AppRouter>();
+  createTRPCContext<AppRouter>();
+
+export type RouterOutput = inferRouterOutputs<AppRouter>;
+
+export type VideoById = RouterOutput["video"]["getById"];

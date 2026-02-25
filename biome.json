@@ -1,0 +1,75 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": [
+    "./node_modules/ultracite/config/core/biome.jsonc",
+    "./node_modules/ultracite/config/react/biome.jsonc",
+    "./node_modules/ultracite/config/next/biome.jsonc"
+  ],
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "!!**/bath-form.html",
+      "!!**/template",
+      "!!**/loccy.config.json"
+    ]
+  },
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noUnknownAtRules": {
+          "level": "error",
+          "options": {
+            "ignore": ["custom-variant", "theme", "apply", "source"]
+          }
+        },
+        "noAlert": "off",
+        "noArrayIndexKey": "off",
+        "useAwait": "off",
+        "noEmptyBlockStatements": "off",
+        "noAssignInExpressions": "off",
+        "noDocumentCookie": "off",
+        "noExplicitAny": "off",
+        "useIterableCallbackReturn": "off"
+      },
+      "performance": {
+        "noBarrelFile": "off",
+        "noNamespaceImport": "off",
+        "useTopLevelRegex": "off"
+      },
+      "style": {
+        "useFilenamingConvention": "off",
+        "useCollapsedElseIf": "off",
+        "noNestedTernary": "off",
+        "useDefaultSwitchClause": "off",
+        "noParameterAssign": "off",
+        "noDescendingSpecificity": "off",
+        "useForOf": "off",
+        "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "off",
+        "noForEach": "off",
+        "noArguments": "off",
+        "noCommaOperator": "off",
+        "noVoid": "off"
+      },
+      "correctness": {
+        "noNestedComponentDefinitions": "off",
+        "noUndeclaredVariables": "off"
+      },
+      "a11y": {
+        "useFocusableInteractive": "off",
+        "useSemanticElements": "off",
+        "useAltText": "off",
+        "useButtonType": "off",
+        "noSvgWithoutTitle": "off",
+        "noNoninteractiveElementInteractions": "off",
+        "useKeyWithClickEvents": "off",
+        "useAriaPropsForRole": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      }
+    }
+  }
+}

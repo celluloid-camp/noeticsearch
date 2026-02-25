@@ -105,3 +105,27 @@ export function VideoForm() {
 - Always show loading states during form submission
 - Handle errors with `form.setError()` for field-level errors or display error toasts
 - Reset form after successful submission when appropriate
+
+## Linting & Formatting
+
+This project uses **Biome** with **Ultracite** presets for linting and formatting.
+
+### Commands
+- `bun run lint` - Run biome check
+- `bun run lint:fix` - Fix linting issues automatically
+- `bun run format` - Format code
+
+### Configuration
+The biome.json extends Ultracite presets (core, react, next) with custom overrides for project-specific rules.
+
+## Git Hooks
+
+This project uses **Lefthook** for managing git hooks.
+
+### Hooks
+- **pre-commit**: Runs biome check and format
+- **pre-push**: Runs biome check
+
+### Manual Run
+- `bunx lefthook run pre-commit`
+- `bunx lefthook run pre-push`

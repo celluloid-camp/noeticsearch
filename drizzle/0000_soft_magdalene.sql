@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"account_id" text NOT NULL,
@@ -51,22 +53,22 @@ CREATE TABLE "verification" (
 	"updated_at" timestamp
 );
 --> statement-breakpoint
-CREATE TABLE "search_history" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"query" text NOT NULL,
-	"results" jsonb,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "subtitles" (
+CREATE TABLE "captions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"video_id" integer NOT NULL,
-	"language" text NOT NULL,
+	"language" text DEFAULT 'fr' NOT NULL,
 	"text" text NOT NULL,
 	"start_time" real NOT NULL,
 	"end_time" real NOT NULL,
 	"raw" jsonb NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "search_history" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"messages" jsonb,
+	"results" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -75,6 +77,7 @@ CREATE TABLE "videos" (
 	"user_id" text NOT NULL,
 	"external_id" text NOT NULL,
 	"title" text NOT NULL,
+	"description" text,
 	"url" text NOT NULL,
 	"thumbnail" text,
 	"is_public" boolean DEFAULT false NOT NULL,
@@ -83,6 +86,23 @@ CREATE TABLE "videos" (
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "captions" ADD CONSTRAINT "captions_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "search_history" ADD CONSTRAINT "search_history_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subtitles" ADD CONSTRAINT "subtitles_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "videos" ADD CONSTRAINT "videos_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "videos" ADD CONSTRAINT "videos_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "captions_search_index" ON "captions" USING gin ((
+			setweight(
+				to_tsvector(
+					CASE "language"
+						WHEN 'fr' THEN 'french'::regconfig
+						WHEN 'en' THEN 'english'::regconfig
+						ELSE 'simple'::regconfig
+					END,
+					"text"
+				),
+				'A'
+			)
+		));--> statement-breakpoint
+CREATE INDEX "search_index" ON "videos" USING gin ((
+				setweight(to_tsvector('french', "title"), 'A') ||
+				setweight(to_tsvector('french', "description"), 'B')
+		));

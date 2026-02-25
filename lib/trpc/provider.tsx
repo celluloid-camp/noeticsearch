@@ -1,11 +1,7 @@
 "use client";
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
-import {
-	createTRPCClient,
-	httpBatchLink,
-	TRPCClientError,
-} from "@trpc/client";
+import { createTRPCClient, httpBatchLink, TRPCClientError } from "@trpc/client";
 import SuperJSON from "superjson";
 import type { AppRouter } from "@/api";
 import { env } from "@/env";
@@ -15,50 +11,54 @@ import { makeQueryClient } from "./query-client";
 let browserQueryClient: QueryClient | undefined;
 
 function getQueryClient() {
-	if (typeof window === "undefined") {
-		// Server: always make a new query client
-		return makeQueryClient();
-	}
-	// Browser: make a new query client if we don't already have one
-	// This is very important, so we don't re-make a new client if React
-	// suspends during the initial render
-	if (!browserQueryClient) browserQueryClient = makeQueryClient();
-	return browserQueryClient;
+  if (typeof window === "undefined") {
+    // Server: always make a new query client
+    return makeQueryClient();
+  }
+  // Browser: make a new query client if we don't already have one
+  // This is very important, so we don't re-make a new client if React
+  // suspends during the initial render
+  if (!browserQueryClient) {
+    browserQueryClient = makeQueryClient();
+  }
+  return browserQueryClient;
 }
 
 function getUrl() {
-	const base = (() => {
-		if (typeof window !== "undefined") return "";
-		return env.BASE_URL;
-	})();
-	return `${base}/api/trpc`;
+  const base = (() => {
+    if (typeof window !== "undefined") {
+      return "";
+    }
+    return env.BASE_URL;
+  })();
+  return `${base}/api/trpc`;
 }
 export const trpcClient = createTRPCClient<AppRouter>({
-	links: [
-		httpBatchLink({
-			url: getUrl(),
-			transformer: SuperJSON,
-			// You can pass any HTTP headers you wish here
-			async headers() {
-				return {};
-			},
-		}),
-	],
+  links: [
+    httpBatchLink({
+      url: getUrl(),
+      transformer: SuperJSON,
+      // You can pass any HTTP headers you wish here
+      async headers() {
+        return {};
+      },
+    }),
+  ],
 });
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-	const queryClient = getQueryClient();
-	return (
-		<QueryClientProvider client={queryClient}>
-			<TRPCContextProvider trpcClient={trpcClient} queryClient={queryClient}>
-				{children}
-			</TRPCContextProvider>
-		</QueryClientProvider>
-	);
+  const queryClient = getQueryClient();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TRPCContextProvider queryClient={queryClient} trpcClient={trpcClient}>
+        {children}
+      </TRPCContextProvider>
+    </QueryClientProvider>
+  );
 }
 
 export function isTRPCClientError(
-	cause: unknown,
+  cause: unknown
 ): cause is TRPCClientError<AppRouter> {
-	return cause instanceof TRPCClientError;
+  return cause instanceof TRPCClientError;
 }

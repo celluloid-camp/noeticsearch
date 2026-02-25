@@ -7,13 +7,13 @@ import { searchRouter } from "./search";
 import { videoRouter } from "./video";
 
 export const appRouter = router({
-	healthcheck: publicProcedure
-		.meta({ openapi: { method: "GET", path: "/health" } })
-		.input(z.object({}))
-		.output(z.string())
-		.query(() => "yay!"),
-	search: searchRouter,
-	video: videoRouter,
+  healthcheck: publicProcedure
+    .meta({ openapi: { method: "GET", path: "/health" } })
+    .input(z.object({}))
+    .output(z.string())
+    .query(() => "yay!"),
+  search: searchRouter,
+  video: videoRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
-import { Button } from '@/components/ui/button'
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -20,25 +20,25 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { useToast } from '@/hooks/use-toast'
-import { useTRPC } from '@/lib/trpc/client'
-import type { Video } from '@/lib/types'
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import { useTRPC } from "@/lib/trpc/client";
+import type { Video } from "@/lib/types";
 
 const editVideoSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  title: z.string().min(1, "Title is required"),
   isPublic: z.boolean(),
-})
+});
 
-type EditVideoSchema = z.infer<typeof editVideoSchema>
+type EditVideoSchema = z.infer<typeof editVideoSchema>;
 
 interface EditVideoDialogProps {
-  video: Video
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess?: () => void
+  video: Video;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 export default function EditVideoDialog({
@@ -47,9 +47,9 @@ export default function EditVideoDialog({
   onOpenChange,
   onSuccess,
 }: EditVideoDialogProps) {
-  const { toast } = useToast()
-  const api = useTRPC()
-  const queryClient = useQueryClient()
+  const { toast } = useToast();
+  const api = useTRPC();
+  const queryClient = useQueryClient();
 
   const form = useForm<EditVideoSchema>({
     resolver: zodResolver(editVideoSchema),
@@ -57,43 +57,43 @@ export default function EditVideoDialog({
       title: video.title,
       isPublic: video.isPublic,
     },
-  })
+  });
 
   const updateVideo = useMutation(
     api.video.update.mutationOptions({
       onSuccess: () => {
         toast({
-          title: 'Video updated',
-          description: 'The video has been successfully updated.',
-        })
+          title: "Video updated",
+          description: "The video has been successfully updated.",
+        });
         queryClient.invalidateQueries({
-          queryKey: [['video', 'getById'], { input: { id: video.id } }],
-        })
+          queryKey: [["video", "getById"], { input: { id: video.id } }],
+        });
         queryClient.invalidateQueries({
-          queryKey: [['video', 'getAll']],
-        })
-        onSuccess?.()
+          queryKey: [["video", "getAll"]],
+        });
+        onSuccess?.();
       },
       onError: (error) => {
         toast({
-          title: 'Error',
-          description: error.message || 'Failed to update video',
-          variant: 'destructive',
-        })
+          title: "Error",
+          description: error.message || "Failed to update video",
+          variant: "destructive",
+        });
       },
-    }),
-  )
+    })
+  );
 
   const onSubmit = (data: EditVideoSchema) => {
     updateVideo.mutate({
       id: video.id,
       title: data.title,
       isPublic: data.isPublic,
-    })
-  }
+    });
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Video</DialogTitle>
@@ -102,7 +102,7 @@ export default function EditVideoDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <FormField
               control={form.control}
               name="title"
@@ -123,7 +123,7 @@ export default function EditVideoDialog({
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">Public</FormLabel>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Make this video visible to everyone
                     </p>
                   </div>
@@ -138,19 +138,19 @@ export default function EditVideoDialog({
             />
             <DialogFooter>
               <Button
+                onClick={() => onOpenChange(false)}
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateVideo.isPending}>
-                {updateVideo.isPending ? 'Saving...' : 'Save Changes'}
+              <Button disabled={updateVideo.isPending} type="submit">
+                {updateVideo.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

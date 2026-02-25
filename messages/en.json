@@ -1,36 +1,36 @@
 {
-	"common": {
-		"loading": "Loading...",
-		"save": "Save",
-		"cancel": "Cancel",
-		"delete": "Delete",
-		"edit": "Edit",
-		"close": "Close"
-	},
-	"nav": {
-		"allVideos": "All Videos",
-		"publicVideos": "Public Videos",
-		"myVideos": "My Videos",
-		"search": "Search",
-		"import": "Import",
-		"newSearch": "New search",
-		"importVideo": "Import video",
-		"signUp": "Sign up",
-		"signOut": "Sign out"
-	},
-	"search": {
-		"title": "Search Assistant",
-		"placeholder": "Search in video subtitles...",
-		"hint": "Ask me to find words or phrases in your video subtitles.",
-		"searching": "Searching for videos...",
-		"noResults": "Search for videos to see results here"
-	},
-	"video": {
-		"peerTube": "PeerTube Video",
-		"editVideo": "Edit video",
-		"deleteVideo": "Delete video",
-		"notFound": "Video not found",
-		"goBack": "Go Back",
-		"import": "Import video"
-	}
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close"
+  },
+  "nav": {
+    "allVideos": "All Videos",
+    "publicVideos": "Public Videos",
+    "myVideos": "My Videos",
+    "search": "Search",
+    "import": "Import",
+    "newSearch": "New search",
+    "importVideo": "Import video",
+    "signUp": "Sign up",
+    "signOut": "Sign out"
+  },
+  "search": {
+    "title": "Search Assistant",
+    "placeholder": "Search in video subtitles...",
+    "hint": "Ask me to find words or phrases in your video subtitles.",
+    "searching": "Searching for videos...",
+    "noResults": "Search for videos to see results here"
+  },
+  "video": {
+    "peerTube": "PeerTube Video",
+    "editVideo": "Edit video",
+    "deleteVideo": "Delete video",
+    "notFound": "Video not found",
+    "goBack": "Go Back",
+    "import": "Import video"
+  }
 }

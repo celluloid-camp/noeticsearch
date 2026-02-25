@@ -1,0 +1,16 @@
+# lefthook.yml
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      run: bunx biome check .
+    format:
+      run: bunx biome format --write .
+
+pre-push:
+  parallel: true
+  commands:
+    lint:
+      run: bunx biome check .

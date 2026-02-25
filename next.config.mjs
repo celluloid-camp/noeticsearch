@@ -2,12 +2,12 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-	typescript: {
-		ignoreBuildErrors: true,
-	},
-	images: {
-		unoptimized: true,
-	},
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");

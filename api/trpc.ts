@@ -6,49 +6,49 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export async function createTRPCContext(opts: FetchCreateContextFnOptions) {
-	const { req } = opts;
+  const { req } = opts;
 
-	// Get session from Better Auth
-	const session = await auth.api.getSession({
-		headers: req.headers,
-	});
+  // Get session from Better Auth
+  const session = await auth.api.getSession({
+    headers: req.headers,
+  });
 
-	const user = session?.user;
-	return {
-		user,
-		db,
-	};
+  const user = session?.user;
+  return {
+    user,
+    db,
+  };
 }
 
 export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
 
 const t = initTRPC.context<Context>().create({
-	transformer: superjson,
-	errorFormatter: ({ shape, error }) => ({
-		...shape,
-		data: {
-			...shape.data,
-			zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
-		},
-	}),
+  transformer: superjson,
+  errorFormatter: ({ shape, error }) => ({
+    ...shape,
+    data: {
+      ...shape.data,
+      zodError: error.cause instanceof ZodError ? error.cause.flatten() : null,
+    },
+  }),
 });
 
 const isAuthed = t.middleware(({ ctx, next }) => {
-	if (ctx.user === undefined || ctx.user.id === undefined) {
-		throw new TRPCError({ code: "UNAUTHORIZED" });
-	}
-	return next({ ctx: { ...ctx, user: ctx.user } });
+  if (ctx.user === undefined || ctx.user.id === undefined) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
 const isAdmin = t.middleware((opts) => {
-	const { ctx } = opts;
-	if (!ctx.user?.id) {
-		throw new TRPCError({ code: "UNAUTHORIZED" });
-	}
-	if (ctx.user?.role !== "admin") {
-		throw new TRPCError({ code: "FORBIDDEN" });
-	}
-	return opts.next({ ctx: { ...ctx, user: ctx.user } });
+  const { ctx } = opts;
+  if (!ctx.user?.id) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  if (ctx.user?.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+  return opts.next({ ctx: { ...ctx, user: ctx.user } });
 });
 
 /**

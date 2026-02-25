@@ -1,36 +1,36 @@
 {
-	"common": {
-		"loading": "Chargement...",
-		"save": "Enregistrer",
-		"cancel": "Annuler",
-		"delete": "Supprimer",
-		"edit": "Modifier",
-		"close": "Fermer"
-	},
-	"nav": {
-		"allVideos": "Toutes les vidéos",
-		"publicVideos": "Vidéos publiques",
-		"myVideos": "Mes vidéos",
-		"search": "Recherche",
-		"import": "Importer",
-		"newSearch": "Nouvelle recherche",
-		"importVideo": "Importer une vidéo",
-		"signUp": "S'inscrire",
-		"signOut": "Déconnexion"
-	},
-	"search": {
-		"title": "Assistant de recherche",
-		"placeholder": "Rechercher dans les sous-titres...",
-		"hint": "Demandez-moi de trouver des mots ou expressions dans vos sous-titres.",
-		"searching": "Recherche de vidéos...",
-		"noResults": "Recherchez des vidéos pour voir les résultats ici"
-	},
-	"video": {
-		"peerTube": "Vidéo PeerTube",
-		"editVideo": "Modifier la vidéo",
-		"deleteVideo": "Supprimer la vidéo",
-		"notFound": "Vidéo introuvable",
-		"goBack": "Retour",
-		"import": "Importer une vidéo"
-	}
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer"
+  },
+  "nav": {
+    "allVideos": "Toutes les vidéos",
+    "publicVideos": "Vidéos publiques",
+    "myVideos": "Mes vidéos",
+    "search": "Recherche",
+    "import": "Importer",
+    "newSearch": "Nouvelle recherche",
+    "importVideo": "Importer une vidéo",
+    "signUp": "S'inscrire",
+    "signOut": "Déconnexion"
+  },
+  "search": {
+    "title": "Assistant de recherche",
+    "placeholder": "Rechercher dans les sous-titres...",
+    "hint": "Demandez-moi de trouver des mots ou expressions dans vos sous-titres.",
+    "searching": "Recherche de vidéos...",
+    "noResults": "Recherchez des vidéos pour voir les résultats ici"
+  },
+  "video": {
+    "peerTube": "Vidéo PeerTube",
+    "editVideo": "Modifier la vidéo",
+    "deleteVideo": "Supprimer la vidéo",
+    "notFound": "Vidéo introuvable",
+    "goBack": "Retour",
+    "import": "Importer une vidéo"
+  }
 }

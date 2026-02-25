@@ -1,1 +1,0 @@
-ALTER TABLE "search_history" ADD COLUMN "active_stream_id" text;
