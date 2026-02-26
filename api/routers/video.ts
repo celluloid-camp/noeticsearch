@@ -2,9 +2,10 @@ import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { captionsTable, videoTable } from "@/db/schema";
 import {
-  fetchPeerTubeCaptions,
+  computeSpriteUrl,
   fetchPeerTubeVideo,
-  fetchPeerTubeVideoInfo,
+  parsePeerTubeVideoCaptions,
+  resolveAuthorAvatarUrl,
 } from "@/lib/peertube-client";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 
@@ -12,57 +13,64 @@ export const videoRouter = router({
   import: protectedProcedure
     .input(
       z.object({
-        url: z.string().url(),
+        url: z.url(),
         isPublic: z.boolean().default(false),
-        videoId: z.string(),
-        baseUrl: z.string().url(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { url, isPublic, videoId, baseUrl } = input;
+      const { url, isPublic } = input;
       const userId = ctx.user.id;
 
       // Fetch video info from PeerTube using the provided videoId and baseUrl
       const videoInfo = await fetchPeerTubeVideo(url);
 
       // Use the provided videoId as externalId (no need to parse URL)
-      const externalId = videoId;
+      const externalId =
+        videoInfo.videoDetails.shortUUID ||
+        videoInfo.videoDetails.uuid ||
+        videoInfo.videoId;
 
+      // we only keep one caption for now
       // Create video
       const [video] = await ctx.db
         .insert(videoTable)
         .values({
           userId,
           externalId,
+          baseUrl: videoInfo.baseUrl,
           title: videoInfo.title,
           description: videoInfo.description,
           url,
           thumbnail: videoInfo.thumbnail || null,
+          videoDetails: videoInfo.videoDetails,
+          captionList: videoInfo.captions,
+          storyboard: videoInfo.storyboard,
           isPublic,
         })
-        .returning();
+        .returning({
+          id: videoTable.id,
+        });
 
-      const subtitles = await fetchPeerTubeCaptions(baseUrl, videoId);
+      const caption = videoInfo.captions[0].captionData;
+
+      const parsedCaptions = await parsePeerTubeVideoCaptions(caption);
 
       await ctx.db.insert(captionsTable).values(
-        subtitles.map((subtitle) => ({
+        parsedCaptions.map((caption) => ({
           videoId: video.id,
-          language: subtitle.language,
-          text: subtitle.text,
-          startTime: subtitle.startTime,
-          endTime: subtitle.endTime,
-          raw: subtitle.raw,
+          language: caption.language as string,
+          text: caption.text,
+          startTime: caption.startTime,
+          endTime: caption.endTime,
+          raw: JSON.stringify(caption.cue),
+          thumbnail: videoInfo.storyboard
+            ? computeSpriteUrl(videoInfo.storyboard, caption.startTime)
+            : videoInfo.thumbnail,
         }))
       );
 
       return {
-        id: video.id.toString(),
-        title: video.title,
-        url: video.url,
-        thumbnail: video.thumbnail || "/placeholder.svg",
-        subtitles: [], // Empty for now - will be fetched on-demand
-        addedDate: video.createdAt,
-        isPublic: video.isPublic,
+        id: video.id,
       };
     }),
 
@@ -84,38 +92,68 @@ export const videoRouter = router({
         throw new Error("Video not found");
       }
 
-      let author: string | null = null;
-      let authorAvatar: string | null = null;
-      let extendedDescription = video.description ?? "";
-      try {
-        const peertubeInfo = await fetchPeerTubeVideoInfo(video.url);
-        author = peertubeInfo.author;
-        authorAvatar = peertubeInfo.authorAvatar;
-        extendedDescription =
-          peertubeInfo.extendedDescription || peertubeInfo.description || "";
-      } catch (error) {
-        console.warn("Failed to enrich video with PeerTube metadata:", error);
-      }
+      const author = resolveAuthorAvatarUrl(video.videoDetails);
+      const authorAvatar = author
+        ? new URL(author, video.baseUrl).toString()
+        : null;
 
       return {
         id: video.id.toString(),
         title: video.title,
+        description: video.description,
         url: video.url,
         thumbnail: video.thumbnail || "/placeholder.svg",
-        author,
+        author:
+          video.videoDetails.account?.displayName ??
+          video.videoDetails.channel?.displayName ??
+          null,
         authorAvatar,
-        extendedDescription,
         addedDate: video.createdAt,
         isPublic: video.isPublic,
         canEdit: video.userId === ctx.user?.id || ctx.user?.role === "admin",
       };
     }),
   getCaptions: publicProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string(), search: z.string().optional() }))
     .query(async ({ input, ctx }) => {
       const videoId = Number.parseInt(input.id, 10);
       if (Number.isNaN(videoId)) {
         throw new Error("Invalid video ID");
+      }
+
+      const trimmed = input.search?.trim();
+
+      if (trimmed) {
+        const tsQuery = sql`to_tsquery('french', lower(unaccent(${trimmed
+          .split(/\s+/)
+          .filter(Boolean)
+          .join(" | ")})))`;
+
+        const captions = await ctx.db
+          .select({
+            text: captionsTable.text,
+            startTime: captionsTable.startTime,
+            endTime: captionsTable.endTime,
+            headline: sql<string>`ts_headline(
+              'french',
+              ${captionsTable.text},
+              ${tsQuery},
+              'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
+            )`,
+          })
+          .from(captionsTable)
+          .where(
+            sql`${eq(captionsTable.videoId, videoId)} AND to_tsvector('french', lower(unaccent(${captionsTable.text}))) @@ ${tsQuery}`
+          )
+          .orderBy(asc(captionsTable.startTime));
+
+        return captions.map((sub) => ({
+          text: sub.text,
+          headline: sub.headline,
+          timestamp: formatTimestamp(sub.startTime),
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }));
       }
 
       const captions = await ctx.db
@@ -126,6 +164,7 @@ export const videoRouter = router({
 
       return captions.map((sub) => ({
         text: sub.text,
+        headline: null as string | null,
         timestamp: formatTimestamp(sub.startTime),
         startTime: sub.startTime,
         endTime: sub.endTime,

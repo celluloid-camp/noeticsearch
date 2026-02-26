@@ -27,21 +27,21 @@ import type { Subtitle } from "@/lib/types";
 const MATCH_URL = /(https?):\/\/(.*)(\/videos\/watch\/|\/w\/)(.*)/;
 
 interface MediaChromePlayerProps {
-  url: string;
-  playing?: boolean;
   controls?: boolean;
-  subtitles?: Subtitle[];
-  onReady?: () => void;
-  onPlay?: () => void;
   onPause?: () => void;
+  onPlay?: () => void;
   onProgress?: (state: { playedSeconds: number }) => void;
+  onReady?: () => void;
   onSeek?: (seconds: number) => void;
+  playing?: boolean;
+  subtitles?: Subtitle[];
+  url: string;
 }
 
 export interface MediaChromePlayerRef {
-  seekTo: (seconds: number) => void;
   getCurrentTime: () => number;
   getDuration: () => number;
+  seekTo: (seconds: number) => void;
 }
 
 const MediaChromePlayer = forwardRef<

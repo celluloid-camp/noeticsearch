@@ -17,13 +17,13 @@ export default function AppLayoutClient({ children }: AppLayoutClientProps) {
 
   return (
     <SidebarProvider>
-      <div className="flex h-dvh w-full">
+      <div className="flex h-dvh w-full overflow-hidden">
         <MainSidebar />
-        <SidebarInset>
+        <SidebarInset className="overflow-hidden">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
             {isMobile && <SidebarTrigger />}
           </header>
-          <div className="px-4 py-8">{children}</div>
+          <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
         </SidebarInset>
       </div>
     </SidebarProvider>

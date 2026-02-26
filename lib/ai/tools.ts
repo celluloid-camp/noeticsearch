@@ -1,20 +1,19 @@
 import { tool as createTool, type InferUITool } from "ai";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { searchHistoryTable, searchResultTable } from "@/db/schema";
 import { db, getDbErrorMessage } from "../db";
 
 interface CaptionSearchRow {
-  videoId: number;
-  videoTitle: string;
-  videoThumbnail: string | null;
-  videoUrl: string;
-  subtitleId: number;
-  subtitleText: string;
-  startTime: number;
   endTime: number;
   language: string;
   rank: number;
+  startTime: number;
+  subtitleId: number;
+  subtitleText: string;
+  videoId: number;
+  videoThumbnail: string | null;
+  videoTitle: string;
+  videoUrl: string;
 }
 
 // Full output shape for the searchVideoCaptions tool (for documentation / reuse).
@@ -39,17 +38,26 @@ export const searchVideoCaptionsOutputSchema = z.object({
 export const searchVideoCaptions = createTool({
   description: "Search videos in database using captions",
   inputSchema: z.object({
-    keyword: z
-      .string()
+    limit: z
+      .number()
+      .min(1)
+      .max(50)
+      .default(20)
+      .describe("Maximum number of results to return"),
+    keywords: z
+      .array(z.string())
+      .min(1)
       .describe(
-        "Keyword to find in videos captions, pg full-text search based on each caption."
+        "Keywords to search for in video captions. Each keyword is OR-combined using pg full-text search. Provide synonyms or related terms to broaden the search."
       ),
   }),
-  execute: async ({ keyword }) => {
-    const term = keyword.trim();
-    if (!term) {
+  execute: async ({ keywords, limit }) => {
+    const terms = keywords.map((k) => k.trim().toLowerCase()).filter(Boolean);
+    if (terms.length === 0) {
       return [];
     }
+
+    const combined = terms.join(" | ");
 
     try {
       const result = await db.execute(
@@ -65,22 +73,22 @@ export const searchVideoCaptions = createTool({
 							c.start_time,
 							c.end_time,
 							c.language,
-							to_tsvector(
-								CASE c.language
-									WHEN 'fr' THEN 'french'::regconfig
-									WHEN 'en' THEN 'english'::regconfig
-									ELSE 'simple'::regconfig
-								END,
-								unaccent(coalesce(c.text, ''))
-							) AS document,
-							plainto_tsquery(
-								CASE c.language
-									WHEN 'fr' THEN 'french'::regconfig
-									WHEN 'en' THEN 'english'::regconfig
-									ELSE 'simple'::regconfig
-								END,
-								unaccent(${term})
-							) AS query
+						to_tsvector(
+							CASE c.language
+								WHEN 'fr' THEN 'french'::regconfig
+								WHEN 'en' THEN 'english'::regconfig
+								ELSE 'simple'::regconfig
+							END,
+							lower(unaccent(coalesce(c.text, '')))
+						) AS document,
+						to_tsquery(
+							CASE c.language
+								WHEN 'fr' THEN 'french'::regconfig
+								WHEN 'en' THEN 'english'::regconfig
+								ELSE 'simple'::regconfig
+							END,
+							lower(unaccent(${combined}))
+						) AS query
 						FROM captions c
 						INNER JOIN videos v ON v.id = c.video_id
 					),
@@ -116,7 +124,7 @@ export const searchVideoCaptions = createTool({
 						language,
 						rank
 					FROM ranked
-					WHERE row_number <= 5
+					WHERE row_number <= ${limit}
 					ORDER BY video_id ASC, rank DESC, start_time ASC
 				`
       );
@@ -184,73 +192,8 @@ export const searchVideoCaptions = createTool({
   },
 });
 
-export const saveLatestSearchResult = createTool({
-  description: "Persist the latest search results",
-  inputSchema: z.object({
-    searchId: z.string().describe("The search ID to persist the results for"),
-    keyword: z
-      .string()
-      .describe("The search keyword to persist for highlighting"),
-    results: z
-      .array(searchVideoCaptionsOutputSchema)
-      .describe("The results to persist"),
-  }),
-  execute: async ({ searchId, keyword, results }) => {
-    const values = results.flatMap((item) =>
-      item.captions.map((caption) => ({
-        searchId,
-        videoId: item.videoId,
-        captionId: caption.id,
-        accuracy: caption.accuracy,
-        rank: caption.rank,
-      }))
-    );
-
-    try {
-      await db.transaction(async (tx) => {
-        await tx
-          .update(searchHistoryTable)
-          .set({
-            keyword,
-          })
-          .where(eq(searchHistoryTable.id, searchId));
-
-        await tx
-          .delete(searchResultTable)
-          .where(eq(searchResultTable.searchId, searchId));
-
-        if (values.length > 0) {
-          await tx.insert(searchResultTable).values(values);
-        }
-      });
-
-      return {
-        searchId,
-        savedCount: values.length,
-      };
-    } catch (error) {
-      const { message, constraint } = getDbErrorMessage(error);
-      console.error("Failed to persist latest search result:", {
-        message,
-        constraint,
-        originalError: error,
-      });
-
-      return {
-        searchId,
-        savedCount: 0,
-        error: message,
-      };
-    }
-  },
-});
-
 export const tools = {
   searchVideoCaptions,
-  saveLatestSearchResult,
 };
 
 export type SearchVideoCaptionsUITool = InferUITool<typeof searchVideoCaptions>;
-export type SaveLatestSearchResultUITool = InferUITool<
-  typeof saveLatestSearchResult
->;

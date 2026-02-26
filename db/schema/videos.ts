@@ -1,7 +1,13 @@
+import type {
+  Storyboard,
+  VideoCaption,
+  VideoDetails,
+} from "@celluloid/peertube-api/types";
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -21,9 +27,13 @@ export const videoTable = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     url: text("url").notNull(),
+    baseUrl: text("base_url").notNull(),
     thumbnail: text("thumbnail"),
     isPublic: boolean("is_public").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    videoDetails: jsonb("video_details").$type<VideoDetails>().notNull(),
+    captionList: jsonb("caption_list").$type<VideoCaption[]>(),
+    storyboard: jsonb("storyboard").$type<Storyboard>(),
   },
   (table) => [
     index("search_index").using(

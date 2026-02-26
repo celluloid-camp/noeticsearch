@@ -1,9 +1,9 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": [
-    "./node_modules/ultracite/config/core/biome.jsonc",
-    "./node_modules/ultracite/config/react/biome.jsonc",
-    "./node_modules/ultracite/config/next/biome.jsonc"
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/next"
   ],
   "files": {
     "ignoreUnknown": true,

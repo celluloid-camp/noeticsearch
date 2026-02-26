@@ -10,12 +10,12 @@ import type { FindVideosUITool } from "@/lib/ai/tools";
 export type FindVideosUIToolOutput = FindVideosUITool["output"];
 
 interface VideoItem {
+  createdAt?: Date | string;
   id: number | string;
+  isPublic?: boolean;
+  thumbnail?: string | null;
   title: string;
   url: string;
-  thumbnail?: string | null;
-  createdAt?: Date | string;
-  isPublic?: boolean;
 }
 export const SearchVideo = ({ videos }: { videos: FindVideosUIToolOutput }) => {
   // Handle case where videos might be undefined or not an array

@@ -45,6 +45,8 @@ export async function POST(req: Request) {
       userId: z.string(),
       chatId: z.string(),
       language: z.string().default("fr"),
+      filter: z.enum(["public", "mine", "custom"]),
+      videoIds: z.array(z.string()).default([]),
     }),
     instructions: searchPrompt,
     tools,
@@ -52,10 +54,10 @@ export async function POST(req: Request) {
       ...settings,
       instructions:
         settings.instructions +
-        `\nUser context:
+        `\nContexte utilisateur :
 	- User ID: ${options.userId}
 	- Search ID: ${options.chatId}
-	- User language code: ${options.language}
+	- Langue de réponse : français (obligatoire)
 `,
     }),
   });
@@ -67,6 +69,8 @@ export async function POST(req: Request) {
       userId,
       chatId: id,
       language: "fr",
+      filter: "public",
+      videoIds: [],
     },
     generateMessageId: createIdGenerator({
       prefix: "msg",

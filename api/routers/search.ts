@@ -3,7 +3,6 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { searchHistoryTable } from "@/db/schema";
 import { protectedProcedure, router } from "../trpc";
-
 export const searchRouter = router({
   create: protectedProcedure
     .input(
@@ -53,7 +52,7 @@ export const searchRouter = router({
         ),
         columns: {
           id: true,
-          keyword: true,
+          keywords: true,
         },
       });
 
@@ -64,7 +63,10 @@ export const searchRouter = router({
         });
       }
 
-      const keyword = searchHistory.keyword ?? "";
+      const keywords = (searchHistory.keywords ?? [])
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean)
+        .join(" | ");
 
       const raw = await ctx.db.execute(
         sql`
@@ -78,6 +80,7 @@ export const searchRouter = router({
               c.text AS "captionText",
               c.start_time AS "startTime",
               c.end_time AS "endTime",
+              c.thumbnail AS "thumbnail",
               c.language,
               sr.accuracy
             FROM search_result sr
@@ -104,14 +107,14 @@ export const searchRouter = router({
                       WHEN 'en' THEN 'english'::regconfig
                       ELSE 'simple'::regconfig
                     END,
-                    unaccent(coalesce("captionText", '')),
-                    plainto_tsquery(
+                    lower(unaccent(coalesce("captionText", ''))),
+                    to_tsquery(
                       CASE language
                         WHEN 'fr' THEN 'french'::regconfig
                         WHEN 'en' THEN 'english'::regconfig
                         ELSE 'simple'::regconfig
                       END,
-                      unaccent(${keyword})
+                      lower(unaccent(${keywords}))
                     ),
                     'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15'
                   ),
@@ -119,6 +122,8 @@ export const searchRouter = router({
                   "startTime",
                   'endTime',
                   "endTime",
+                  'thumbnail',
+                  "thumbnail",
                   'language',
                   language,
                   'rank',
@@ -163,6 +168,7 @@ export const searchRouter = router({
         videoUrl: string;
         captions: Array<{
           id: number;
+          thumbnail: string | null;
           text: string;
           headline: string;
           startTime: number;

@@ -42,9 +42,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { SearchVideoCaptionsUITool } from "@/lib/ai/tools";
-import { getThumbnailAtTimestamp } from "@/lib/peertube-client";
 import { useTRPC } from "@/lib/trpc/client";
 
 export function SearchChat({
@@ -56,6 +54,10 @@ export function SearchChat({
 }) {
   const api = useTRPC();
   const [input, setInput] = useState("");
+  const { data: captionResults = [], refetch } = useQuery(
+    api.search.captionResults.queryOptions({ id })
+  );
+
   const { messages, sendMessage, status, regenerate } = useChat({
     id,
     messages: initialMessages,
@@ -67,11 +69,9 @@ export function SearchChat({
         return { body: { message: messages.at(-1), id } };
       },
     }),
-  });
-
-  const { data: captionResults = [] } = useQuery({
-    ...api.search.captionResults.queryOptions({ id }),
-    refetchInterval: status === "streaming" ? 1000 : false,
+    onFinish: async () => {
+      refetch();
+    },
   });
 
   const handleSubmit = (message: PromptInputMessage) => {
@@ -97,44 +97,8 @@ export function SearchChat({
       .padStart(2, "0")}`;
   };
 
-  const [hoverThumbnails, setHoverThumbnails] = useState<
-    Record<string, string | null>
-  >({});
-
-  const handleCaptionHover = async (
-    videoUrl: string,
-    videoId: string,
-    timestamp: number
-  ) => {
-    try {
-      const url = new URL(videoUrl);
-      const baseUrl = url.origin;
-      const peerTubeVideoId =
-        url.pathname.split("/").filter(Boolean).pop() ?? "";
-      if (!peerTubeVideoId) {
-        return;
-      }
-      const ts = Math.max(0, Math.floor(timestamp));
-      const preview = await getThumbnailAtTimestamp(
-        baseUrl,
-        peerTubeVideoId,
-        ts
-      );
-      console.log(preview);
-      if (!preview) {
-        return;
-      }
-      setHoverThumbnails((prev) => ({
-        ...prev,
-        [videoId]: preview,
-      }));
-    } catch {
-      // Ignore errors parsing URL or fetching storyboard
-    }
-  };
-
   return (
-    <div className="flex h-[calc(100dvh-7rem)] overflow-hidden">
+    <div className="flex h-full overflow-hidden">
       {/* Central Video Grid */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
@@ -142,87 +106,75 @@ export function SearchChat({
             <div className="flex flex-col gap-4 p-4">
               {captionResults.map((video) => {
                 const videoId = video.videoId.toString();
-                const originalThumbnail =
+                const videoThumbnail =
                   video.videoThumbnail || "/placeholder.svg";
-                const hoverThumbnail = hoverThumbnails[videoId] ?? null;
-                const thumbnail = hoverThumbnail || originalThumbnail;
+
                 const title = video.videoTitle || "Untitled";
                 const captions = video.captions ?? [];
 
                 return (
-                  <div className="flex gap-4" key={videoId}>
+                  <div className="min-w-0" key={videoId}>
                     <Link
-                      aria-label={`Open video: ${title}`}
-                      className="relative aspect-video w-64 shrink-0 overflow-hidden rounded-xl bg-muted sm:w-80"
+                      className="mb-2 inline-block"
                       href={`/video/${videoId}`}
                     >
-                      {thumbnail && thumbnail !== "/placeholder.svg" ? (
-                        <StoryboardImage
-                          alt={title}
-                          className="h-full w-full rounded-xl object-cover"
-                          loading="eager"
-                          src={thumbnail}
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                          <Loader2 className="h-8 w-8 animate-spin" />
-                        </div>
-                      )}
+                      <h3 className="line-clamp-1 font-semibold text-sm hover:underline">
+                        {title}
+                      </h3>
                     </Link>
-                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                      <Link
-                        className="block w-full shrink-0"
-                        href={`/video/${videoId}`}
-                      >
-                        <h3 className="line-clamp-2 font-semibold text-base leading-snug">
-                          {title}
-                        </h3>
-                      </Link>
-                      {captions.length > 0 ? (
-                        <ScrollArea className="mt-3 min-h-0 flex-1 pr-2">
-                          <div className="space-y-1">
-                            {captions.map((caption) => (
-                              <Link
-                                className="block rounded-sm px-1 py-0.5 hover:bg-muted/60"
-                                href={`/video/${videoId}?t=${Math.max(0, Math.floor(caption.startTime))}`}
-                                key={caption.id}
-                                onMouseEnter={() =>
-                                  handleCaptionHover(
-                                    video.videoUrl,
-                                    videoId,
-                                    caption.startTime
-                                  )
-                                }
-                                onMouseLeave={() => {
-                                  setHoverThumbnails((prev) => ({
-                                    ...prev,
-                                    [videoId]: null,
-                                  }));
-                                }}
-                              >
-                                <div className="flex items-start gap-2">
-                                  <span className="inline-flex shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground leading-none">
-                                    {formatTimestamp(caption.startTime)}
-                                  </span>
-                                  {"headline" in caption &&
-                                  typeof caption.headline === "string" ? (
-                                    <span
-                                      className="text-muted-foreground text-xs [&_mark]:rounded [&_mark]:bg-primary/25 [&_mark]:px-0.5 [&_mark]:text-foreground"
-                                      dangerouslySetInnerHTML={{
-                                        __html: caption.headline,
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">
-                                      {caption.text}
-                                    </span>
-                                  )}
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {captions.slice(0, 5).map((caption) => {
+                        const thumbnail = caption.thumbnail ?? videoThumbnail;
+
+                        return (
+                          <Link
+                            className="group shrink-0"
+                            href={`/video/${videoId}?t=${Math.max(0, Math.floor(caption.startTime))}`}
+                            key={caption.id}
+                          >
+                            <div className="relative aspect-video w-44 overflow-hidden rounded-lg bg-muted sm:w-52">
+                              {thumbnail ? (
+                                <StoryboardImage
+                                  alt={`${title} at ${formatTimestamp(caption.startTime)}`}
+                                  className="h-full w-full rounded-lg object-cover transition-opacity group-hover:opacity-80"
+                                  loading="lazy"
+                                  src={thumbnail}
+                                />
+                              ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground">
+                                  <Loader2 className="h-5 w-5 animate-spin" />
                                 </div>
-                              </Link>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      ) : null}
+                              )}
+                              <span className="absolute right-1.5 bottom-1.5 rounded bg-black/70 px-1.5 py-0.5 font-mono text-[11px] text-white leading-none">
+                                {formatTimestamp(caption.startTime)}
+                              </span>
+                            </div>
+                            <div className="mt-1.5 w-44 sm:w-52">
+                              {"headline" in caption &&
+                              typeof caption.headline === "string" ? (
+                                <p
+                                  className="line-clamp-2 text-muted-foreground text-xs leading-snug [&_mark]:rounded [&_mark]:bg-primary/25 [&_mark]:px-0.5 [&_mark]:text-foreground"
+                                  dangerouslySetInnerHTML={{
+                                    __html: caption.headline,
+                                  }}
+                                />
+                              ) : (
+                                <p className="line-clamp-2 text-muted-foreground text-xs leading-snug">
+                                  {caption.text}
+                                </p>
+                              )}
+                            </div>
+                          </Link>
+                        );
+                      })}
+                      {captions.length > 5 && (
+                        <Link
+                          className="flex aspect-video w-44 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground text-sm hover:bg-muted/80 sm:w-52"
+                          href={`/video/${videoId}`}
+                        >
+                          +{captions.length - 5} more
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );
@@ -327,7 +279,7 @@ export function SearchChat({
                                         className="w-28 shrink-0 pl-1 sm:w-32"
                                         key={video.videoId}
                                       >
-                                        <Card className="flex w-full flex-col overflow-hidden border">
+                                        <Card className="flex w-full flex-col gap-0 overflow-hidden border py-0">
                                           <Link
                                             aria-label={`Open ${title}`}
                                             className="relative aspect-video w-full shrink-0 bg-muted"
@@ -357,7 +309,7 @@ export function SearchChat({
                                             </Link>
                                             {captions.length > 0 && (
                                               <p className="text-muted-foreground text-xs">
-                                                {captions.length} captions found
+                                                {captions.length} results found
                                               </p>
                                             )}
                                           </CardContent>

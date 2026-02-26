@@ -1,25 +1,25 @@
 export interface SearchResult {
-  videoId: string;
-  videoTitle: string;
-  videoThumbnail: string;
+  endTime: number;
+  startTime: number;
   subtitle: string;
   timestamp: string;
-  startTime: number;
-  endTime: number;
+  videoId: string;
+  videoThumbnail: string;
+  videoTitle: string;
 }
 
 export interface ChatMessage {
+  content: string;
   id: string;
   role: "user" | "assistant";
-  content: string;
   timestamp: Date;
 }
 
 export interface SavedConversation {
   id: string;
+  isPublic: boolean;
+  name: string;
   query: string;
   results: SearchResult[];
   timestamp: Date;
-  name: string;
-  isPublic: boolean;
 }

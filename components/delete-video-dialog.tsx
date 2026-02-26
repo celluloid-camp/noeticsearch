@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,24 +12,25 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import type { VideoById } from "@/lib/trpc/client";
 import { useTRPC } from "@/lib/trpc/client";
-import type { Video } from "@/lib/types";
 
 interface DeleteVideoDialogProps {
-  video: Video;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
   onSuccess?: () => void;
+  video: VideoById;
 }
 
 export default function DeleteVideoDialog({
   video,
-  open,
-  onOpenChange,
+  children,
   onSuccess,
 }: DeleteVideoDialogProps) {
+  const [open, setOpen] = useState(false);
+  const onOpenChange = setOpen;
   const { toast } = useToast();
   const router = useRouter();
   const api = useTRPC();
@@ -59,10 +61,12 @@ export default function DeleteVideoDialog({
 
   const handleDelete = () => {
     deleteVideo.mutate({ id: video.id });
+    router.push("/");
   };
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
+      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>

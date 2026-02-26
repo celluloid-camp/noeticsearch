@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -24,8 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { useTRPC } from "@/lib/trpc/client";
-import type { Video } from "@/lib/types";
+import { useTRPC, type VideoById } from "@/lib/trpc/client";
 
 const editVideoSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -35,18 +36,18 @@ const editVideoSchema = z.object({
 type EditVideoSchema = z.infer<typeof editVideoSchema>;
 
 interface EditVideoDialogProps {
-  video: Video;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
   onSuccess?: () => void;
+  video: VideoById;
 }
 
 export default function EditVideoDialog({
   video,
-  open,
-  onOpenChange,
+  children,
   onSuccess,
 }: EditVideoDialogProps) {
+  const [open, setOpen] = useState(false);
+  const onOpenChange = setOpen;
   const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -94,6 +95,7 @@ export default function EditVideoDialog({
 
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Video</DialogTitle>

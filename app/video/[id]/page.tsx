@@ -1,12 +1,12 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { MediaProvider } from "media-chrome/react/media-store";
 import { useParams, useRouter } from "next/navigation";
 import { parseAsFloat, useQueryState } from "nuqs";
-import { Suspense, useRef, useState } from "react";
+import { Suspense } from "react";
 import Loading from "@/app/loading";
 import { CaptionsPanel } from "@/components/captions-panel";
-import type { MediaChromePlayerRef } from "@/components/media-chrome-player";
 import VideoPlayer from "@/components/video-player";
 import { useTRPC } from "@/lib/trpc/client";
 
@@ -16,11 +16,8 @@ export default function VideoPage() {
   const [timestampParam] = useQueryState("t", parseAsFloat);
 
   const videoId = params.id as string;
-  const [, setCurrentTime] = useState(0);
-  const playerRef = useRef<MediaChromePlayerRef | null>(null);
 
   const api = useTRPC();
-  const queryClient = useQueryClient();
   const {
     data: video,
     isLoading,
@@ -62,34 +59,23 @@ export default function VideoPage() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-7rem)] gap-4 overflow-hidden">
-      {/* Video Player */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <VideoPlayer
-          onClose={handleBack}
-          onCurrentTimeChange={setCurrentTime}
-          onVideoDeleted={() => {
-            // Navigate away after deletion
-            router.push("/");
-          }}
-          onVideoUpdated={() => {
-            // Refetch video data after update
-            queryClient.invalidateQueries({
-              queryKey: api.video.getById.queryOptions({ id: videoId })
-                .queryKey,
-            });
-          }}
-          playerRef={playerRef as React.RefObject<MediaChromePlayerRef>}
-          video={video}
-        />
-      </div>
+    <MediaProvider>
+      <div className="flex h-[calc(100dvh-7rem)] gap-4 overflow-hidden">
+        {/* Video Player */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <VideoPlayer video={video} />
+        </div>
 
-      {/* Middle: Transcript Panel */}
-      <div className="flex min-h-0 w-96 min-w-0 flex-col overflow-hidden">
-        <Suspense fallback={<Loading />}>
-          <CaptionsPanel timestamp={timestampParam} videoId={videoId} />
-        </Suspense>
+        {/* Middle: Transcript Panel */}
+        <div className="flex min-h-0 w-96 min-w-0 flex-col overflow-hidden">
+          <Suspense fallback={<Loading />}>
+            <CaptionsPanel
+              highlightTimestamp={timestampParam}
+              videoId={videoId}
+            />
+          </Suspense>
+        </div>
       </div>
-    </div>
+    </MediaProvider>
   );
 }

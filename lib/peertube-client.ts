@@ -4,31 +4,36 @@ import {
   listVideoStoryboards,
 } from "@celluloid/peertube-api";
 import { createClient } from "@celluloid/peertube-api/client";
+import type {
+  Storyboard,
+  VideoCaption,
+  VideoDetails,
+} from "@celluloid/peertube-api/types";
 import type { VTTCue } from "media-captions";
 import { parseResponse } from "media-captions";
 
 export interface PeerTubeVideoInfo {
-  title: string;
-  description: string;
-  extendedDescription: string;
   author: string | null;
   authorAvatar: string | null;
-  thumbnail: string;
-  videoId: string;
   baseUrl: string;
+  description: string;
+  extendedDescription: string;
+  thumbnail: string;
+  title: string;
+  videoId: string;
 }
 
 export interface PeerTubeCaptionInfo {
-  language: string;
   fileUrl: string;
+  language: string;
 }
 
 export interface PeerTubeSubtitle {
-  text: string;
-  startTime: number;
   endTime: number;
   language: string;
   raw: VTTCue;
+  startTime: number;
+  text: string;
 }
 
 /**
@@ -60,9 +65,7 @@ export function parsePeerTubeUrl(
 /**
  * Validate and fetch video information from PeerTube using the client library
  */
-export async function fetchPeerTubeVideoInfo(
-  url: string
-): Promise<PeerTubeVideoInfo> {
+export async function fetchPeerTubeVideoDetails(url: string) {
   const parsed = parsePeerTubeUrl(url);
   if (!parsed) {
     throw new Error("Invalid PeerTube URL format");
@@ -78,19 +81,11 @@ export async function fetchPeerTubeVideoInfo(
     });
 
     if (!videoData) {
-      throw new Error("Video not found");
+      throw new Error(`Video not found url: ${url}`);
     }
 
     const title = videoData.name || "Untitled video";
     const description = videoData.description || "";
-    const extendedDescription = videoData.description || "";
-    const author =
-      videoData.account?.displayName ||
-      videoData.account?.name ||
-      videoData.channel?.displayName ||
-      videoData.channel?.name ||
-      null;
-    const authorAvatar = resolveAuthorAvatarUrl(videoData, baseUrl);
 
     // Get thumbnail from thumbnails array (PeerTube >= 8.1) or deprecated thumbnailPath
     let thumbnail = "";
@@ -106,12 +101,10 @@ export async function fetchPeerTubeVideoInfo(
     return {
       title,
       description,
-      extendedDescription,
-      author,
-      authorAvatar,
       thumbnail,
       videoId,
       baseUrl,
+      videoDetails: videoData,
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -121,63 +114,46 @@ export async function fetchPeerTubeVideoInfo(
   }
 }
 
-function resolveAuthorAvatarUrl(
-  videoData: Awaited<ReturnType<typeof getVideo>>["data"],
-  baseUrl: string
+export function resolveAuthorAvatarUrl(
+  videoDetails: VideoDetails
 ): string | null {
-  if (!videoData) {
-    return null;
-  }
-
   const accountAvatar =
-    videoData.account?.avatars?.[0]?.fileUrl ??
-    videoData.account?.avatars?.[0]?.path ??
+    videoDetails.account?.avatars?.[0]?.fileUrl ??
+    videoDetails.account?.avatars?.[0]?.path ??
     null;
   if (accountAvatar) {
-    return toAbsoluteUrl(accountAvatar, baseUrl);
+    return accountAvatar;
   }
 
   const channelAvatar =
-    videoData.channel?.avatars?.[0]?.fileUrl ??
-    videoData.channel?.avatars?.[0]?.path ??
+    videoDetails.channel?.avatars?.[0]?.fileUrl ??
+    videoDetails.channel?.avatars?.[0]?.path ??
     null;
   if (channelAvatar) {
-    return toAbsoluteUrl(channelAvatar, baseUrl);
+    return channelAvatar;
   }
 
   return null;
 }
 
-function toAbsoluteUrl(value: string, baseUrl: string): string {
-  if (value.startsWith("http://") || value.startsWith("https://")) {
-    return value;
-  }
-  return new URL(value, baseUrl).toString();
-}
-
 /**
  * Fetch and parse subtitles from PeerTube video
  */
-export async function fetchPeerTubeCaptions(
-  baseUrl: string,
-  videoId: string
-): Promise<PeerTubeSubtitle[]> {
+export async function parsePeerTubeVideoCaptions(caption: VideoCaption) {
+  if (!caption.fileUrl) {
+    throw new Error("Caption file URL is required");
+  }
   try {
-    const captions = await fetchPeerTubeCaptionList(baseUrl, videoId);
-
-    const caption = captions[0];
     const parsed = await parseResponse(fetch(caption.fileUrl));
 
     // Convert parsed captions to our format
-    const subtitles: PeerTubeSubtitle[] = parsed.cues.map((cue) => ({
+    return parsed.cues.map((cue) => ({
       text: cue.text || "",
       startTime: cue.startTime,
       endTime: cue.endTime,
       language: caption.language || "en",
-      raw: cue,
+      cue,
     }));
-
-    return subtitles;
   } catch (error) {
     // Silently fail for subtitles - they're optional
     console.warn("Failed to fetch subtitles:", error);
@@ -191,7 +167,7 @@ export async function fetchPeerTubeCaptions(
 export async function fetchPeerTubeCaptionList(
   baseUrl: string,
   videoId: string
-): Promise<PeerTubeCaptionInfo[]> {
+) {
   const client = createClient({ baseUrl });
 
   try {
@@ -219,6 +195,7 @@ export async function fetchPeerTubeCaptionList(
 
       return {
         language,
+        captionData: caption,
         fileUrl: caption.fileUrl || "",
       };
     });
@@ -232,16 +209,13 @@ export async function fetchPeerTubeCaptionList(
 /**
  * Fetch complete video information including caption list (metadata only)
  */
-export async function fetchPeerTubeVideo(url: string): Promise<{
-  title: string;
-  description: string;
-  thumbnail: string;
-  videoId: string;
-  baseUrl: string;
-  captions: PeerTubeCaptionInfo[];
-}> {
-  const videoInfo = await fetchPeerTubeVideoInfo(url);
+export async function fetchPeerTubeVideo(url: string) {
+  const videoInfo = await fetchPeerTubeVideoDetails(url);
   const captions = await fetchPeerTubeCaptionList(
+    videoInfo.baseUrl,
+    videoInfo.videoId
+  );
+  const storyboard = await fetchStoryboard(
     videoInfo.baseUrl,
     videoInfo.videoId
   );
@@ -249,87 +223,80 @@ export async function fetchPeerTubeVideo(url: string): Promise<{
   return {
     ...videoInfo,
     captions,
+    storyboard,
   };
 }
 
 /**
- * Get thumbnail URL for a specific timestamp using storyboard
- * Returns the storyboard URL with timestamp parameter if supported,
- * or calculates the position in the sprite
+ * Fetch storyboard metadata for a video. Call once per video,
+ * then use `computeSpriteUrl` for each timestamp.
+ */
+export async function fetchStoryboard(
+  baseUrl: string,
+  videoId: string
+): Promise<Storyboard | null> {
+  const client = createClient({ baseUrl });
+  const { data: storyboardData } = await listVideoStoryboards({
+    client,
+    path: { id: videoId },
+  });
+
+  const storyboard = storyboardData?.storyboards?.[0];
+  if (!storyboard) {
+    return null;
+  }
+
+  return storyboard;
+}
+
+/**
+ * Compute a sprite URL with `#sprite=` fragment for a given timestamp.
+ * Pure function, no network calls.
+ */
+export function computeSpriteUrl(
+  storyboard: Storyboard,
+  timestampSeconds: number
+): string | null {
+  const fileUrl = storyboard.fileUrl ?? storyboard.storyboardPath;
+  const tileW = storyboard.spriteWidth;
+  const tileH = storyboard.spriteHeight;
+  const interval = storyboard.spriteDuration;
+
+  if (!(fileUrl && tileW && tileH && interval) || interval <= 0) {
+    return null;
+  }
+
+  const columns =
+    storyboard.totalWidth && tileW
+      ? Math.floor(storyboard.totalWidth / tileW)
+      : 0;
+  if (columns <= 0) {
+    return null;
+  }
+
+  const totalW = storyboard.totalWidth ?? columns * tileW;
+  const spriteIndex = Math.floor(timestampSeconds / interval);
+  const row = Math.floor(spriteIndex / columns);
+  const col = spriteIndex % columns;
+  const totalH = storyboard.totalHeight ?? (row + 1) * tileH;
+
+  const posX = col * tileW;
+  const posY = row * tileH;
+
+  return `${fileUrl}#sprite=${posX},${posY},${tileW},${tileH},${totalW},${totalH}`;
+}
+
+/**
+ * Convenience wrapper: fetch storyboard + compute sprite URL in one call.
  */
 export async function getThumbnailAtTimestamp(
   baseUrl: string,
   videoId: string,
   timestampSeconds: number
 ): Promise<string | null> {
-  const client = createClient({ baseUrl });
-  const { data: videoData } = await listVideoStoryboards({
-    client,
-    path: { id: videoId },
-  });
-
-  if (!videoData) {
+  const data = await fetchStoryboard(baseUrl, videoId);
+  if (!data) {
     return null;
   }
-
-  const storyboard = videoData.storyboards?.[0];
-  if (!storyboard) {
-    return null;
-  }
-
-  // Storyboard shape can vary between PeerTube versions.
-  // We support both the documented fields and the ones seen in practice.
-  const anyStoryboard = storyboard as {
-    fileUrl?: string;
-    storyboardPath?: string;
-    totalWidth?: number;
-    totalHeight?: number;
-    spriteWidth?: number;
-    spriteHeight?: number;
-    thumbnailWidth?: number;
-    thumbnailHeight?: number;
-    spriteColumns?: number;
-    spriteDuration?: number;
-  };
-
-  const fileUrl = anyStoryboard.fileUrl ?? anyStoryboard.storyboardPath;
-
-  const baseThumbWidth =
-    anyStoryboard.thumbnailWidth ?? anyStoryboard.spriteWidth;
-  const baseThumbHeight =
-    anyStoryboard.thumbnailHeight ?? anyStoryboard.spriteHeight;
-
-  const columnsExplicit = anyStoryboard.spriteColumns;
-  const columnsFromTotal =
-    anyStoryboard.totalWidth && anyStoryboard.spriteWidth
-      ? Math.floor(anyStoryboard.totalWidth / anyStoryboard.spriteWidth)
-      : undefined;
-
-  const columns = columnsExplicit ?? columnsFromTotal ?? 0;
-  const interval = anyStoryboard.spriteDuration ?? 0;
-
-  if (
-    !fileUrl ||
-    typeof baseThumbWidth !== "number" ||
-    typeof baseThumbHeight !== "number" ||
-    columns <= 0 ||
-    interval <= 0
-  ) {
-    return null;
-  }
-
-  const spriteIndex = Math.floor(timestampSeconds / interval);
-  const row = Math.floor(spriteIndex / columns);
-  const col = spriteIndex % columns;
-
-  const posX = col * baseThumbWidth;
-  const posY = row * baseThumbHeight;
-
-  const totalW = anyStoryboard.totalWidth ?? columns * baseThumbWidth;
-  const totalH = anyStoryboard.totalHeight ?? (row + 1) * baseThumbHeight;
-
-  return `${toAbsoluteUrl(
-    fileUrl,
-    baseUrl
-  )}#sprite=${posX},${posY},${baseThumbWidth},${baseThumbHeight},${totalW},${totalH}`;
+  return computeSpriteUrl(data, timestampSeconds);
 }

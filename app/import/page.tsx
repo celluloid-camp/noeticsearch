@@ -26,7 +26,7 @@ import { fetchPeerTubeVideo, parsePeerTubeUrl } from "@/lib/peertube-client";
 import { useTRPC } from "@/lib/trpc/client";
 
 const importVideoSchema = z.object({
-  url: z.string().url("Invalid URL format").min(1, "PeerTube URL is required"),
+  url: z.url("Invalid URL format").min(1, "PeerTube URL is required"),
   isPublic: z.boolean(),
   videoId: z.string().optional(),
   baseUrl: z.string().optional(),
@@ -203,8 +203,6 @@ export default function ImportPage() {
     const video = await importVideo.mutateAsync({
       url: data.url,
       isPublic: data.isPublic,
-      videoId,
-      baseUrl,
     });
     router.push(`/video/${video.id}`);
   };

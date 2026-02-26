@@ -24,6 +24,7 @@ export const captionsTable = pgTable(
     startTime: real("start_time").notNull(),
     endTime: real("end_time").notNull(),
     raw: jsonb("raw").notNull(),
+    thumbnail: text("thumbnail"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
