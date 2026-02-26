@@ -3,6 +3,7 @@ import {
   index,
   integer,
   pgTable,
+  real,
   serial,
   text,
   timestamp,
@@ -25,6 +26,7 @@ export const searchResultTable = pgTable(
     captionId: integer("caption_id")
       .notNull()
       .references(() => captionsTable.id, { onDelete: "cascade" }),
+    accuracy: real("accuracy").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

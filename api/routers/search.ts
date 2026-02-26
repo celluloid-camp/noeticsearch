@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { searchHistoryTable, searchResultTable } from "@/db/schema";
+import { searchHistoryTable } from "@/db/schema";
 import { protectedProcedure, router } from "../trpc";
 
 export const searchRouter = router({
@@ -40,7 +40,11 @@ export const searchRouter = router({
       return searchHistory;
     }),
   captionResults: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(
+      z.object({
+        id: z.string(),
+      })
+    )
     .query(async ({ input, ctx }) => {
       const searchHistory = await ctx.db.query.searchHistoryTable.findFirst({
         where: and(
@@ -49,6 +53,7 @@ export const searchRouter = router({
         ),
         columns: {
           id: true,
+          keyword: true,
         },
       });
 
@@ -59,63 +64,114 @@ export const searchRouter = router({
         });
       }
 
-      const references = await ctx.db.query.searchResultTable.findMany({
-        where: eq(searchResultTable.searchId, input.id),
-        with: {
-          video: true,
-          caption: true,
-        },
-        orderBy: (searchResult, { asc }) => [asc(searchResult.id)],
-      });
+      const keyword = searchHistory.keyword ?? "";
 
-      const grouped = new Map<
-        number,
-        {
-          videoId: number;
-          videoTitle: string;
-          videoThumbnail: string | null;
-          videoUrl: string;
-          captions: Array<{
-            id: number;
-            text: string;
-            startTime: number;
-            endTime: number;
-            language: string;
-            rank: number;
-          }>;
-        }
-      >();
+      const raw = await ctx.db.execute(
+        sql`
+          WITH base AS (
+            SELECT
+              v.id AS "videoId",
+              v.title AS "videoTitle",
+              v.thumbnail AS "videoThumbnail",
+              v.url AS "videoUrl",
+              c.id AS "captionId",
+              c.text AS "captionText",
+              c.start_time AS "startTime",
+              c.end_time AS "endTime",
+              c.language,
+              sr.accuracy
+            FROM search_result sr
+            INNER JOIN captions c ON c.id = sr.caption_id
+            INNER JOIN videos v ON v.id = sr.video_id
+            WHERE sr.search_id = ${input.id}
+          ),
+          grouped AS (
+            SELECT
+              "videoId",
+              "videoTitle",
+              "videoThumbnail",
+              "videoUrl",
+              json_agg(
+                json_build_object(
+                  'id',
+                  "captionId",
+                  'text',
+                  "captionText",
+                  'headline',
+                  ts_headline(
+                    CASE language
+                      WHEN 'fr' THEN 'french'::regconfig
+                      WHEN 'en' THEN 'english'::regconfig
+                      ELSE 'simple'::regconfig
+                    END,
+                    unaccent(coalesce("captionText", '')),
+                    plainto_tsquery(
+                      CASE language
+                        WHEN 'fr' THEN 'french'::regconfig
+                        WHEN 'en' THEN 'english'::regconfig
+                        ELSE 'simple'::regconfig
+                      END,
+                      unaccent(${keyword})
+                    ),
+                    'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15'
+                  ),
+                  'startTime',
+                  "startTime",
+                  'endTime',
+                  "endTime",
+                  'language',
+                  language,
+                  'rank',
+                  0,
+                  'accuracy',
+                  accuracy
+                )
+                ORDER BY "startTime"
+              ) AS captions
+            FROM base
+            GROUP BY "videoId", "videoTitle", "videoThumbnail", "videoUrl"
+          )
+          SELECT
+            coalesce(
+              json_agg(
+                json_build_object(
+                  'videoId',
+                  "videoId",
+                  'videoTitle',
+                  "videoTitle",
+                  'videoThumbnail',
+                  "videoThumbnail",
+                  'videoUrl',
+                  "videoUrl",
+                  'captions',
+                  captions
+                )
+              ),
+              '[]'::json
+            ) AS results
+          FROM grouped;
+        `
+      );
 
-      for (const reference of references) {
-        if (!(reference.video && reference.caption)) {
-          continue;
-        }
-
-        const existing = grouped.get(reference.video.id);
-        const caption = {
-          id: reference.caption.id,
-          text: reference.caption.text,
-          startTime: reference.caption.startTime,
-          endTime: reference.caption.endTime,
-          language: reference.caption.language,
-          rank: 0,
-        };
-
-        if (!existing) {
-          grouped.set(reference.video.id, {
-            videoId: reference.video.id,
-            videoTitle: reference.video.title,
-            videoThumbnail: reference.video.thumbnail ?? null,
-            videoUrl: reference.video.url,
-            captions: [caption],
-          });
-          continue;
-        }
-
-        existing.captions.push(caption);
-      }
-
-      return Array.from(grouped.values());
+      const rows =
+        (raw as unknown as { rows?: { results: unknown }[] }).rows ?? [];
+      const results = (rows[0]?.results as unknown) ?? [];
+      return results as {
+        videoId: number;
+        videoTitle: string;
+        videoThumbnail: string | null;
+        videoUrl: string;
+        captions: Array<{
+          id: number;
+          text: string;
+          headline: string;
+          startTime: number;
+          endTime: number;
+          language: string;
+          rank: number;
+          accuracy: number;
+        }>;
+      }[];
     }),
   list: protectedProcedure.query(async ({ ctx }) => {
     const searchHistories = await ctx.db.query.searchHistoryTable.findMany({

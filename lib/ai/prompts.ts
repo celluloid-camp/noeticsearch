@@ -13,4 +13,7 @@ The tool output is already visible to the user. Your text response should only:
 
 Always combine the previous tool results with the new tool results unless requested to do otherwise.
 
-Never duplicate information that is already shown in the tool UI output.`;
+Never duplicate information that is already shown in the tool UI output.
+
+IMPORTANT: Always reply in the user's language.
+  `;

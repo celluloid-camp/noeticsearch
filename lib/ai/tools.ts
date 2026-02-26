@@ -1,7 +1,7 @@
 import { tool as createTool, type InferUITool } from "ai";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { searchResultTable } from "@/db/schema";
+import { searchHistoryTable, searchResultTable } from "@/db/schema";
 import { db, getDbErrorMessage } from "../db";
 
 interface CaptionSearchRow {
@@ -17,11 +17,21 @@ interface CaptionSearchRow {
   rank: number;
 }
 
-const captionResultSchema = z.object({
+// Full output shape for the searchVideoCaptions tool (for documentation / reuse).
+export const searchVideoCaptionsOutputSchema = z.object({
   videoId: z.number(),
+  videoTitle: z.string(),
+  videoThumbnail: z.string().nullable().optional(),
+  videoUrl: z.string(),
   captions: z.array(
     z.object({
       id: z.number(),
+      text: z.string(),
+      startTime: z.number(),
+      endTime: z.number(),
+      language: z.string(),
+      rank: z.number(),
+      accuracy: z.number(),
     })
   ),
 });
@@ -29,14 +39,14 @@ const captionResultSchema = z.object({
 export const searchVideoCaptions = createTool({
   description: "Search videos in database using captions",
   inputSchema: z.object({
-    query: z
+    keyword: z
       .string()
       .describe(
-        "Text to find in videos captions. Uses language-aware PostgreSQL full-text search based on each caption."
+        "Keyword to find in videos captions, pg full-text search based on each caption."
       ),
   }),
-  execute: async ({ query }) => {
-    const term = query.trim();
+  execute: async ({ keyword }) => {
+    const term = keyword.trim();
     if (!term) {
       return [];
     }
@@ -86,6 +96,7 @@ export const searchVideoCaptions = createTool({
 							end_time,
 							language,
 							ts_rank_cd(document, query) AS rank,
+							query,
 							row_number() OVER (
 								PARTITION BY video_id
 								ORDER BY ts_rank_cd(document, query) DESC, start_time ASC
@@ -112,6 +123,8 @@ export const searchVideoCaptions = createTool({
 
       const rows = ((result as { rows?: unknown[] }).rows ??
         []) as CaptionSearchRow[];
+      const maxRank =
+        rows.reduce((max, row) => (row.rank > max ? row.rank : max), 0) || 0;
       const grouped = new Map<
         number,
         {
@@ -132,6 +145,7 @@ export const searchVideoCaptions = createTool({
 
       for (const row of rows) {
         const existing = grouped.get(row.videoId);
+        const accuracy = maxRank > 0 ? (row.rank / maxRank) * 100 : 0;
         const caption = {
           id: row.subtitleId,
           text: row.subtitleText,
@@ -139,6 +153,7 @@ export const searchVideoCaptions = createTool({
           endTime: row.endTime,
           language: row.language,
           rank: row.rank,
+          accuracy,
         };
 
         if (!existing) {
@@ -170,34 +185,36 @@ export const searchVideoCaptions = createTool({
 });
 
 export const saveLatestSearchResult = createTool({
-  description:
-    "Persist the latest caption-search results by saving only searchId, video IDs and caption IDs.",
+  description: "Persist the latest search results",
   inputSchema: z.object({
-    searchId: z.string(),
-    results: z.array(captionResultSchema),
+    searchId: z.string().describe("The search ID to persist the results for"),
+    keyword: z
+      .string()
+      .describe("The search keyword to persist for highlighting"),
+    results: z
+      .array(searchVideoCaptionsOutputSchema)
+      .describe("The results to persist"),
   }),
-  execute: async ({ searchId, results }) => {
-    const dedup = new Map<number, Set<number>>();
-
-    for (const item of results) {
-      const existing = dedup.get(item.videoId) ?? new Set<number>();
-      for (const subtitle of item.captions) {
-        existing.add(subtitle.id);
-      }
-      dedup.set(item.videoId, existing);
-    }
-
-    const values = Array.from(dedup.entries()).flatMap(
-      ([videoId, captionIds]) =>
-        Array.from(captionIds).map((captionId) => ({
-          searchId,
-          videoId,
-          captionId,
-        }))
+  execute: async ({ searchId, keyword, results }) => {
+    const values = results.flatMap((item) =>
+      item.captions.map((caption) => ({
+        searchId,
+        videoId: item.videoId,
+        captionId: caption.id,
+        accuracy: caption.accuracy,
+        rank: caption.rank,
+      }))
     );
 
     try {
       await db.transaction(async (tx) => {
+        await tx
+          .update(searchHistoryTable)
+          .set({
+            keyword,
+          })
+          .where(eq(searchHistoryTable.id, searchId));
+
         await tx
           .delete(searchResultTable)
           .where(eq(searchResultTable.searchId, searchId));

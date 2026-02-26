@@ -1,4 +1,8 @@
-import { getVideo, getVideoCaptions } from "@celluloid/peertube-api";
+import {
+  getVideo,
+  getVideoCaptions,
+  listVideoStoryboards,
+} from "@celluloid/peertube-api";
 import { createClient } from "@celluloid/peertube-api/client";
 import type { VTTCue } from "media-captions";
 import { parseResponse } from "media-captions";
@@ -246,4 +250,86 @@ export async function fetchPeerTubeVideo(url: string): Promise<{
     ...videoInfo,
     captions,
   };
+}
+
+/**
+ * Get thumbnail URL for a specific timestamp using storyboard
+ * Returns the storyboard URL with timestamp parameter if supported,
+ * or calculates the position in the sprite
+ */
+export async function getThumbnailAtTimestamp(
+  baseUrl: string,
+  videoId: string,
+  timestampSeconds: number
+): Promise<string | null> {
+  const client = createClient({ baseUrl });
+  const { data: videoData } = await listVideoStoryboards({
+    client,
+    path: { id: videoId },
+  });
+
+  if (!videoData) {
+    return null;
+  }
+
+  const storyboard = videoData.storyboards?.[0];
+  if (!storyboard) {
+    return null;
+  }
+
+  // Storyboard shape can vary between PeerTube versions.
+  // We support both the documented fields and the ones seen in practice.
+  const anyStoryboard = storyboard as {
+    fileUrl?: string;
+    storyboardPath?: string;
+    totalWidth?: number;
+    totalHeight?: number;
+    spriteWidth?: number;
+    spriteHeight?: number;
+    thumbnailWidth?: number;
+    thumbnailHeight?: number;
+    spriteColumns?: number;
+    spriteDuration?: number;
+  };
+
+  const fileUrl = anyStoryboard.fileUrl ?? anyStoryboard.storyboardPath;
+
+  const baseThumbWidth =
+    anyStoryboard.thumbnailWidth ?? anyStoryboard.spriteWidth;
+  const baseThumbHeight =
+    anyStoryboard.thumbnailHeight ?? anyStoryboard.spriteHeight;
+
+  const columnsExplicit = anyStoryboard.spriteColumns;
+  const columnsFromTotal =
+    anyStoryboard.totalWidth && anyStoryboard.spriteWidth
+      ? Math.floor(anyStoryboard.totalWidth / anyStoryboard.spriteWidth)
+      : undefined;
+
+  const columns = columnsExplicit ?? columnsFromTotal ?? 0;
+  const interval = anyStoryboard.spriteDuration ?? 0;
+
+  if (
+    !fileUrl ||
+    typeof baseThumbWidth !== "number" ||
+    typeof baseThumbHeight !== "number" ||
+    columns <= 0 ||
+    interval <= 0
+  ) {
+    return null;
+  }
+
+  const spriteIndex = Math.floor(timestampSeconds / interval);
+  const row = Math.floor(spriteIndex / columns);
+  const col = spriteIndex % columns;
+
+  const posX = col * baseThumbWidth;
+  const posY = row * baseThumbHeight;
+
+  const totalW = anyStoryboard.totalWidth ?? columns * baseThumbWidth;
+  const totalH = anyStoryboard.totalHeight ?? (row + 1) * baseThumbHeight;
+
+  return `${toAbsoluteUrl(
+    fileUrl,
+    baseUrl
+  )}#sprite=${posX},${posY},${baseThumbWidth},${baseThumbHeight},${totalW},${totalH}`;
 }

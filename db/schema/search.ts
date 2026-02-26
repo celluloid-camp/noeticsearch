@@ -11,6 +11,7 @@ export const searchHistoryTable = pgTable("search_history", {
     .references(() => userTable.id, { onDelete: "cascade" }),
   messages: jsonb("messages").$type<UIMessage[]>(),
   results: jsonb("results"),
+  keyword: text("keyword"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -32,6 +32,8 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { Shimmer } from "@/components/ai-elements/shimmer";
+import { StoryboardImage } from "@/components/storyboard-image";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Carousel,
@@ -42,24 +44,8 @@ import {
 } from "@/components/ui/carousel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { SearchVideoCaptionsUITool } from "@/lib/ai/tools";
+import { getThumbnailAtTimestamp } from "@/lib/peertube-client";
 import { useTRPC } from "@/lib/trpc/client";
-
-interface CaptionMatch {
-  id: number;
-  text: string;
-  startTime: number;
-  endTime: number;
-  language: string;
-  rank: number;
-}
-
-interface CaptionSearchVideo {
-  videoId: number;
-  videoTitle: string;
-  videoThumbnail?: string | null;
-  videoUrl: string;
-  captions: CaptionMatch[];
-}
 
 export function SearchChat({
   id,
@@ -111,6 +97,42 @@ export function SearchChat({
       .padStart(2, "0")}`;
   };
 
+  const [hoverThumbnails, setHoverThumbnails] = useState<
+    Record<string, string | null>
+  >({});
+
+  const handleCaptionHover = async (
+    videoUrl: string,
+    videoId: string,
+    timestamp: number
+  ) => {
+    try {
+      const url = new URL(videoUrl);
+      const baseUrl = url.origin;
+      const peerTubeVideoId =
+        url.pathname.split("/").filter(Boolean).pop() ?? "";
+      if (!peerTubeVideoId) {
+        return;
+      }
+      const ts = Math.max(0, Math.floor(timestamp));
+      const preview = await getThumbnailAtTimestamp(
+        baseUrl,
+        peerTubeVideoId,
+        ts
+      );
+      console.log(preview);
+      if (!preview) {
+        return;
+      }
+      setHoverThumbnails((prev) => ({
+        ...prev,
+        [videoId]: preview,
+      }));
+    } catch {
+      // Ignore errors parsing URL or fetching storyboard
+    }
+  };
+
   return (
     <div className="flex h-[calc(100dvh-7rem)] overflow-hidden">
       {/* Central Video Grid */}
@@ -120,26 +142,25 @@ export function SearchChat({
             <div className="flex flex-col gap-4 p-4">
               {captionResults.map((video) => {
                 const videoId = video.videoId.toString();
-                const thumbnail = video.videoThumbnail || "/placeholder.svg";
+                const originalThumbnail =
+                  video.videoThumbnail || "/placeholder.svg";
+                const hoverThumbnail = hoverThumbnails[videoId] ?? null;
+                const thumbnail = hoverThumbnail || originalThumbnail;
                 const title = video.videoTitle || "Untitled";
                 const captions = video.captions ?? [];
 
                 return (
-                  <Card
-                    className="flex h-36 flex-row items-stretch gap-0 overflow-hidden py-0 transition-shadow hover:shadow-lg sm:h-44"
-                    key={videoId}
-                  >
+                  <div className="flex gap-4" key={videoId}>
                     <Link
                       aria-label={`Open video: ${title}`}
-                      className="relative h-36 w-56 shrink-0 bg-muted sm:h-44 sm:w-72"
+                      className="relative aspect-video w-64 shrink-0 overflow-hidden rounded-xl bg-muted sm:w-80"
                       href={`/video/${videoId}`}
                     >
                       {thumbnail && thumbnail !== "/placeholder.svg" ? (
-                        <Image
+                        <StoryboardImage
                           alt={title}
-                          className="object-cover"
-                          fill
-                          sizes="288px"
+                          className="h-full w-full rounded-xl object-cover"
+                          loading="eager"
                           src={thumbnail}
                         />
                       ) : (
@@ -148,39 +169,62 @@ export function SearchChat({
                         </div>
                       )}
                     </Link>
-                    <CardContent className="flex min-h-0 min-w-0 flex-1 flex-col items-start justify-start overflow-hidden p-4 text-left">
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                       <Link
                         className="block w-full shrink-0"
                         href={`/video/${videoId}`}
                       >
-                        <h3 className="mb-2 line-clamp-1 font-semibold text-sm">
+                        <h3 className="line-clamp-2 font-semibold text-base leading-snug">
                           {title}
                         </h3>
                       </Link>
                       {captions.length > 0 ? (
-                        <ScrollArea className="min-h-0 w-full flex-1 pr-2">
+                        <ScrollArea className="mt-3 min-h-0 flex-1 pr-2">
                           <div className="space-y-1">
                             {captions.map((caption) => (
                               <Link
-                                className="block rounded-sm px-1 py-1 hover:bg-muted/60"
+                                className="block rounded-sm px-1 py-0.5 hover:bg-muted/60"
                                 href={`/video/${videoId}?t=${Math.max(0, Math.floor(caption.startTime))}`}
                                 key={caption.id}
+                                onMouseEnter={() =>
+                                  handleCaptionHover(
+                                    video.videoUrl,
+                                    videoId,
+                                    caption.startTime
+                                  )
+                                }
+                                onMouseLeave={() => {
+                                  setHoverThumbnails((prev) => ({
+                                    ...prev,
+                                    [videoId]: null,
+                                  }));
+                                }}
                               >
                                 <div className="flex items-start gap-2">
                                   <span className="inline-flex shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground leading-none">
                                     {formatTimestamp(caption.startTime)}
                                   </span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {caption.text}
-                                  </span>
+                                  {"headline" in caption &&
+                                  typeof caption.headline === "string" ? (
+                                    <span
+                                      className="text-muted-foreground text-xs [&_mark]:rounded [&_mark]:bg-primary/25 [&_mark]:px-0.5 [&_mark]:text-foreground"
+                                      dangerouslySetInnerHTML={{
+                                        __html: caption.headline,
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">
+                                      {caption.text}
+                                    </span>
+                                  )}
                                 </div>
                               </Link>
                             ))}
                           </div>
                         </ScrollArea>
                       ) : null}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -256,7 +300,7 @@ export function SearchChat({
                           const toolOutput = part.output as
                             | SearchVideoCaptionsUITool["output"]
                             | undefined;
-                          const captionVideos: CaptionSearchVideo[] =
+                          const captionVideos: SearchVideoCaptionsUITool["output"] =
                             Array.isArray(toolOutput) ? toolOutput : [];
                           return (
                             <div className="w-full" key={`${message.id}-${i}`}>
@@ -276,6 +320,7 @@ export function SearchChat({
                                       "/placeholder.svg";
                                     const title =
                                       video.videoTitle || "Untitled";
+                                    const captions = video.captions ?? [];
 
                                     return (
                                       <CarouselItem
@@ -310,6 +355,11 @@ export function SearchChat({
                                             >
                                               {title}
                                             </Link>
+                                            {captions.length > 0 && (
+                                              <p className="text-muted-foreground text-xs">
+                                                {captions.length} captions found
+                                              </p>
+                                            )}
                                           </CardContent>
                                         </Card>
                                       </CarouselItem>
@@ -344,6 +394,13 @@ export function SearchChat({
                 })}
               </Fragment>
             ))}
+            {status === "streaming" && (
+              <div className="mt-2">
+                <Shimmer className="text-xs" duration={3} spread={3}>
+                  Searching...
+                </Shimmer>
+              </div>
+            )}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>

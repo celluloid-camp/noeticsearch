@@ -54,6 +54,7 @@
     "m3u8-parser": "^7.2.0",
     "media-captions": "^0.0.18",
     "media-chrome": "^4.17.2",
+    "motion": "^12.34.3",
     "nanoid": "^5.1.6",
     "next": "16.0.10",
     "next-intl": "^4.8.3",

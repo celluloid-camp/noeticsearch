@@ -56,8 +56,7 @@ export async function POST(req: Request) {
 	- User ID: ${options.userId}
 	- Search ID: ${options.chatId}
 	- User language code: ${options.language}
-
-	Reply only in the user's language.`,
+`,
     }),
   });
 
