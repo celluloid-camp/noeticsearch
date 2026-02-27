@@ -11,16 +11,20 @@ import {
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Card, CardHeader } from "./ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { ScrollArea } from "./ui/scroll-area";
+import { Skeleton } from "./ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 interface CaptionsPanelProps {
   highlightTimestamp?: number | null;
@@ -28,6 +32,7 @@ interface CaptionsPanelProps {
 }
 
 export type Caption = RouterOutput["video"]["getCaptions"][number];
+const PARAGRAPH_BREAK_GAP_SECONDS = 0.4;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -40,8 +45,10 @@ export function CaptionsPanel({
   highlightTimestamp,
 }: CaptionsPanelProps) {
   const api = useTRPC();
-  const subtitleRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const subtitleRefs = useRef<Record<number, HTMLSpanElement | null>>({});
   const [autoScroll, setAutoScroll] = useState(true);
+  const [isParagraphLayout, setIsParagraphLayout] = useState(true);
+  const [layoutSwitchKey, setLayoutSwitchKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -69,7 +76,10 @@ export function CaptionsPanel({
     api.video.getCaptions.queryOptions({ id: videoId })
   );
 
-  const { data: searchResults } = useQuery({
+  const { data: chapters = [] } = useQuery(
+    api.video.getChapters.queryOptions({ id: videoId })
+  );
+  const { data: searchResults, isFetching: isFetchingSearch } = useQuery({
     ...api.video.getCaptions.queryOptions({
       id: videoId,
       search: debouncedSearch,
@@ -78,6 +88,26 @@ export function CaptionsPanel({
   });
 
   const captions = isSearching ? (searchResults ?? []) : allCaptions;
+  const useParagraphLayout = isParagraphLayout && !isSearching;
+  const chapterByCaptionIndex = useMemo(() => {
+    if (captions.length === 0 || chapters.length === 0) {
+      return captions.map(() => null);
+    }
+
+    let chapterIndex = 0;
+    return captions.map((caption) => {
+      while (
+        chapterIndex + 1 < chapters.length &&
+        chapters[chapterIndex + 1].timecode <= caption.startTime
+      ) {
+        chapterIndex += 1;
+      }
+      if (chapters[chapterIndex].timecode <= caption.startTime) {
+        return chapters[chapterIndex];
+      }
+      return null;
+    });
+  }, [captions, chapters]);
 
   // Index from URL timestamp param (initial scroll target, based on allCaptions)
   const targetCaptionIndex = useMemo(() => {
@@ -128,6 +158,11 @@ export function CaptionsPanel({
 
   // Auto-scroll as playback progresses
   const prevCaptionIndexRef = useRef(-1);
+  const currentCaptionIndexRef = useRef(-1);
+  useEffect(() => {
+    currentCaptionIndexRef.current = currentCaptionIndex;
+  }, [currentCaptionIndex]);
+
   useEffect(() => {
     if (
       !autoScroll ||
@@ -142,6 +177,21 @@ export function CaptionsPanel({
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [autoScroll, currentCaptionIndex]);
+
+  // Keep the active caption centered when switching layouts.
+  useEffect(() => {
+    const activeIndex = currentCaptionIndexRef.current;
+    if (layoutSwitchKey === 0 || activeIndex < 0) {
+      return;
+    }
+    const id = setTimeout(() => {
+      const el = subtitleRefs.current[activeIndex];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, [layoutSwitchKey]);
 
   const handleSubtitleClick = (
     caption: Caption,
@@ -176,6 +226,16 @@ export function CaptionsPanel({
             >
               Auto-scroll
             </DropdownMenuCheckboxItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={isParagraphLayout}
+              onCheckedChange={(checked) => {
+                setIsParagraphLayout(checked === true);
+                setLayoutSwitchKey((current) => current + 1);
+              }}
+            >
+              Paragraph layout
+            </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
@@ -204,68 +264,175 @@ export function CaptionsPanel({
         </InputGroup>
       </div>
       <ScrollArea className="min-h-0 flex-1 bg-secondary p-0">
-        {captions.length > 0 ? (
-          <div className="py-4">
-            {captions.map((caption, index) => {
-              const allIndex = isSearching
-                ? allCaptions.findIndex(
-                    (c) =>
-                      c.startTime === caption.startTime &&
-                      c.endTime === caption.endTime
-                  )
-                : index;
-
-              return (
-                <div key={`${caption.startTime}-${caption.endTime}`}>
-                  <button
-                    className="group flex w-full cursor-pointer items-start gap-2 px-4 py-2 text-left text-xs transition-colors data-highlight:bg-amber-500/10 data-selected:bg-primary/10"
-                    data-highlight={
-                      allIndex === targetCaptionIndex || undefined
-                    }
-                    data-selected={
-                      (allIndex === currentCaptionIndex &&
-                        allIndex !== targetCaptionIndex) ||
-                      undefined
-                    }
-                    onClick={(e) => {
-                      handleSubtitleClick(caption, e);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSubtitleClick(caption, e);
-                      }
-                    }}
-                    ref={(el) => {
-                      subtitleRefs.current[allIndex] = el;
-                    }}
-                    tabIndex={0}
-                    type="button"
-                  >
-                    <p className="mb-1 font-mono text-[10px] opacity-75 group-data-highlight:text-amber-600 group-data-selected:text-primary">
-                      {formatTime(caption.startTime)}
-                    </p>
-
-                    <div className="flex w-6 shrink-0 justify-center pt-0.5">
-                      <div className="size-2 shrink-0 rounded-full bg-muted-foreground group-data-highlight:bg-amber-500 group-data-selected:bg-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      {caption.headline ? (
-                        <p
-                          className="line-clamp-3 text-xs leading-snug [&_mark]:rounded-sm [&_mark]:bg-amber-200 [&_mark]:px-0.5 dark:[&_mark]:bg-amber-800"
-                          dangerouslySetInnerHTML={{ __html: caption.headline }}
-                        />
-                      ) : (
-                        <p className="line-clamp-3 text-xs leading-snug group-data-highlight:text-amber-900 group-data-selected:text-foreground dark:group-data-highlight:text-amber-100">
-                          {caption.text}
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                </div>
-              );
-            })}
+        {isSearching && isFetchingSearch ? (
+          <div className="space-y-2 px-4 py-4">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div className="space-y-1.5" key={`search-skeleton-${i}`}>
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
           </div>
+        ) : captions.length > 0 ? (
+          useParagraphLayout ? (
+            <div className="px-4 py-4 text-sm leading-relaxed">
+              {captions.map((caption, index) => {
+                const allIndex = isSearching
+                  ? allCaptions.findIndex(
+                      (c) =>
+                        c.startTime === caption.startTime &&
+                        c.endTime === caption.endTime
+                    )
+                  : index;
+                const previousCaption = captions[index - 1];
+                const gapFromPrevious = previousCaption
+                  ? Math.max(0, caption.startTime - previousCaption.endTime)
+                  : 0;
+                const previousText = previousCaption?.text.trim() ?? "";
+                const previousEndsWithComma = /[,;:]$/.test(previousText);
+                const previousEndsWithSentence = /[.!?]$/.test(previousText);
+                const needsParagraphBreak =
+                  index > 0 && gapFromPrevious >= PARAGRAPH_BREAK_GAP_SECONDS;
+                const chapter = chapterByCaptionIndex[index];
+                const previousChapter = chapterByCaptionIndex[index - 1];
+                const showChapterTitle =
+                  Boolean(chapter?.title) &&
+                  chapter?.title !== previousChapter?.title;
+                const inlineSpacingClass =
+                  index === 0 || needsParagraphBreak || showChapterTitle
+                    ? ""
+                    : previousEndsWithComma
+                      ? "ml-0"
+                      : previousEndsWithSentence || gapFromPrevious >= 0.45
+                        ? "ml-px"
+                        : "ml-0";
+
+                return (
+                  <span key={`${caption.startTime}-${caption.endTime}`}>
+                    {showChapterTitle && (
+                      <div className="relative my-3 text-center before:absolute before:inset-x-0 before:top-1/2 before:h-px before:-translate-y-1/2 before:bg-border">
+                        <span className="relative z-10 bg-secondary px-2 font-medium text-muted-foreground text-sm">
+                          {chapter?.title}
+                        </span>
+                      </div>
+                    )}
+                    {needsParagraphBreak && (
+                      <span aria-hidden className="block h-3" />
+                    )}
+                    <Tooltip delayDuration={1000}>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={cn(
+                            "group inline cursor-pointer rounded-sm border border-transparent px-0 py-0.5 leading-snug transition-colors hover:border-primary data-selected:border-primary/40 data-highlight:bg-amber-500/20 data-selected:bg-primary/15",
+                            inlineSpacingClass
+                          )}
+                          data-highlight={
+                            allIndex === targetCaptionIndex || undefined
+                          }
+                          data-selected={
+                            (allIndex === currentCaptionIndex &&
+                              allIndex !== targetCaptionIndex) ||
+                            undefined
+                          }
+                          onClick={(e) => {
+                            handleSubtitleClick(caption, e);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSubtitleClick(caption, e);
+                            }
+                          }}
+                          ref={(el) => {
+                            subtitleRefs.current[allIndex] = el;
+                          }}
+                          role="button"
+                          tabIndex={0}
+                        >
+                          <span
+                            className="inline group-data-highlight:text-amber-900 group-data-selected:text-foreground dark:group-data-highlight:text-amber-100 [&_mark]:rounded-sm [&_mark]:bg-amber-200 [&_mark]:px-0.5 dark:[&_mark]:bg-amber-800"
+                            dangerouslySetInnerHTML={{
+                              __html: caption.headline ?? caption.text,
+                            }}
+                          />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {formatTime(caption.startTime)}
+                      </TooltipContent>
+                    </Tooltip>
+                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-2">
+              {captions.map((caption, index) => {
+                const allIndex = isSearching
+                  ? allCaptions.findIndex(
+                      (c) =>
+                        c.startTime === caption.startTime &&
+                        c.endTime === caption.endTime
+                    )
+                  : index;
+                const chapter = chapterByCaptionIndex[index];
+                const previousChapter = chapterByCaptionIndex[index - 1];
+                const showChapterTitle =
+                  Boolean(chapter?.title) &&
+                  chapter?.title !== previousChapter?.title;
+
+                return (
+                  <div
+                    className="px-2"
+                    key={`${caption.startTime}-${caption.endTime}`}
+                  >
+                    {showChapterTitle && (
+                      <div className="relative my-3 text-center before:absolute before:inset-x-0 before:top-1/2 before:h-px before:-translate-y-1/2 before:bg-border">
+                        <span className="relative z-10 bg-secondary px-2 font-medium text-muted-foreground text-sm">
+                          {chapter?.title}
+                        </span>
+                      </div>
+                    )}
+                    <span
+                      className="group flex cursor-pointer items-start gap-2 rounded-sm border border-transparent px-2 py-1.5 text-sm leading-snug transition-colors hover:border-primary data-selected:border-primary/40 data-highlight:bg-amber-500/10 data-selected:bg-primary/10"
+                      data-highlight={
+                        allIndex === targetCaptionIndex || undefined
+                      }
+                      data-selected={
+                        (allIndex === currentCaptionIndex &&
+                          allIndex !== targetCaptionIndex) ||
+                        undefined
+                      }
+                      onClick={(e) => {
+                        handleSubtitleClick(caption, e);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleSubtitleClick(caption, e);
+                        }
+                      }}
+                      ref={(el) => {
+                        subtitleRefs.current[allIndex] = el;
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <span className="w-10 shrink-0 font-mono text-[10px] opacity-75 group-data-highlight:text-amber-600 group-data-selected:text-primary">
+                        {formatTime(caption.startTime)}
+                      </span>
+                      <span
+                        className="group-data-highlight:text-amber-900 group-data-selected:text-foreground dark:group-data-highlight:text-amber-100 [&_mark]:rounded-sm [&_mark]:bg-amber-200 [&_mark]:px-0.5 dark:[&_mark]:bg-amber-800"
+                        dangerouslySetInnerHTML={{
+                          __html: caption.headline ?? caption.text,
+                        }}
+                      />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
           <div className="py-8 text-center text-muted-foreground text-sm">
             {isSearching ? "No matching captions" : "No subtitles available"}

@@ -1,6 +1,7 @@
 import {
   getVideo,
   getVideoCaptions,
+  getVideoChapters,
   listVideoStoryboards,
 } from "@celluloid/peertube-api";
 import { createClient } from "@celluloid/peertube-api/client";
@@ -219,11 +220,13 @@ export async function fetchPeerTubeVideo(url: string) {
     videoInfo.baseUrl,
     videoInfo.videoId
   );
+  const chapters = await fetchChapters(videoInfo.baseUrl, videoInfo.videoId);
 
   return {
     ...videoInfo,
     captions,
     storyboard,
+    chapters,
   };
 }
 
@@ -247,6 +250,27 @@ export async function fetchStoryboard(
   }
 
   return storyboard;
+}
+
+export async function fetchChapters(baseUrl: string, videoId: string) {
+  const client = createClient({ baseUrl });
+  const { data: chaptersData } = await getVideoChapters({
+    client,
+    path: { id: videoId },
+  });
+
+  if (!chaptersData?.chapters) {
+    return [];
+  }
+  return (
+    chaptersData.chapters as {
+      title?: string;
+      timecode?: number;
+    }[]
+  ).map((chapter) => ({
+    title: chapter.title || "",
+    timecode: chapter.timecode || 0,
+  }));
 }
 
 /**

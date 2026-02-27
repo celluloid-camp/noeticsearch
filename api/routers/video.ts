@@ -1,6 +1,7 @@
 import { asc, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { captionsTable, videoTable } from "@/db/schema";
+import { chaptersTable } from "@/db/schema/chapters";
 import {
   computeSpriteUrl,
   fetchPeerTubeVideo,
@@ -21,57 +22,74 @@ export const videoRouter = router({
       const { url, isPublic } = input;
       const userId = ctx.user.id;
 
-      // Fetch video info from PeerTube using the provided videoId and baseUrl
-      const videoInfo = await fetchPeerTubeVideo(url);
+      try {
+        // Fetch video info from PeerTube using the provided videoId and baseUrl
+        const videoInfo = await fetchPeerTubeVideo(url);
 
-      // Use the provided videoId as externalId (no need to parse URL)
-      const externalId =
-        videoInfo.videoDetails.shortUUID ||
-        videoInfo.videoDetails.uuid ||
-        videoInfo.videoId;
+        // Use the provided videoId as externalId (no need to parse URL)
+        const externalId =
+          videoInfo.videoDetails.shortUUID ||
+          videoInfo.videoDetails.uuid ||
+          videoInfo.videoId;
 
-      // we only keep one caption for now
-      // Create video
-      const [video] = await ctx.db
-        .insert(videoTable)
-        .values({
-          userId,
-          externalId,
-          baseUrl: videoInfo.baseUrl,
-          title: videoInfo.title,
-          description: videoInfo.description,
-          url,
-          thumbnail: videoInfo.thumbnail || null,
-          videoDetails: videoInfo.videoDetails,
-          captionList: videoInfo.captions,
-          storyboard: videoInfo.storyboard,
-          isPublic,
-        })
-        .returning({
-          id: videoTable.id,
-        });
+        // we only keep one caption for now
+        // Create video
+        const [video] = await ctx.db
+          .insert(videoTable)
+          .values({
+            userId,
+            externalId,
+            baseUrl: videoInfo.baseUrl,
+            title: videoInfo.title,
+            description: videoInfo.description,
+            url,
+            thumbnail: videoInfo.thumbnail || null,
+            videoDetails: videoInfo.videoDetails,
+            captionList: videoInfo.captions,
+            storyboard: videoInfo.storyboard,
+            isPublic,
+          })
+          .returning({
+            id: videoTable.id,
+          });
 
-      const caption = videoInfo.captions[0].captionData;
+        const caption = videoInfo.captions[0].captionData;
 
-      const parsedCaptions = await parsePeerTubeVideoCaptions(caption);
+        const parsedCaptions = await parsePeerTubeVideoCaptions(caption);
 
-      await ctx.db.insert(captionsTable).values(
-        parsedCaptions.map((caption) => ({
-          videoId: video.id,
-          language: caption.language as string,
-          text: caption.text,
-          startTime: caption.startTime,
-          endTime: caption.endTime,
-          raw: JSON.stringify(caption.cue),
-          thumbnail: videoInfo.storyboard
-            ? computeSpriteUrl(videoInfo.storyboard, caption.startTime)
-            : videoInfo.thumbnail,
-        }))
-      );
+        await ctx.db.insert(captionsTable).values(
+          parsedCaptions.map((caption) => ({
+            videoId: video.id,
+            language: caption.language as string,
+            text: caption.text,
+            startTime: caption.startTime,
+            endTime: caption.endTime,
+            raw: JSON.stringify(caption.cue),
+            thumbnail: videoInfo.storyboard
+              ? computeSpriteUrl(videoInfo.storyboard, caption.startTime)
+              : videoInfo.thumbnail,
+          }))
+        );
 
-      return {
-        id: video.id,
-      };
+        const chapters = videoInfo.chapters;
+        if (chapters.length > 0) {
+          await ctx.db.insert(chaptersTable).values(
+            chapters.map((chapter) => ({
+              videoId: video.id,
+              language: "fr", // TODO: get language from video details
+              title: chapter.title,
+              timecode: chapter.timecode,
+            }))
+          );
+        }
+
+        return {
+          id: video.id,
+        };
+      } catch (error) {
+        console.error(error);
+        throw new Error("Failed to import video");
+      }
     }),
 
   getById: publicProcedure
@@ -112,6 +130,26 @@ export const videoRouter = router({
         isPublic: video.isPublic,
         canEdit: video.userId === ctx.user?.id || ctx.user?.role === "admin",
       };
+    }),
+
+  getChapters: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const videoId = Number.parseInt(input.id, 10);
+      if (Number.isNaN(videoId)) {
+        throw new Error("Invalid video ID");
+      }
+
+      const chapters = await ctx.db
+        .select({
+          title: chaptersTable.title,
+          timecode: chaptersTable.timecode,
+        })
+        .from(chaptersTable)
+        .where(eq(chaptersTable.videoId, videoId))
+        .orderBy(asc(chaptersTable.timecode));
+
+      return chapters;
     }),
   getCaptions: publicProcedure
     .input(z.object({ id: z.string(), search: z.string().optional() }))

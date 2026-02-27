@@ -60,14 +60,14 @@ export default function VideoPage() {
 
   return (
     <MediaProvider>
-      <div className="flex h-[calc(100dvh-7rem)] gap-4 overflow-hidden">
+      <div className="flex h-full gap-4 overflow-hidden">
         {/* Video Player */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <VideoPlayer video={video} />
         </div>
 
         {/* Middle: Transcript Panel */}
-        <div className="flex min-h-0 w-96 min-w-0 flex-col overflow-hidden">
+        <div className="mx-4 flex min-h-0 w-1/3 min-w-0 flex-col overflow-hidden py-6">
           <Suspense fallback={<Loading />}>
             <CaptionsPanel
               highlightTimestamp={timestampParam}
