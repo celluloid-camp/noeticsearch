@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Trash2 } from "lucide-react";
+import { PlusIcon, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -75,8 +75,19 @@ export function SearchHistorySidebar() {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Recent Searches</SidebarGroupLabel>
+      <SidebarGroupLabel>Searches</SidebarGroupLabel>
       <SidebarGroupContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild size="sm">
+              <Link href="/search">
+                <PlusIcon className="size-4" />
+                <span>New search</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
         {isLoadingSearches ? (
           <div className="space-y-2 px-2">
             <Skeleton className="h-8 w-full" />
@@ -87,24 +98,19 @@ export function SearchHistorySidebar() {
           <SidebarMenu>
             {searchHistories.map((search) => {
               const isActive = pathname === `/search/${search.id}`;
-              const searchDate = new Date(search.createdAt);
-              const formattedDate = searchDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-
               return (
                 <SidebarMenuItem key={search.id}>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive}
-                    tooltip={formattedDate}
+                    tooltip={search.title ?? ""}
                   >
                     <Link href={`/search/${search.id}`}>
-                      <Search className="size-4" />
-                      <span className="truncate">{formattedDate}</span>
+                      {search.title ? (
+                        <span className="truncate">{search.title}</span>
+                      ) : (
+                        <Skeleton className="h-4 w-24" />
+                      )}
                     </Link>
                   </SidebarMenuButton>
                   <SidebarMenuAction

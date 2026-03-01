@@ -44,6 +44,30 @@ function extractSearchToolOutput(messages: UIMessage[]) {
   return null;
 }
 
+function extractSetSearchTitleToolOutput(messages: UIMessage[]) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role !== "assistant") {
+      continue;
+    }
+    for (let j = msg.parts.length - 1; j >= 0; j--) {
+      const part = msg.parts[j] as Record<string, unknown>;
+      if (part.type !== "tool-setSearchTitle") {
+        continue;
+      }
+      if (part.state !== "output-available") {
+        continue;
+      }
+      const parsed = z.string().safeParse(part.output);
+      if (!parsed.success) {
+        continue;
+      }
+      return parsed.data;
+    }
+  }
+  return null;
+}
+
 export async function saveSearchHistory({
   id,
   messages,
@@ -53,12 +77,16 @@ export async function saveSearchHistory({
 }) {
   try {
     const toolOutput = messages ? extractSearchToolOutput(messages) : null;
+    const setSearchTitleToolOutput = messages
+      ? extractSetSearchTitleToolOutput(messages)
+      : null;
 
     await db.transaction(async (tx) => {
       await tx
         .update(searchHistoryTable)
         .set({
           messages,
+          title: setSearchTitleToolOutput ?? undefined,
           ...(toolOutput?.keywords ? { keywords: toolOutput.keywords } : {}),
         })
         .where(eq(searchHistoryTable.id, id));
@@ -98,10 +126,12 @@ export async function loadSearchHistory(id: string) {
     where: eq(searchHistoryTable.id, id),
     columns: {
       messages: true,
+      title: true,
     },
   });
 
   return {
     messages: searchHistory?.messages ?? [],
+    title: searchHistory?.title ?? null,
   };
 }

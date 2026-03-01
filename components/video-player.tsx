@@ -35,11 +35,11 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   const mediaRefCallback = useMediaRef();
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
+    <div className="flex h-full flex-col">
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full w-full flex-col overflow-hidden">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
             {/* Video Area */}
             <div className="flex min-w-0 flex-col gap-4">
               {/* Embedded Player */}
@@ -55,7 +55,7 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
               </div>
 
               {/* Video Title */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <h2 className="font-bold text-foreground text-xl">

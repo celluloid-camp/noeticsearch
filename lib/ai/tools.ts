@@ -192,8 +192,19 @@ export const searchVideoCaptions = createTool({
   },
 });
 
+export const setSearchTitle = createTool({
+  description: "Suggest a title for the search",
+  inputSchema: z.object({
+    title: z.string(),
+  }),
+  execute: async ({ title }) => {
+    return title;
+  },
+});
+
 export const tools = {
   searchVideoCaptions,
+  setSearchTitle,
 };
 
 export type SearchVideoCaptionsUITool = InferUITool<typeof searchVideoCaptions>;

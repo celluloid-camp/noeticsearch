@@ -1,11 +1,13 @@
 "use client";
 
-import { Globe, LogOut, Search, User, Video } from "lucide-react";
+import { IconVideo, IconWorld } from "@tabler/icons-react";
+import { LogOut, Settings, User, Video } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SearchHistorySidebar } from "@/components/search-history-sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +55,6 @@ export function MainSidebar() {
   };
   const activeTab = getActiveTab();
 
-  const handleNewSearchClick = () => router.push("/search");
   const handleSignUpClick = () => router.push("/sign-up");
   const handleSignOut = async () => {
     await signOut();
@@ -75,14 +76,19 @@ export function MainSidebar() {
     <Sidebar collapsible="icon" variant="floating">
       <SidebarHeader className="border-sidebar-border border-b">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip="VisionSearch">
+          <SidebarMenuItem className="flex items-center">
+            <SidebarMenuButton
+              asChild
+              className="flex-1"
+              size="lg"
+              tooltip="VisionSearch"
+            >
               <Link href="/">
                 <OurIcon />
                 <span>VisionSearch</span>
               </Link>
             </SidebarMenuButton>
-            <SidebarTrigger className="ml-auto" />
+            <SidebarTrigger className="ml-2 shrink-0" />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
@@ -98,7 +104,7 @@ export function MainSidebar() {
                 tooltip="All Videos"
               >
                 <Link href="/">
-                  <Video className="size-4" />
+                  <IconVideo className="size-4" />
                   <span>All Videos</span>
                 </Link>
               </SidebarMenuButton>
@@ -110,7 +116,7 @@ export function MainSidebar() {
                 tooltip="Public Videos"
               >
                 <Link href="/public">
-                  <Globe className="size-4" />
+                  <IconWorld className="size-4" />
                   <span>Public Videos</span>
                 </Link>
               </SidebarMenuButton>
@@ -127,98 +133,110 @@ export function MainSidebar() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+
+            {isLoggedIn ? (
+              <SidebarMenuItem>
+                <Button
+                  asChild
+                  className="bg-background"
+                  type="button"
+                  variant={"outline"}
+                >
+                  <Link href="/import">
+                    <Video />
+                    {isExpanded && <span>{t("video.import")}</span>}
+                  </Link>
+                </Button>
+              </SidebarMenuItem>
+            ) : null}
           </SidebarMenu>
         </SidebarGroup>
 
         <SearchHistorySidebar />
       </SidebarContent>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <LocaleSwitcher />
-        {isLoggedIn ? (
-          <>
-            <Button
-              className="shrink-0"
-              onClick={handleNewSearchClick}
-              size="sm"
-              type="button"
-              variant="secondary"
-            >
-              {isExpanded ? (
-                <>
-                  <Search className="h-4 w-4" />
-                  New search
-                </>
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
-            </Button>
-            <Link href="/import">
-              <Button className="shrink-0" size="sm" type="button">
-                <Video className="h-4 w-4" />
-                {isExpanded && t("video.import")}
-              </Button>
-            </Link>
-          </>
-        ) : null}
-      </div>
       <SidebarFooter className="border-sidebar-border border-t">
-        <div className="flex flex-wrap items-center gap-2">
-          {isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  className="flex h-auto w-full min-w-0 shrink-0 items-center justify-start gap-2 rounded-full py-1.5 pr-2"
-                  type="button"
-                  variant="ghost"
-                >
-                  <Avatar className="size-8 shrink-0 border border-border">
-                    {session?.user?.image ? (
-                      <AvatarImage
-                        alt=""
-                        className="object-cover"
-                        src={session.user.image}
-                      />
-                    ) : null}
-                    <AvatarFallback className="bg-secondary font-semibold text-foreground text-xs">
-                      {getInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isExpanded && (
-                    <div className="flex min-w-0 flex-col truncate text-left">
-                      <span className="truncate font-medium text-sm">
-                        {session?.user?.name || "User"}
-                      </span>
-                      <span className="truncate text-muted-foreground text-xs">
-                        {session?.user?.email}
-                      </span>
-                    </div>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>
-                  <p className="font-medium text-sm">
-                    {session?.user?.name || "User"}
-                  </p>
-                  <p className="truncate font-normal text-muted-foreground text-xs">
-                    {session?.user?.email}
-                  </p>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={handleSignOut}
-                  variant="destructive"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button onClick={handleSignUpClick} size="sm" type="button">
-              Sign up
-            </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className={`flex h-auto w-full min-w-0 shrink-0 items-center justify-start gap-2 rounded-full py-1.5 ${
+                      isExpanded ? "pr-2" : "px-2"
+                    }`}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Avatar className="size-8 shrink-0 border border-border">
+                      {session?.user?.image ? (
+                        <AvatarImage
+                          alt=""
+                          className="object-cover"
+                          src={session.user.image}
+                        />
+                      ) : null}
+                      <AvatarFallback className="bg-secondary font-semibold text-foreground text-xs">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isExpanded && (
+                      <div className="flex min-w-0 flex-col truncate text-left">
+                        <span className="truncate font-medium text-sm">
+                          {session?.user?.name || "User"}
+                        </span>
+                        <span className="truncate text-muted-foreground text-xs">
+                          {session?.user?.email}
+                        </span>
+                      </div>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>
+                    <p className="font-medium text-sm">
+                      {session?.user?.name || "User"}
+                    </p>
+                    <p className="truncate font-normal text-muted-foreground text-xs">
+                      {session?.user?.email}
+                    </p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={handleSignOut}
+                    variant="destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : isExpanded ? (
+              <Button onClick={handleSignUpClick} size="sm" type="button">
+                Sign up
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSignUpClick}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <User className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {isExpanded && (
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <LocaleSwitcher />
+            </div>
           )}
         </div>
       </SidebarFooter>

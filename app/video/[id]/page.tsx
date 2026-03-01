@@ -1,19 +1,19 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, ArrowLeftIcon } from "lucide-react";
 import { MediaProvider } from "media-chrome/react/media-store";
 import { useParams, useRouter } from "next/navigation";
-import { parseAsFloat, useQueryState } from "nuqs";
 import { Suspense } from "react";
 import Loading from "@/app/loading";
 import { CaptionsPanel } from "@/components/captions-panel";
+import { Button } from "@/components/ui/button";
 import VideoPlayer from "@/components/video-player";
 import { useTRPC } from "@/lib/trpc/client";
 
 export default function VideoPage() {
   const router = useRouter();
   const params = useParams();
-  const [timestampParam] = useQueryState("t", parseAsFloat);
 
   const videoId = params.id as string;
 
@@ -39,20 +39,20 @@ export default function VideoPage() {
   if (error || !video) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <h1 className="mb-2 font-bold text-2xl text-foreground">
+        <div className="flex max-w-sm flex-col items-center gap-3 text-center">
+          <div className="flex size-20 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <AlertTriangle className="size-12" />
+          </div>
+          <h1 className="font-bold text-2xl text-foreground">
             {error ? "Error loading video" : "Video not found"}
           </h1>
           {error && (
-            <p className="mb-4 text-muted-foreground">{error.message}</p>
+            <p className="text-muted-foreground text-sm">{error.message}</p>
           )}
-          <button
-            className="rounded-lg bg-primary px-4 py-2 text-primary-foreground transition-opacity hover:opacity-90"
-            onClick={handleBack}
-            type="button"
-          >
-            Go Back
-          </button>
+          <Button onClick={handleBack} type="button" variant="outline">
+            <ArrowLeftIcon className="size-4" />
+            Go back
+          </Button>
         </div>
       </div>
     );
@@ -60,19 +60,16 @@ export default function VideoPage() {
 
   return (
     <MediaProvider>
-      <div className="flex h-full gap-4 overflow-hidden">
+      <div className="flex h-full overflow-hidden">
         {/* Video Player */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="mt-6 flex min-w-0 flex-1 flex-col overflow-hidden">
           <VideoPlayer video={video} />
         </div>
 
         {/* Middle: Transcript Panel */}
-        <div className="mx-4 flex min-h-0 w-1/3 min-w-0 flex-col overflow-hidden py-6">
+        <div className="mx-4 my-6 flex min-h-0 w-1/3 min-w-0 flex-col">
           <Suspense fallback={<Loading />}>
-            <CaptionsPanel
-              highlightTimestamp={timestampParam}
-              videoId={videoId}
-            />
+            <CaptionsPanel videoId={videoId} />
           </Suspense>
         </div>
       </div>

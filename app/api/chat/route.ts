@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return new Response("No search ID provided", { status: 400 });
   }
 
-  const { messages: previousMessages } = await loadSearchHistory(id);
+  const { messages: previousMessages, title } = await loadSearchHistory(id);
 
   const validatedMessages = await validateUIMessages({
     // append the new message to the previous messages:
@@ -43,7 +43,8 @@ export async function POST(req: Request) {
     model: mistral("mistral-small"),
     callOptionsSchema: z.object({
       userId: z.string(),
-      chatId: z.string(),
+      searchId: z.string(),
+      title: z.string().nullable().optional(),
       language: z.string().default("fr"),
       filter: z.enum(["public", "mine", "custom"]),
       videoIds: z.array(z.string()).default([]),
@@ -56,8 +57,11 @@ export async function POST(req: Request) {
         settings.instructions +
         `\nContexte utilisateur :
 	- User ID: ${options.userId}
-	- Search ID: ${options.chatId}
+	- Search ID: ${options.searchId}
 	- Langue de réponse : français (obligatoire)
+  - Titre de la recherche : ${options.title ?? "null"}
+
+    Important : Si le titre de la recherche est null, utilise l'outil setSearchTitle pour le suggérer.
 `,
     }),
   });
@@ -67,7 +71,8 @@ export async function POST(req: Request) {
     uiMessages: validatedMessages,
     options: {
       userId,
-      chatId: id,
+      searchId: id,
+      title,
       language: "fr",
       filter: "public",
       videoIds: [],

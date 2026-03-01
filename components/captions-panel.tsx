@@ -2,37 +2,30 @@
 
 import { useDebouncedCallback } from "@tanstack/react-pacer";
 import { useQuery } from "@tanstack/react-query";
-import { SearchIcon, Settings, XIcon } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { ListIcon, SearchIcon, WrapText, XIcon } from "lucide-react";
 import {
   MediaActionTypes,
   useMediaDispatch,
   useMediaSelector,
 } from "media-chrome/react/media-store";
+import { parseAsInteger, useQueryState } from "nuqs";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { CaptionsParagraphLayout } from "./captions-paragraph-layout";
 import { Button } from "./ui/button";
 import { Card, CardHeader } from "./ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
-import { ScrollArea } from "./ui/scroll-area";
 import { Skeleton } from "./ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { Switch } from "./ui/switch";
 
 interface CaptionsPanelProps {
-  highlightTimestamp?: number | null;
   videoId: string;
 }
 
 export type Caption = RouterOutput["video"]["getCaptions"][number];
-const PARAGRAPH_BREAK_GAP_SECONDS = 0.4;
+const CAPTION_KEY_SEPARATOR = "::";
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -40,11 +33,40 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function CaptionsPanel({
-  videoId,
-  highlightTimestamp,
-}: CaptionsPanelProps) {
+function getCaptionKey(
+  caption: Pick<Caption, "startTime" | "endTime">
+): string {
+  return `${caption.startTime}${CAPTION_KEY_SEPARATOR}${caption.endTime}`;
+}
+
+function findCaptionIndexAtTime(captions: Caption[], time: number): number {
+  let low = 0;
+  let high = captions.length - 1;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const caption = captions[mid];
+
+    if (time < caption.startTime) {
+      high = mid - 1;
+      continue;
+    }
+    if (time > caption.endTime) {
+      low = mid + 1;
+      continue;
+    }
+
+    return mid;
+  }
+
+  return -1;
+}
+
+export function CaptionsPanel({ videoId }: CaptionsPanelProps) {
   const api = useTRPC();
+  const [captionHighlightId] = useQueryState("c", parseAsInteger);
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const subtitleRefs = useRef<Record<number, HTMLSpanElement | null>>({});
   const [autoScroll, setAutoScroll] = useState(true);
   const [isParagraphLayout, setIsParagraphLayout] = useState(true);
@@ -89,6 +111,13 @@ export function CaptionsPanel({
 
   const captions = isSearching ? (searchResults ?? []) : allCaptions;
   const useParagraphLayout = isParagraphLayout && !isSearching;
+  const captionIndexByKey = useMemo(() => {
+    const indexMap = new Map<string, number>();
+    allCaptions.forEach((caption, index) => {
+      indexMap.set(getCaptionKey(caption), index);
+    });
+    return indexMap;
+  }, [allCaptions]);
   const chapterByCaptionIndex = useMemo(() => {
     if (captions.length === 0 || chapters.length === 0) {
       return captions.map(() => null);
@@ -108,53 +137,60 @@ export function CaptionsPanel({
       return null;
     });
   }, [captions, chapters]);
+  const isVirtualizedListLayout = !useParagraphLayout;
+  const rowVirtualizer = useVirtualizer({
+    count: isVirtualizedListLayout ? captions.length : 0,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 48,
+    overscan: 10,
+  });
 
-  // Index from URL timestamp param (initial scroll target, based on allCaptions)
+  // Index from URL caption id param (initial scroll target, based on allCaptions)
   const targetCaptionIndex = useMemo(() => {
-    if (
-      allCaptions.length === 0 ||
-      highlightTimestamp == null ||
-      Number.isNaN(Number(highlightTimestamp))
-    ) {
-      return -1;
-    }
-    const t = Number(highlightTimestamp);
-    const index = allCaptions.findIndex(
-      (c) => t >= c.startTime && t <= c.endTime
-    );
-    if (index !== -1) {
-      return index;
-    }
-    return allCaptions.reduce((closest, c, i) => {
-      const closestDiff = Math.abs(allCaptions[closest].startTime - t);
-      const diff = Math.abs(c.startTime - t);
-      return diff < closestDiff ? i : closest;
-    }, 0);
-  }, [allCaptions, highlightTimestamp]);
-
-  // Index of the caption matching the current playback time (based on allCaptions)
-  const currentCaptionIndex = useMemo(() => {
-    if (allCaptions.length === 0 || mediaCurrentTime == null) {
+    if (allCaptions.length === 0 || captionHighlightId == null) {
       return -1;
     }
     return allCaptions.findIndex(
-      (c) => mediaCurrentTime >= c.startTime && mediaCurrentTime <= c.endTime
+      (caption) => caption.id === captionHighlightId
     );
-  }, [allCaptions, mediaCurrentTime]);
+  }, [allCaptions, captionHighlightId]);
+
+  // Index of the caption matching the current playback time (based on allCaptions)
+  const currentCaptionIndex = useMemo(() => {
+    if (
+      useParagraphLayout ||
+      allCaptions.length === 0 ||
+      mediaCurrentTime == null
+    ) {
+      return -1;
+    }
+    return findCaptionIndexAtTime(allCaptions, mediaCurrentTime);
+  }, [allCaptions, mediaCurrentTime, useParagraphLayout]);
 
   // Scroll to the URL timestamp caption on load
+  const scrollToCaptionIndex = useCallback(
+    (index: number) => {
+      const el = subtitleRefs.current[index];
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (isVirtualizedListLayout && !isSearching) {
+        rowVirtualizer.scrollToIndex(index, { align: "center" });
+      }
+    },
+    [isSearching, isVirtualizedListLayout, rowVirtualizer]
+  );
+
   useEffect(() => {
-    if (targetCaptionIndex < 0) {
+    if (useParagraphLayout || targetCaptionIndex < 0) {
       return;
     }
     const id = setTimeout(() => {
-      const el = subtitleRefs.current[targetCaptionIndex];
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      scrollToCaptionIndex(targetCaptionIndex);
     }, 100);
     return () => clearTimeout(id);
-  }, [targetCaptionIndex]);
+  }, [targetCaptionIndex, scrollToCaptionIndex, useParagraphLayout]);
 
   // Auto-scroll as playback progresses
   const prevCaptionIndexRef = useRef(-1);
@@ -165,6 +201,7 @@ export function CaptionsPanel({
 
   useEffect(() => {
     if (
+      useParagraphLayout ||
       !autoScroll ||
       currentCaptionIndex < 0 ||
       currentCaptionIndex === prevCaptionIndexRef.current
@@ -172,26 +209,25 @@ export function CaptionsPanel({
       return;
     }
     prevCaptionIndexRef.current = currentCaptionIndex;
-    const el = subtitleRefs.current[currentCaptionIndex];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [autoScroll, currentCaptionIndex]);
+    scrollToCaptionIndex(currentCaptionIndex);
+  }, [
+    autoScroll,
+    currentCaptionIndex,
+    scrollToCaptionIndex,
+    useParagraphLayout,
+  ]);
 
   // Keep the active caption centered when switching layouts.
   useEffect(() => {
     const activeIndex = currentCaptionIndexRef.current;
-    if (layoutSwitchKey === 0 || activeIndex < 0) {
+    if (useParagraphLayout || layoutSwitchKey === 0 || activeIndex < 0) {
       return;
     }
     const id = setTimeout(() => {
-      const el = subtitleRefs.current[activeIndex];
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
+      scrollToCaptionIndex(activeIndex);
     }, 0);
     return () => clearTimeout(id);
-  }, [layoutSwitchKey]);
+  }, [layoutSwitchKey, scrollToCaptionIndex, useParagraphLayout]);
 
   const handleSubtitleClick = (
     caption: Caption,
@@ -210,34 +246,39 @@ export function CaptionsPanel({
   };
 
   return (
-    <Card className="flex h-full flex-col gap-0 py-0">
+    <Card className="flex h-full flex-col gap-0 border border-border py-0">
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
         <span className="font-medium text-sm">Captions</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon-sm" variant="ghost">
-              <Settings className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuCheckboxItem
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">Auto-scroll</span>
+            <Switch
               checked={autoScroll}
               onCheckedChange={setAutoScroll}
-            >
-              Auto-scroll
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={isParagraphLayout}
-              onCheckedChange={(checked) => {
-                setIsParagraphLayout(checked === true);
-                setLayoutSwitchKey((current) => current + 1);
-              }}
-            >
-              Paragraph layout
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              size="sm"
+            />
+          </div>
+          <Button
+            aria-label={
+              isParagraphLayout
+                ? "Switch to list layout"
+                : "Switch to paragraph layout"
+            }
+            onClick={() => {
+              setIsParagraphLayout((current) => !current);
+              setLayoutSwitchKey((current) => current + 1);
+            }}
+            size="icon-sm"
+            title={isParagraphLayout ? "Paragraph layout" : "List layout"}
+            variant={isParagraphLayout ? "secondary" : "ghost"}
+          >
+            {isParagraphLayout ? (
+              <WrapText className="size-4" />
+            ) : (
+              <ListIcon className="size-4" />
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <div className="border-b px-2 py-1.5">
         <InputGroup className="h-8">
@@ -263,7 +304,10 @@ export function CaptionsPanel({
           )}
         </InputGroup>
       </div>
-      <ScrollArea className="min-h-0 flex-1 bg-secondary p-0">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto bg-secondary p-0"
+        ref={scrollContainerRef}
+      >
         {isSearching && isFetchingSearch ? (
           <div className="space-y-2 px-4 py-4">
             {Array.from({ length: 7 }).map((_, i) => (
@@ -275,105 +319,23 @@ export function CaptionsPanel({
           </div>
         ) : captions.length > 0 ? (
           useParagraphLayout ? (
-            <div className="px-4 py-4 text-sm leading-relaxed">
-              {captions.map((caption, index) => {
-                const allIndex = isSearching
-                  ? allCaptions.findIndex(
-                      (c) =>
-                        c.startTime === caption.startTime &&
-                        c.endTime === caption.endTime
-                    )
-                  : index;
-                const previousCaption = captions[index - 1];
-                const gapFromPrevious = previousCaption
-                  ? Math.max(0, caption.startTime - previousCaption.endTime)
-                  : 0;
-                const previousText = previousCaption?.text.trim() ?? "";
-                const previousEndsWithComma = /[,;:]$/.test(previousText);
-                const previousEndsWithSentence = /[.!?]$/.test(previousText);
-                const needsParagraphBreak =
-                  index > 0 && gapFromPrevious >= PARAGRAPH_BREAK_GAP_SECONDS;
-                const chapter = chapterByCaptionIndex[index];
-                const previousChapter = chapterByCaptionIndex[index - 1];
-                const showChapterTitle =
-                  Boolean(chapter?.title) &&
-                  chapter?.title !== previousChapter?.title;
-                const inlineSpacingClass =
-                  index === 0 || needsParagraphBreak || showChapterTitle
-                    ? ""
-                    : previousEndsWithComma
-                      ? "ml-0"
-                      : previousEndsWithSentence || gapFromPrevious >= 0.45
-                        ? "ml-px"
-                        : "ml-0";
-
-                return (
-                  <span key={`${caption.startTime}-${caption.endTime}`}>
-                    {showChapterTitle && (
-                      <div className="relative my-3 text-center before:absolute before:inset-x-0 before:top-1/2 before:h-px before:-translate-y-1/2 before:bg-border">
-                        <span className="relative z-10 bg-secondary px-2 font-medium text-muted-foreground text-sm">
-                          {chapter?.title}
-                        </span>
-                      </div>
-                    )}
-                    {needsParagraphBreak && (
-                      <span aria-hidden className="block h-3" />
-                    )}
-                    <Tooltip delayDuration={1000}>
-                      <TooltipTrigger asChild>
-                        <span
-                          className={cn(
-                            "group inline cursor-pointer rounded-sm border border-transparent px-0 py-0.5 leading-snug transition-colors hover:border-primary data-selected:border-primary/40 data-highlight:bg-amber-500/20 data-selected:bg-primary/15",
-                            inlineSpacingClass
-                          )}
-                          data-highlight={
-                            allIndex === targetCaptionIndex || undefined
-                          }
-                          data-selected={
-                            (allIndex === currentCaptionIndex &&
-                              allIndex !== targetCaptionIndex) ||
-                            undefined
-                          }
-                          onClick={(e) => {
-                            handleSubtitleClick(caption, e);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleSubtitleClick(caption, e);
-                            }
-                          }}
-                          ref={(el) => {
-                            subtitleRefs.current[allIndex] = el;
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <span
-                            className="inline group-data-highlight:text-amber-900 group-data-selected:text-foreground dark:group-data-highlight:text-amber-100 [&_mark]:rounded-sm [&_mark]:bg-amber-200 [&_mark]:px-0.5 dark:[&_mark]:bg-amber-800"
-                            dangerouslySetInnerHTML={{
-                              __html: caption.headline ?? caption.text,
-                            }}
-                          />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {formatTime(caption.startTime)}
-                      </TooltipContent>
-                    </Tooltip>
-                  </span>
-                );
-              })}
-            </div>
+            <CaptionsParagraphLayout
+              autoScroll={autoScroll}
+              captions={captions}
+              chapterByCaptionIndex={chapterByCaptionIndex}
+              onAutoScrollChange={setAutoScroll}
+              targetCaptionIndex={targetCaptionIndex}
+            />
           ) : (
-            <div className="py-2">
-              {captions.map((caption, index) => {
+            <div
+              className="relative py-2"
+              style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const index = virtualRow.index;
+                const caption = captions[index];
                 const allIndex = isSearching
-                  ? allCaptions.findIndex(
-                      (c) =>
-                        c.startTime === caption.startTime &&
-                        c.endTime === caption.endTime
-                    )
+                  ? (captionIndexByKey.get(getCaptionKey(caption)) ?? -1)
                   : index;
                 const chapter = chapterByCaptionIndex[index];
                 const previousChapter = chapterByCaptionIndex[index - 1];
@@ -383,8 +345,9 @@ export function CaptionsPanel({
 
                 return (
                   <div
-                    className="px-2"
+                    className="absolute top-0 left-0 w-full px-2"
                     key={`${caption.startTime}-${caption.endTime}`}
+                    style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
                     {showChapterTitle && (
                       <div className="relative my-3 text-center before:absolute before:inset-x-0 before:top-1/2 before:h-px before:-translate-y-1/2 before:bg-border">
@@ -406,14 +369,10 @@ export function CaptionsPanel({
                       onClick={(e) => {
                         handleSubtitleClick(caption, e);
                       }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleSubtitleClick(caption, e);
-                        }
-                      }}
                       ref={(el) => {
-                        subtitleRefs.current[allIndex] = el;
+                        if (allIndex >= 0) {
+                          subtitleRefs.current[allIndex] = el;
+                        }
                       }}
                       role="button"
                       tabIndex={0}
@@ -422,7 +381,7 @@ export function CaptionsPanel({
                         {formatTime(caption.startTime)}
                       </span>
                       <span
-                        className="group-data-highlight:text-amber-900 group-data-selected:text-foreground dark:group-data-highlight:text-amber-100 [&_mark]:rounded-sm [&_mark]:bg-amber-200 [&_mark]:px-0.5 dark:[&_mark]:bg-amber-800"
+                        className="group-data-highlight:text-amber-900 group-data-selected:text-foreground dark:group-data-highlight:text-amber-100 [&_mark]:rounded [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:text-foreground dark:[&_mark]:bg-yellow-600"
                         dangerouslySetInnerHTML={{
                           __html: caption.headline ?? caption.text,
                         }}
@@ -438,7 +397,7 @@ export function CaptionsPanel({
             {isSearching ? "No matching captions" : "No subtitles available"}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </Card>
   );
 }

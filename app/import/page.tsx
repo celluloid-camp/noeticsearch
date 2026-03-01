@@ -11,6 +11,14 @@ import { z } from "zod";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -209,166 +217,172 @@ export default function ImportPage() {
 
   return (
     <ProtectedRoute>
-      <div className="container mx-auto max-w-2xl px-4 py-8">
-        <div className="space-y-6">
-          <div>
-            <h1 className="font-bold text-3xl text-foreground">
-              Import PeerTube Video
-            </h1>
-            <p className="mt-2 text-muted-foreground">
+      <div className="flex min-h-full w-full items-center justify-center p-4">
+        <Card className="w-full max-w-2xl">
+          <CardHeader>
+            <CardTitle>Import PeerTube Video</CardTitle>
+            <CardDescription>
               Import a video from PeerTube by providing its URL. The video
               metadata and subtitles will be automatically fetched.
-            </p>
-          </div>
-
-          <Form {...form}>
-            <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-              <FormField
-                control={form.control}
-                name="url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>PeerTube URL</FormLabel>
-                    <FormControl>
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <Input
-                            placeholder="https://peertube.example.com/w/..."
-                            type="url"
-                            {...field}
-                          />
-                          {isValidating && (
-                            <div className="absolute top-1/2 right-3 -translate-y-1/2">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                          )}
-                          {!isValidating &&
-                            videoPreview &&
-                            !form.formState.errors.url && (
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                className="space-y-6"
+                id="import-video-form"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
+                <FormField
+                  control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PeerTube URL</FormLabel>
+                      <FormControl>
+                        <div className="space-y-2">
+                          <div className="relative">
+                            <Input
+                              placeholder="https://peertube.example.com/w/..."
+                              type="url"
+                              {...field}
+                            />
+                            {isValidating && (
                               <div className="absolute top-1/2 right-3 -translate-y-1/2">
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                               </div>
                             )}
-                          {!isValidating && form.formState.errors.url && (
-                            <div className="absolute top-1/2 right-3 -translate-y-1/2">
-                              <AlertCircle className="h-4 w-4 text-destructive" />
-                            </div>
-                          )}
-                        </div>
-                        {videoPreview && (
-                          <div className="space-y-3 rounded-lg border bg-muted/50 p-3">
-                            <div className="flex gap-3">
-                              {videoPreview.thumbnail && (
-                                <div className="relative h-16 w-24 shrink-0">
-                                  <Image
-                                    alt={videoPreview.title}
-                                    className="rounded object-cover"
-                                    fill
-                                    src={videoPreview.thumbnail}
-                                    unoptimized
-                                  />
+                            {!isValidating &&
+                              videoPreview &&
+                              !form.formState.errors.url && (
+                                <div className="absolute top-1/2 right-3 -translate-y-1/2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                                 </div>
                               )}
-                              <div className="min-w-0 flex-1">
-                                <p className="line-clamp-2 font-medium text-foreground text-sm">
-                                  {videoPreview.title}
-                                </p>
-                                {videoPreview.description && (
-                                  <p className="mt-1 line-clamp-2 text-muted-foreground text-xs">
-                                    {videoPreview.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            {videoPreview.captions.length > 0 && (
-                              <div className="border-t pt-2">
-                                <p className="mb-2 font-medium text-foreground text-xs">
-                                  Available Captions (
-                                  {videoPreview.captions.length}):
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  {videoPreview.captions.map(
-                                    (caption, index) => (
-                                      <div
-                                        className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-foreground text-xs"
-                                        key={index}
-                                      >
-                                        <span className="font-medium">
-                                          {caption.language.toUpperCase()}
-                                        </span>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            {videoPreview.captions.length === 0 && (
-                              <div className="border-t pt-2">
-                                <p className="font-medium text-destructive text-xs">
-                                  ⚠️ No captions available for this video. Videos
-                                  with captions are required for import.
-                                </p>
+                            {!isValidating && form.formState.errors.url && (
+                              <div className="absolute top-1/2 right-3 -translate-y-1/2">
+                                <AlertCircle className="h-4 w-4 text-destructive" />
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      Enter the full URL to your PeerTube video (e.g.,
-                      https://peertube.example.com/w/abc123)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="isPublic"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Public Video</FormLabel>
+                          {videoPreview && (
+                            <div className="space-y-3 rounded-lg border bg-muted/50 p-3">
+                              <div className="flex gap-3">
+                                {videoPreview.thumbnail && (
+                                  <div className="relative h-16 w-24 shrink-0">
+                                    <Image
+                                      alt={videoPreview.title}
+                                      className="rounded object-cover"
+                                      fill
+                                      src={videoPreview.thumbnail}
+                                      unoptimized
+                                    />
+                                  </div>
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="line-clamp-2 font-medium text-foreground text-sm">
+                                    {videoPreview.title}
+                                  </p>
+                                  {videoPreview.description && (
+                                    <p className="mt-1 line-clamp-2 text-muted-foreground text-xs">
+                                      {videoPreview.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {videoPreview.captions.length > 0 && (
+                                <div className="border-t pt-2">
+                                  <p className="mb-2 font-medium text-foreground text-xs">
+                                    Available Captions (
+                                    {videoPreview.captions.length}):
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {videoPreview.captions.map(
+                                      (caption, index) => (
+                                        <div
+                                          className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-foreground text-xs"
+                                          key={index}
+                                        >
+                                          <span className="font-medium">
+                                            {caption.language.toUpperCase()}
+                                          </span>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {videoPreview.captions.length === 0 && (
+                                <div className="border-t pt-2">
+                                  <p className="font-medium text-destructive text-xs">
+                                    ⚠️ No captions available for this video.
+                                    Videos with captions are required for
+                                    import.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
                       <FormDescription>
-                        Make this video visible to other users. If disabled,
-                        only you can see it.
+                        Enter the full URL to your PeerTube video (e.g.,
+                        https://peertube.example.com/w/abc123)
                       </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <Button
-                className="w-full"
-                disabled={
-                  importVideo.isPending ||
-                  isValidating ||
-                  !!form.formState.errors.url ||
-                  !videoPreview ||
-                  !videoPreview.captions ||
-                  videoPreview.captions.length === 0
-                }
-                type="submit"
-              >
-                {importVideo.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  "Import Video"
-                )}
-              </Button>
-            </form>
-          </Form>
-        </div>
+                <FormField
+                  control={form.control}
+                  name="isPublic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-md">Public Video</FormLabel>
+                        <FormDescription>
+                          Make this video visible to other users. If disabled,
+                          only you can see it.
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </form>
+            </Form>
+          </CardContent>
+          <CardFooter className="flex justify-end">
+            <Button
+              disabled={
+                importVideo.isPending ||
+                isValidating ||
+                !!form.formState.errors.url ||
+                !videoPreview ||
+                !videoPreview.captions ||
+                videoPreview.captions.length === 0
+              }
+              form="import-video-form"
+              size="lg"
+              type="submit"
+            >
+              {importVideo.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                "Import Video"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </ProtectedRoute>
   );

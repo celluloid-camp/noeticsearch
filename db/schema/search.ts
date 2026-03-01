@@ -1,11 +1,17 @@
 import type { UIMessage } from "ai";
 import { relations } from "drizzle-orm";
-import { jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { userTable } from "./auth";
 import { searchResultTable } from "./search-result";
 
 export const searchHistoryTable = pgTable("search_history", {
   id: text("id").primaryKey(),
+  title: text("title"),
+  isPublic: boolean("is_public").notNull().default(false),
+  filterType: text("filter_type")
+    .$type<"all" | "public" | "mine" | "custom">()
+    .default("all"),
+  videoIds: jsonb("video_ids").$type<number[]>().default([]),
   userId: text("user_id")
     .notNull()
     .references(() => userTable.id, { onDelete: "cascade" }),

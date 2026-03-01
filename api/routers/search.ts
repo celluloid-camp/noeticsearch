@@ -1,22 +1,42 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { searchHistoryTable } from "@/db/schema";
+import { getDbErrorMessage } from "@/lib/db";
 import { protectedProcedure, router } from "../trpc";
 export const searchRouter = router({
   create: protectedProcedure
     .input(
       z.object({
         id: z.string(),
+        isPublic: z.boolean().optional(),
+        filterType: z.enum(["all", "public", "mine", "custom"]).optional(),
+        videoIds: z.array(z.number()).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { id } = input;
-      await ctx.db.insert(searchHistoryTable).values({
-        id,
-        userId: ctx.user.id,
-      });
-      return { id };
+      try {
+        const { id, isPublic, filterType, videoIds } = input;
+        await ctx.db.insert(searchHistoryTable).values({
+          id,
+          isPublic: isPublic ?? false,
+          filterType: filterType ?? "all",
+          videoIds: videoIds ?? [],
+          userId: ctx.user.id,
+        });
+        return { id };
+      } catch (error) {
+        const { message, constraint } = getDbErrorMessage(error);
+        console.error("Failed to create search history:", {
+          message,
+          constraint,
+          originalError: error,
+        });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message,
+        });
+      }
     }),
   load: protectedProcedure
     .input(z.object({ id: z.string() }))
@@ -27,7 +47,22 @@ export const searchRouter = router({
           eq(searchHistoryTable.userId, ctx.user.id)
         ),
         with: {
-          user: true,
+          user: {
+            columns: {
+              id: true,
+              name: true,
+              image: true,
+            },
+          },
+        },
+        columns: {
+          id: true,
+          title: true,
+          isPublic: true,
+          filterType: true,
+          videoIds: true,
+          messages: true,
+          createdAt: true,
         },
       });
       if (!searchHistory) {
@@ -184,11 +219,41 @@ export const searchRouter = router({
       where: eq(searchHistoryTable.userId, ctx.user.id),
       columns: {
         id: true,
+        title: true,
         createdAt: true,
       },
+      orderBy: [desc(searchHistoryTable.createdAt)],
     });
     return searchHistories;
   }),
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        filterType: z.enum(["all", "public", "mine", "custom"]).optional(),
+        isPublic: z.boolean().optional(),
+        title: z.string().nullable().optional(),
+        videoIds: z.array(z.number()).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { id, filterType, isPublic, title, videoIds } = input;
+      await ctx.db
+        .update(searchHistoryTable)
+        .set({
+          ...(filterType != null && { filterType }),
+          ...(isPublic != null && { isPublic }),
+          ...(title !== undefined && { title }),
+          ...(videoIds != null && { videoIds }),
+        })
+        .where(
+          and(
+            eq(searchHistoryTable.id, id),
+            eq(searchHistoryTable.userId, ctx.user.id)
+          )
+        );
+      return { id };
+    }),
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {

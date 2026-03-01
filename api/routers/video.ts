@@ -162,13 +162,17 @@ export const videoRouter = router({
       const trimmed = input.search?.trim();
 
       if (trimmed) {
-        const tsQuery = sql`to_tsquery('french', lower(unaccent(${trimmed
-          .split(/\s+/)
-          .filter(Boolean)
-          .join(" | ")})))`;
+        const keywords = trimmed
+          .split(/[,\s]+/)
+          .map((k) => k.trim())
+          .filter(Boolean);
+        const tsQuery = sql`to_tsquery('french', lower(unaccent(${keywords.join(
+          " | "
+        )})))`;
 
         const captions = await ctx.db
           .select({
+            id: captionsTable.id,
             text: captionsTable.text,
             startTime: captionsTable.startTime,
             endTime: captionsTable.endTime,
@@ -186,6 +190,7 @@ export const videoRouter = router({
           .orderBy(asc(captionsTable.startTime));
 
         return captions.map((sub) => ({
+          id: sub.id,
           text: sub.text,
           headline: sub.headline,
           timestamp: formatTimestamp(sub.startTime),
@@ -201,6 +206,7 @@ export const videoRouter = router({
         .orderBy(asc(captionsTable.startTime));
 
       return captions.map((sub) => ({
+        id: sub.id,
         text: sub.text,
         headline: null as string | null,
         timestamp: formatTimestamp(sub.startTime),

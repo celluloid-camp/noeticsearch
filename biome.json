@@ -39,6 +39,7 @@
       "style": {
         "useFilenamingConvention": "off",
         "useCollapsedElseIf": "off",
+        "useConsistentTypeDefinitions": "off",
         "noNestedTernary": "off",
         "useDefaultSwitchClause": "off",
         "noParameterAssign": "off",
@@ -55,10 +56,12 @@
       },
       "correctness": {
         "noNestedComponentDefinitions": "off",
+        "useExhaustiveDependencies": "off",
         "noUndeclaredVariables": "off"
       },
       "a11y": {
         "useFocusableInteractive": "off",
+        "noRedundantRoles": "off",
         "useSemanticElements": "off",
         "useAltText": "off",
         "useButtonType": "off",

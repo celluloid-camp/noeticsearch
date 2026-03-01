@@ -4,6 +4,8 @@ import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import AppLayoutClient from "@/components/app-layout-client";
+import { AuthProvider } from "@/components/auth-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 import { Agentation } from "agentation";
@@ -62,9 +64,17 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <TRPCProvider>
             <NuqsAdapter>
-              <TooltipProvider>
-                <AppLayoutClient>{children}</AppLayoutClient>
-              </TooltipProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                disableTransitionOnChange
+              >
+                <AuthProvider>
+                  <TooltipProvider>
+                    <AppLayoutClient>{children}</AppLayoutClient>
+                  </TooltipProvider>
+                </AuthProvider>
+              </ThemeProvider>
             </NuqsAdapter>
           </TRPCProvider>
         </NextIntlClientProvider>
