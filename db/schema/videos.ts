@@ -34,6 +34,7 @@ export const videoTable = pgTable(
     videoDetails: jsonb("video_details").$type<VideoDetails>().notNull(),
     captionList: jsonb("caption_list").$type<VideoCaption[]>(),
     storyboard: jsonb("storyboard").$type<Storyboard>(),
+    videoPassword: text("video_password"),
   },
   (table) => [
     index("search_index").using(

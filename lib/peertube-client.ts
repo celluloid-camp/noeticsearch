@@ -3,8 +3,10 @@ import {
   getVideoCaptions,
   getVideoChapters,
   listVideoStoryboards,
+  searchVideos,
 } from "@celluloid/peertube-api";
 import { createClient } from "@celluloid/peertube-api/client";
+
 import type {
   Storyboard,
   VideoCaption,
@@ -323,4 +325,67 @@ export async function getThumbnailAtTimestamp(
     return null;
   }
   return computeSpriteUrl(data, timestampSeconds);
+}
+
+export interface PeerTubeSearchVideosParams {
+  /** Page size (1–100). Default 15. */
+  count?: number;
+  /** Include NSFW results. Default true. */
+  nsfw?: boolean;
+  /** Search query (required). */
+  search: string;
+  /** Sort: -match (relevance), -publishedAt, -createdAt, etc. */
+  sort?: string;
+  /** Pagination offset. Default 0. */
+  start?: number;
+}
+
+const DEFAULT_COUNT = 15;
+const DEFAULT_SORT = "-match";
+
+/**
+ * Search videos on a PeerTube instance using the official API client.
+ * Call from server to avoid CORS.
+ */
+export async function searchPeerTubeVideos(
+  baseUrl: string,
+  params: PeerTubeSearchVideosParams
+) {
+  const {
+    search,
+    start = 0,
+    count = DEFAULT_COUNT,
+    sort = DEFAULT_SORT,
+    // nsfw = true,
+  } = params;
+
+  const client = createClient({ baseUrl: baseUrl.replace(/\/$/, "") });
+
+  const { data, error } = await searchVideos({
+    client,
+    query: {
+      search: search.trim(),
+      start,
+      count: Math.min(100, Math.max(1, count)),
+      sort: sort as Parameters<typeof searchVideos>[0]["query"]["sort"],
+      // nsfw: nsfw ? "true" : "false",
+    },
+  });
+
+  if (error) {
+    throw new Error(`PeerTube search failed: ${String(error)}`);
+  }
+  if (typeof data?.total !== "number" || !Array.isArray(data?.data)) {
+    throw new Error("Invalid PeerTube search response");
+  }
+  return {
+    total: data.total ?? 0,
+    data: data.data ?? [],
+  };
+}
+
+/** Build watch URL for a video on the given instance. */
+export function peerTubeWatchUrl(baseUrl: string, shortUUID: string): string {
+  const base = baseUrl.replace(/\/$/, "");
+  return `${base}/w/${shortUUID}`;
 }

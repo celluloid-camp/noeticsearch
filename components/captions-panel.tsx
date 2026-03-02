@@ -16,6 +16,7 @@ import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 import { CaptionsParagraphLayout } from "./captions-paragraph-layout";
 import { Button } from "./ui/button";
 import { Card, CardHeader } from "./ui/card";
+import { Input } from "./ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Skeleton } from "./ui/skeleton";
 import { Switch } from "./ui/switch";
@@ -31,6 +32,39 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+function parseTimeInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const parts = trimmed.split(":");
+  if (parts.length === 1) {
+    const seconds = Number(parts[0]);
+    if (Number.isNaN(seconds) || seconds < 0) {
+      return null;
+    }
+    return seconds;
+  }
+
+  if (parts.length === 2) {
+    const [minutesPart, secondsPart] = parts;
+    const minutes = Number(minutesPart);
+    const seconds = Number(secondsPart);
+    if (
+      Number.isNaN(minutes) ||
+      Number.isNaN(seconds) ||
+      minutes < 0 ||
+      seconds < 0
+    ) {
+      return null;
+    }
+    return minutes * 60 + seconds;
+  }
+
+  return null;
 }
 
 function getCaptionKey(
@@ -73,6 +107,8 @@ export function CaptionsPanel({ videoId }: CaptionsPanelProps) {
   const [layoutSwitchKey, setLayoutSwitchKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [timestampFrom, setTimestampFrom] = useState("");
+  const [timestampTo, setTimestampTo] = useState("");
 
   const debouncedSetSearch = useDebouncedCallback(
     (value: string) => setDebouncedSearch(value.trim()),
@@ -109,7 +145,27 @@ export function CaptionsPanel({ videoId }: CaptionsPanelProps) {
     enabled: isSearching,
   });
 
-  const captions = isSearching ? (searchResults ?? []) : allCaptions;
+  const baseCaptions = isSearching ? (searchResults ?? []) : allCaptions;
+  const fromSeconds = useMemo(
+    () => parseTimeInput(timestampFrom),
+    [timestampFrom]
+  );
+  const toSeconds = useMemo(() => parseTimeInput(timestampTo), [timestampTo]);
+  const captions = useMemo(() => {
+    if (fromSeconds == null && toSeconds == null) {
+      return baseCaptions;
+    }
+    return baseCaptions.filter((caption) => {
+      const start = caption.startTime;
+      if (fromSeconds != null && start < fromSeconds) {
+        return false;
+      }
+      if (toSeconds != null && start > toSeconds) {
+        return false;
+      }
+      return true;
+    });
+  }, [baseCaptions, fromSeconds, toSeconds]);
   const useParagraphLayout = isParagraphLayout && !isSearching;
   const captionIndexByKey = useMemo(() => {
     const indexMap = new Map<string, number>();
@@ -246,9 +302,9 @@ export function CaptionsPanel({ videoId }: CaptionsPanelProps) {
   };
 
   return (
-    <Card className="flex h-full flex-col gap-0 border border-border py-0">
-      <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
-        <span className="font-medium text-sm">Captions</span>
+    <Card className="flex h-full flex-col gap-0 py-0">
+      <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-4">
+        <span className="font-medium text-sm">Subtitles</span>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground text-xs">Auto-scroll</span>
@@ -281,28 +337,49 @@ export function CaptionsPanel({ videoId }: CaptionsPanelProps) {
         </div>
       </CardHeader>
       <div className="border-b px-2 py-1.5">
-        <InputGroup className="h-8">
-          <InputGroupAddon>
-            <SearchIcon className="text-muted-foreground" />
-          </InputGroupAddon>
-          <InputGroupInput
-            className="h-8 text-xs"
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search captions..."
-            value={searchQuery}
-          />
-          {searchQuery && (
-            <InputGroupAddon align="inline-end">
-              <button
-                className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
-                onClick={clearSearch}
-                type="button"
-              >
-                <XIcon className="size-3" />
-              </button>
-            </InputGroupAddon>
-          )}
-        </InputGroup>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <InputGroup className="h-8">
+              <InputGroupAddon>
+                <SearchIcon className="text-muted-foreground" />
+              </InputGroupAddon>
+              <InputGroupInput
+                className="h-8 text-xs"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search captions..."
+                value={searchQuery}
+              />
+              {searchQuery && (
+                <InputGroupAddon align="inline-end">
+                  <button
+                    className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+                    onClick={clearSearch}
+                    type="button"
+                  >
+                    <XIcon className="size-3" />
+                  </button>
+                </InputGroupAddon>
+              )}
+            </InputGroup>
+          </div>
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-8 w-12 appearance-none bg-background px-2 text-[11px] [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+              onChange={(e) => setTimestampFrom(e.target.value)}
+              placeholder="mm:ss"
+              type="time"
+              value={timestampFrom}
+            />
+            <span className="text-[11px] text-muted-foreground">–</span>
+            <Input
+              className="h-8 w-12 appearance-none bg-background px-2 text-[11px] [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+              onChange={(e) => setTimestampTo(e.target.value)}
+              placeholder="mm:ss"
+              type="time"
+              value={timestampTo}
+            />
+          </div>
+        </div>
       </div>
       <div
         className="min-h-0 flex-1 overflow-y-auto bg-secondary p-0"
@@ -346,7 +423,9 @@ export function CaptionsPanel({ videoId }: CaptionsPanelProps) {
                 return (
                   <div
                     className="absolute top-0 left-0 w-full px-2"
-                    key={`${caption.startTime}-${caption.endTime}`}
+                    data-index={virtualRow.index}
+                    key={virtualRow.key}
+                    ref={rowVirtualizer.measureElement}
                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
                     {showChapterTitle && (
