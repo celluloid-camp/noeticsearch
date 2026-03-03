@@ -6,7 +6,7 @@ import Loading from "../loading";
 
 export default function MineVideosPage() {
   return (
-    <div className="flex h-full min-w-0 flex-col gap-4 overflow-hidden">
+    <div className="container mx-auto px-4">
       <Suspense fallback={<Loading />}>
         <VideoCatalog filter="mine" />
       </Suspense>

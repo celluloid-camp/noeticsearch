@@ -10,6 +10,8 @@ export const env = createEnv({
     GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
     MISTRAL_API_KEY: z.string().min(1),
     REDIS_URL: z.string().min(1).optional(),
+    ADMIN_EMAIL: z.email(),
+    ADMIN_PASSWORD: z.string().min(1),
   },
   experimental__runtimeEnv: process.env,
   emptyStringAsUndefined: true,

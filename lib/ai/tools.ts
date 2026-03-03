@@ -10,7 +10,7 @@ interface CaptionSearchRow {
   startTime: number;
   subtitleId: number;
   subtitleText: string;
-  videoId: number;
+  videoId: string;
   videoThumbnail: string | null;
   videoTitle: string;
   videoUrl: string;
@@ -18,13 +18,13 @@ interface CaptionSearchRow {
 
 // Full output shape for the searchVideoCaptions tool (for documentation / reuse).
 export const searchVideoCaptionsOutputSchema = z.object({
-  videoId: z.number(),
+  videoId: z.string(),
   videoTitle: z.string(),
   videoThumbnail: z.string().nullable().optional(),
   videoUrl: z.string(),
   captions: z.array(
     z.object({
-      id: z.number(),
+      id: z.string(),
       text: z.string(),
       startTime: z.number(),
       endTime: z.number(),
@@ -136,12 +136,12 @@ export const searchVideoCaptions = createTool({
       const grouped = new Map<
         number,
         {
-          videoId: number;
+          videoId: string;
           videoTitle: string;
           videoThumbnail: string | null;
           videoUrl: string;
           captions: Array<{
-            id: number;
+            id: string;
             text: string;
             startTime: number;
             endTime: number;

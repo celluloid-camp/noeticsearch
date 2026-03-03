@@ -1,7 +1,9 @@
-import { asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { captionsTable, videoTable } from "@/db/schema";
+import { captionsTable, searchHistoryTable, videoTable } from "@/db/schema";
 import { chaptersTable } from "@/db/schema/chapters";
+import { searchResultTable } from "@/db/schema/search-result";
+import { getDbErrorMessage } from "@/lib/db";
 import {
   computeSpriteUrl,
   fetchPeerTubeVideo,
@@ -16,15 +18,18 @@ export const videoRouter = router({
       z.object({
         url: z.url(),
         isPublic: z.boolean().default(false),
+        videoPassword: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { url, isPublic } = input;
+      const { url, isPublic, videoPassword } = input;
       const userId = ctx.user.id;
 
       try {
         // Fetch video info from PeerTube using the provided videoId and baseUrl
-        const videoInfo = await fetchPeerTubeVideo(url);
+        const videoInfo = await fetchPeerTubeVideo(url, {
+          password: videoPassword,
+        });
 
         // Use the provided videoId as externalId (no need to parse URL)
         const externalId =
@@ -48,6 +53,9 @@ export const videoRouter = router({
             captionList: videoInfo.captions,
             storyboard: videoInfo.storyboard,
             isPublic,
+            publishedAt: videoInfo.videoDetails.publishedAt ?? new Date(),
+            isPasswordProtected: Boolean(videoPassword),
+            videoPassword: videoPassword ?? null,
           })
           .returning({
             id: videoTable.id,
@@ -55,7 +63,7 @@ export const videoRouter = router({
 
         const caption = videoInfo.captions[0].captionData;
 
-        const parsedCaptions = await parsePeerTubeVideoCaptions(caption);
+        const parsedCaptions = await parsePeerTubeVideoCaptions(url, caption);
 
         await ctx.db.insert(captionsTable).values(
           parsedCaptions.map((caption) => ({
@@ -95,15 +103,10 @@ export const videoRouter = router({
   getById: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const videoId = Number.parseInt(input.id, 10);
-      if (Number.isNaN(videoId)) {
-        throw new Error("Invalid video ID");
-      }
-
       const [video] = await ctx.db
         .select()
         .from(videoTable)
-        .where(eq(videoTable.id, videoId))
+        .where(eq(videoTable.id, input.id))
         .limit(1);
 
       if (!video) {
@@ -135,10 +138,7 @@ export const videoRouter = router({
   getChapters: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      const videoId = Number.parseInt(input.id, 10);
-      if (Number.isNaN(videoId)) {
-        throw new Error("Invalid video ID");
-      }
+      const videoId = input.id;
 
       const chapters = await ctx.db
         .select({
@@ -152,14 +152,15 @@ export const videoRouter = router({
       return chapters;
     }),
   getCaptions: publicProcedure
-    .input(z.object({ id: z.string(), search: z.string().optional() }))
+    .input(
+      z.object({
+        id: z.string(),
+        keywords: z.string().optional(),
+      })
+    )
     .query(async ({ input, ctx }) => {
-      const videoId = Number.parseInt(input.id, 10);
-      if (Number.isNaN(videoId)) {
-        throw new Error("Invalid video ID");
-      }
-
-      const trimmed = input.search?.trim();
+      const videoId = input.id;
+      const trimmed = input.keywords?.trim();
 
       if (trimmed) {
         const keywords = trimmed
@@ -170,40 +171,52 @@ export const videoRouter = router({
           " | "
         )})))`;
 
-        const captions = await ctx.db
-          .select({
-            id: captionsTable.id,
-            text: captionsTable.text,
-            startTime: captionsTable.startTime,
-            endTime: captionsTable.endTime,
-            headline: sql<string>`ts_headline(
+        try {
+          const captions = await ctx.db
+            .select({
+              id: captionsTable.id,
+              text: captionsTable.text,
+              startTime: captionsTable.startTime,
+              endTime: captionsTable.endTime,
+              headline: sql<string>`ts_headline(
               'french',
               ${captionsTable.text},
               ${tsQuery},
               'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
             )`,
-          })
-          .from(captionsTable)
-          .where(
-            sql`${eq(captionsTable.videoId, videoId)} AND to_tsvector('french', lower(unaccent(${captionsTable.text}))) @@ ${tsQuery}`
-          )
-          .orderBy(asc(captionsTable.startTime));
+            })
+            .from(captionsTable)
+            .where(
+              sql`${eq(captionsTable.videoId, videoId)} AND to_tsvector('french', lower(unaccent(${captionsTable.text}))) @@ ${tsQuery}`
+            )
+            .orderBy(asc(captionsTable.startTime));
 
-        return captions.map((sub) => ({
-          id: sub.id,
-          text: sub.text,
-          headline: sub.headline,
-          timestamp: formatTimestamp(sub.startTime),
-          startTime: sub.startTime,
-          endTime: sub.endTime,
-        }));
+          return captions.map((sub) => ({
+            id: sub.id,
+            text: sub.text,
+            headline: sub.headline,
+            timestamp: formatTimestamp(sub.startTime),
+            startTime: sub.startTime,
+            endTime: sub.endTime,
+          }));
+        } catch (error) {
+          console.error(error);
+          const { message, constraint } = getDbErrorMessage(error);
+          console.error("Failed to get captions:", {
+            message,
+            constraint,
+            originalError: error,
+          });
+          return [];
+        }
       }
 
       const captions = await ctx.db
         .select()
         .from(captionsTable)
         .where(eq(captionsTable.videoId, videoId))
-        .orderBy(asc(captionsTable.startTime));
+        .orderBy(asc(captionsTable.startTime))
+        .$dynamic();
 
       return captions.map((sub) => ({
         id: sub.id,
@@ -215,16 +228,115 @@ export const videoRouter = router({
       }));
     }),
 
+  getCaptionBySearchId: publicProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        searchId: z.string(),
+        keywords: z.string().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      const videoId = input.id;
+
+      // Load keywords from the saved search to build a tsquery
+      const searchHistory = await ctx.db.query.searchHistoryTable.findFirst({
+        where: eq(searchHistoryTable.id, input.searchId),
+        columns: {
+          id: true,
+          keywords: true,
+        },
+      });
+
+      const savedKeywords =
+        searchHistory?.keywords?.map((k) => k.trim()).filter(Boolean) ?? [];
+      const additionalKeywords =
+        input.keywords
+          ?.split(/[,\s]+/)
+          .map((k) => k.trim())
+          .filter(Boolean) ?? [];
+      const keywordsArray = [...savedKeywords, ...additionalKeywords];
+
+      if (keywordsArray.length === 0) {
+        // Fallback: no keywords stored, return un-highlighted captions
+        const rows = await ctx.db
+          .select({
+            id: captionsTable.id,
+            text: captionsTable.text,
+            startTime: captionsTable.startTime,
+            endTime: captionsTable.endTime,
+          })
+          .from(captionsTable)
+          .innerJoin(
+            searchResultTable,
+            and(
+              eq(searchResultTable.captionId, captionsTable.id),
+              eq(searchResultTable.searchId, input.searchId),
+              eq(searchResultTable.videoId, videoId)
+            )
+          )
+          .orderBy(asc(captionsTable.startTime));
+
+        return rows.map((sub) => ({
+          id: sub.id,
+          text: sub.text,
+          headline: null as string | null,
+          timestamp: formatTimestamp(sub.startTime),
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }));
+      }
+
+      const tsQuery = sql`to_tsquery('french', lower(unaccent(${keywordsArray.join(
+        " | "
+      )})))`;
+
+      const rows = await ctx.db
+        .select({
+          id: captionsTable.id,
+          text: captionsTable.text,
+          startTime: captionsTable.startTime,
+          endTime: captionsTable.endTime,
+          headline: sql<string>`ts_headline(
+            'french',
+            ${captionsTable.text},
+            ${tsQuery},
+            'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
+          )`,
+        })
+        .from(captionsTable)
+        .innerJoin(
+          searchResultTable,
+          and(
+            eq(searchResultTable.captionId, captionsTable.id),
+            eq(searchResultTable.searchId, input.searchId),
+            eq(searchResultTable.videoId, videoId)
+          )
+        )
+        .orderBy(asc(captionsTable.startTime));
+
+      return rows.map((sub) => ({
+        id: sub.id,
+        text: sub.text,
+        headline: sub.headline,
+        timestamp: formatTimestamp(sub.startTime),
+        startTime: sub.startTime,
+        endTime: sub.endTime,
+      }));
+    }),
+
   getAll: publicProcedure
     .input(
       z
         .object({
           filter: z.enum(["public", "all", "mine"]).default("all"),
+          sortBy: z.enum(["recent", "published", "title"]).default("recent"),
         })
         .optional()
     )
     .query(async ({ input, ctx }) => {
       const filter = input?.filter || "all";
+      const sortBy = input?.sortBy || "recent";
       const userId = ctx.user?.id;
 
       // Build query conditions based on filter
@@ -251,23 +363,55 @@ export const videoRouter = router({
         }
       }
 
-      // Fetch videos
-      const videos = await ctx.db
-        .select()
+      const rows = await ctx.db
+        .select({
+          id: videoTable.id,
+          title: videoTable.title,
+          url: videoTable.url,
+          thumbnail: videoTable.thumbnail,
+          createdAt: videoTable.createdAt,
+          publishedAt: videoTable.publishedAt,
+          isPublic: videoTable.isPublic,
+          videoDetails: videoTable.videoDetails,
+          baseUrl: videoTable.baseUrl,
+        })
         .from(videoTable)
         .where(whereCondition)
-        .orderBy(desc(videoTable.createdAt));
+        .orderBy(
+          sortBy === "title"
+            ? asc(videoTable.title)
+            : sortBy === "published"
+              ? desc(videoTable.publishedAt)
+              : desc(videoTable.createdAt)
+        );
 
       // Transform to match Video type (without subtitles)
-      const transformedVideos = videos.map((video) => {
+      const transformedVideos = rows.map((row) => {
+        const author =
+          row.videoDetails.account?.displayName ??
+          row.videoDetails.channel?.displayName ??
+          null;
+        const authorAvatar = resolveAuthorAvatarUrl(row.videoDetails);
+        // Derive instance name/host from videoDetails when available, fallback to baseUrl
+        const instanceHost =
+          (row.videoDetails as { account?: { host?: string } | null }).account
+            ?.host ??
+          (row.videoDetails as { channel?: { host?: string } | null }).channel
+            ?.host ??
+          row.baseUrl;
+
         return {
-          id: video.id.toString(),
-          title: video.title,
-          url: video.url,
-          thumbnail: video.thumbnail || "/placeholder.svg",
+          id: row.id.toString(),
+          title: row.title,
+          url: row.url,
+          thumbnail: row.thumbnail || "/placeholder.svg",
           subtitles: [], // Subtitles not returned in getAll
-          addedDate: video.createdAt,
-          isPublic: video.isPublic,
+          addedDate: row.createdAt,
+          publishedAt: row.publishedAt,
+          isPublic: row.isPublic,
+          author,
+          authorAvatar,
+          instanceName: instanceHost,
         };
       });
 
@@ -276,10 +420,7 @@ export const videoRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const videoId = Number.parseInt(input.id, 10);
-      if (Number.isNaN(videoId)) {
-        throw new Error("Invalid video ID");
-      }
+      const videoId = input.id;
 
       const [video] = await ctx.db
         .select()
@@ -304,10 +445,7 @@ export const videoRouter = router({
       z.object({ id: z.string(), title: z.string(), isPublic: z.boolean() })
     )
     .mutation(async ({ input, ctx }) => {
-      const videoId = Number.parseInt(input.id, 10);
-      if (Number.isNaN(videoId)) {
-        throw new Error("Invalid video ID");
-      }
+      const videoId = input.id;
 
       const [video] = await ctx.db
         .select()

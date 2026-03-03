@@ -1,12 +1,10 @@
 "use client";
 
 import { IconSearch } from "@tabler/icons-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import type { ImportVideoSchema } from "@/app/import/link/page";
+import { useMemo, useState } from "react";
 import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,31 +26,11 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { fetchPeerTubeVideo } from "@/lib/peertube-client";
+import { parsePeerTubeUrl } from "@/lib/peertube-client";
 import { useTRPC } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 
-const PEERTUBE_INSTANCES = [
-  {
-    label: "Public Peertube",
-    baseUrl: "https://sepiasearch.org",
-    thumbnailUrl: "https://sepiasearch.org/theme/framasoft/img/title.svg",
-  },
-  {
-    label: "Celluloid",
-    baseUrl: "https://celluloid.cloud",
-    thumbnailUrl:
-      "https://celluloid.cloud/lazy-static/avatars/195e16ff-c0c2-4ccd-b3d7-3bfe09c55ffd.jpg",
-  },
-  {
-    label: "MSH Paris Nord",
-    baseUrl: "https://video.mshparisnord.fr",
-    thumbnailUrl:
-      "https://video.mshparisnord.fr/lazy-static/avatars/c17d855c-e600-4c89-865d-89c13bb1d5ca.jpg",
-  },
-] as const;
-
-type PeerTubeBaseUrl = (typeof PEERTUBE_INSTANCES)[number]["baseUrl"];
+type PeerTubeBaseUrl = string;
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -62,56 +40,54 @@ function formatDuration(seconds: number): string {
 
 export default function ImportSearchPage() {
   const router = useRouter();
-  const [selectedBaseUrl, setSelectedBaseUrl] = useState<PeerTubeBaseUrl>(
-    PEERTUBE_INSTANCES[0].baseUrl
+  const api = useTRPC();
+  const { toast } = useToast();
+  const { data: instances } = useQuery(
+    api.peertubeInstance.listPublic.queryOptions({
+      limit: 10,
+    })
   );
+
+  const peertubeInstances = useMemo(
+    () =>
+      (instances ?? []).map((instance) => ({
+        label: instance.title,
+        baseUrl: instance.host,
+        thumbnailUrl: instance.thumbnail,
+      })),
+    [instances]
+  );
+
+  const defaultBaseUrl = peertubeInstances[0]?.baseUrl ?? "";
+  const [selectedBaseUrl, setSelectedBaseUrl] =
+    useState<PeerTubeBaseUrl>(defaultBaseUrl);
   const [query, setQuery] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState<{
     baseUrl: PeerTubeBaseUrl;
     search: string;
   } | null>(null);
   const [selectedWatchUrl, setSelectedWatchUrl] = useState<string | null>(null);
-
-  const api = useTRPC();
-  const { toast } = useToast();
+  const [pendingImport, setPendingImport] = useState<{
+    videoId: string;
+    baseUrl: string;
+  } | null>(null);
   const { data, isLoading, isError, error } = useQuery({
     ...api.peertubeSearch.searchVideos.queryOptions({
-      baseUrl: submittedSearch?.baseUrl ?? PEERTUBE_INSTANCES[0].baseUrl,
+      baseUrl: submittedSearch?.baseUrl || defaultBaseUrl,
       search: submittedSearch?.search ?? "",
     }),
-    enabled: !!submittedSearch?.search,
+    enabled: !!submittedSearch?.search && !!defaultBaseUrl,
   });
 
-  const confirmForm = useForm<ImportVideoSchema>({
-    defaultValues: {
-      url: "",
-      isPublic: false,
-      videoPreview: null,
-      isValidating: false,
-    },
-  });
-
-  const importVideo = useMutation(
-    api.video.import.mutationOptions({
-      onSuccess: (video) => {
-        toast({
-          title: "Success",
-          description: "Video imported successfully!",
-        });
-        confirmForm.reset();
-        router.push(`/video/${video.id}`);
-      },
-      onError: (err) => {
-        toast({
-          title: "Error",
-          description:
-            err.message ||
-            "Failed to import video. Please try again or check the video URL.",
-          variant: "destructive",
-        });
-      },
-    })
-  );
+  const handleImportSuccess = (video: { id: string }) => {
+    toast({
+      title: "Success",
+      description: "Video imported successfully!",
+    });
+    setPendingImport(null);
+    setSelectedWatchUrl(null);
+    router.push(`/video/${video.id}`);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,94 +103,29 @@ export default function ImportSearchPage() {
     setQuery("");
     setSubmittedSearch(null);
     setSelectedWatchUrl(null);
-    confirmForm.reset({
-      url: "",
-      isPublic: false,
-      videoPreview: null,
-      isValidating: false,
-    } as ImportVideoSchema);
+    setPendingImport(null);
   };
 
-  const handleSelectVideo = async (watchUrl: string) => {
+  const handleSelectVideo = (watchUrl: string) => {
     if (selectedWatchUrl === watchUrl) {
       setSelectedWatchUrl(null);
-      confirmForm.reset({
-        url: "",
-        isPublic: false,
-        videoPreview: null,
-        isValidating: false,
-      } as ImportVideoSchema);
+      setPendingImport(null);
       return;
     }
-
-    setSelectedWatchUrl(watchUrl);
-    confirmForm.setValue("isValidating", true);
-    try {
-      const info = await fetchPeerTubeVideo(watchUrl);
-      confirmForm.reset({
-        url: watchUrl,
-        isPublic: false,
-        videoPreview: {
-          title: info.title,
-          description: info.description,
-          thumbnail: info.thumbnail,
-          videoId: info.videoId,
-          baseUrl: info.baseUrl,
-          captions: info.captions,
-        },
-        isValidating: false,
-      } as ImportVideoSchema);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error(err);
-      confirmForm.reset({
-        url: "",
-        isPublic: false,
-        videoPreview: null,
-        isValidating: false,
-      } as ImportVideoSchema);
-      setSelectedWatchUrl(null);
+    const parsed = parsePeerTubeUrl(watchUrl);
+    if (!parsed) {
       toast({
         title: "Error",
-        description:
-          err instanceof Error
-            ? err.message
-            : "Failed to load video details for import.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleConfirmImport = async (data: ImportVideoSchema) => {
-    const preview = confirmForm.getValues("videoPreview");
-    const urlError = confirmForm.formState.errors.url;
-
-    if (urlError || !preview) {
-      toast({
-        title: "Validation Error",
-        description:
-          urlError?.message ||
-          "Video information is missing. Please try selecting the video again.",
+        description: "Invalid PeerTube URL format.",
         variant: "destructive",
       });
       return;
     }
-
-    if (!preview.captions || preview.captions.length === 0) {
-      toast({
-        title: "Validation Error",
-        description:
-          "This video does not have any captions available. Videos with captions are required for import.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const video = await importVideo.mutateAsync({
-      url: data.url,
-      isPublic: data.isPublic,
+    setSelectedWatchUrl(watchUrl);
+    setPendingImport({
+      videoId: parsed.videoId,
+      baseUrl: parsed.baseUrl,
     });
-    router.push(`/video/${video.id}`);
   };
 
   return (
@@ -241,9 +152,18 @@ export default function ImportSearchPage() {
                       >
                         {(() => {
                           const selected =
-                            PEERTUBE_INSTANCES.find(
+                            peertubeInstances.find(
                               ({ baseUrl }) => baseUrl === selectedBaseUrl
-                            ) ?? PEERTUBE_INSTANCES[0];
+                            ) ?? peertubeInstances[0];
+
+                          if (!selected) {
+                            return (
+                              <span className="text-muted-foreground text-sm">
+                                No public instances configured
+                              </span>
+                            );
+                          }
+
                           return (
                             <div className="flex items-center gap-3">
                               {selected.thumbnailUrl ? (
@@ -273,7 +193,7 @@ export default function ImportSearchPage() {
                       className=""
                       style={{ width: "var(--radix-popper-anchor-width)" }}
                     >
-                      {PEERTUBE_INSTANCES.map(
+                      {peertubeInstances.map(
                         ({ label, baseUrl, thumbnailUrl }) => (
                           <DropdownMenuItem
                             key={baseUrl}
@@ -402,7 +322,7 @@ export default function ImportSearchPage() {
                         return (
                           <button
                             className={cn(
-                              "flex w-full gap-3 rounded-md border bg-card p-3 text-left text-xs/relaxed transition-colors hover:bg-muted/60",
+                              "flex w-full gap-3 rounded-md p-3 text-left text-xs/relaxed transition-colors hover:bg-muted/60",
                               isSelected && "border-ring bg-muted"
                             )}
                             key={v.watchUrl}
@@ -448,12 +368,12 @@ export default function ImportSearchPage() {
         </div>
       )}
 
-      {selectedWatchUrl && (
+      {pendingImport && (
         <div className="w-full md:w-1/2">
           <ImportVideoConfirmForm
-            form={confirmForm}
-            isSubmitting={importVideo.isPending}
-            onSubmit={handleConfirmImport}
+            baseUrl={pendingImport.baseUrl}
+            onSuccess={handleImportSuccess}
+            videoId={pendingImport.videoId}
           />
         </div>
       )}

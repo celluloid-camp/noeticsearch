@@ -61,25 +61,11 @@ export default function SearchVideoPage() {
 
   return (
     <MediaProvider>
-      <div className="flex h-full overflow-hidden">
-        {/* Video Player */}
-        <div className="mt-6 flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="mb-2 flex items-center gap-2">
-            <Button
-              onClick={handleBack}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <ArrowLeftIcon className="size-4" />
-              Back to search
-            </Button>
-          </div>
-          <VideoPlayer video={video} />
-        </div>
+      <div className="mt-2 flex h-full overflow-hidden">
+        <VideoPlayer video={video} />
 
         {/* Right: Search info panel + Transcript */}
-        <div className="mx-4 my-6 flex min-h-0 w-1/3 min-w-0 flex-col gap-3">
+        <div className="mx-4 my-4 flex w-2/3 flex-col space-y-4">
           <Suspense
             fallback={
               <div className="h-24 shrink-0 animate-pulse rounded-lg bg-muted" />
@@ -89,11 +75,9 @@ export default function SearchVideoPage() {
           </Suspense>
 
           {/* Transcript Panel */}
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <Suspense fallback={<Loading />}>
-              <CaptionsPanel videoId={videoId} />
-            </Suspense>
-          </div>
+          <Suspense fallback={<Loading />}>
+            <CaptionsPanel searchId={searchId} videoId={videoId} />
+          </Suspense>
         </div>
       </div>
     </MediaProvider>

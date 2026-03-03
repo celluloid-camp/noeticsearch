@@ -1,20 +1,15 @@
+import { createId } from "@paralleldrive/cuid2";
 import { relations, sql } from "drizzle-orm";
-import {
-  index,
-  integer,
-  pgTable,
-  real,
-  serial,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { index, pgTable, real, text, timestamp } from "drizzle-orm/pg-core";
 import { videoTable } from "./videos";
 
 export const chaptersTable = pgTable(
   "chapters",
   {
-    id: serial("id").primaryKey(),
-    videoId: integer("video_id")
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    videoId: text("video_id")
       .notNull()
       .references(() => videoTable.id, { onDelete: "cascade" }),
     language: text("language").notNull().default("fr"),

@@ -1,13 +1,11 @@
 "use client";
 
 import { IconVideo, IconWorld } from "@tabler/icons-react";
-import { LogOut, Settings, User, Video } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { SearchHistorySidebar } from "@/components/search-history-sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { MySearchSidebar } from "@/components/search-history-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,11 +31,11 @@ import {
 } from "@/components/ui/sidebar";
 import { signOut, useSession } from "@/lib/auth-client";
 import OurIcon from "../icons/ouricon";
+import { PublicSearchSidebar } from "../public-search-sidebar";
 
 export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const t = useTranslations();
   const { data: session } = useSession();
   const { state } = useSidebar();
 
@@ -73,7 +71,7 @@ export function MainSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" variant="floating">
+    <Sidebar collapsible="icon">
       <SidebarHeader className="border-sidebar-border border-b">
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center">
@@ -109,6 +107,21 @@ export function MainSidebar() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+
+            {isLoggedIn ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={activeTab === "mine"}
+                  tooltip="My Videos"
+                >
+                  <Link href="/mine">
+                    <User className="size-4" />
+                    <span>My Videos</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -121,38 +134,11 @@ export function MainSidebar() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={activeTab === "mine"}
-                tooltip="My Videos"
-              >
-                <Link href="/mine">
-                  <User className="size-4" />
-                  <span>My Videos</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
-            {isLoggedIn ? (
-              <SidebarMenuItem>
-                <Button
-                  asChild
-                  className="bg-background"
-                  type="button"
-                  variant={"outline"}
-                >
-                  <Link href="/import">
-                    <Video />
-                    {isExpanded && <span>{t("video.import")}</span>}
-                  </Link>
-                </Button>
-              </SidebarMenuItem>
-            ) : null}
           </SidebarMenu>
         </SidebarGroup>
 
-        <SearchHistorySidebar />
+        <MySearchSidebar />
+        <PublicSearchSidebar />
       </SidebarContent>
 
       <SidebarFooter className="border-sidebar-border border-t">
@@ -234,7 +220,6 @@ export function MainSidebar() {
           </div>
           {isExpanded && (
             <div className="flex items-center gap-1">
-              <ThemeToggle />
               <LocaleSwitcher />
             </div>
           )}

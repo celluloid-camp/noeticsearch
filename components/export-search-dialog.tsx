@@ -25,7 +25,7 @@ type ExportFormat = "csv" | "ods";
 
 interface CaptionResult {
   captions: Array<{
-    id: number;
+    id: string;
     thumbnail: string | null;
     text: string;
     headline: string;
@@ -35,7 +35,7 @@ interface CaptionResult {
     rank: number;
     accuracy: number;
   }>;
-  videoId: number;
+  videoId: string;
   videoThumbnail: string | null;
   videoTitle: string;
   videoUrl: string;

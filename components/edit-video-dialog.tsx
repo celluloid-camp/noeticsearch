@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -23,10 +24,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useTRPC, type VideoById } from "@/lib/trpc/client";
+import DeleteVideoDialog from "./delete-video-dialog";
 
 const editVideoSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -73,6 +75,7 @@ export default function EditVideoDialog({
         queryClient.invalidateQueries({
           queryKey: [["video", "getAll"]],
         });
+        onOpenChange(false);
         onSuccess?.();
       },
       onError: (error) => {
@@ -112,7 +115,7 @@ export default function EditVideoDialog({
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Textarea className="min-h-[72px] resize-y" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -124,8 +127,8 @@ export default function EditVideoDialog({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">Public</FormLabel>
-                    <p className="text-muted-foreground text-sm">
+                    <FormLabel>Public</FormLabel>
+                    <p className="text-muted-foreground text-xs">
                       Make this video visible to everyone
                     </p>
                   </div>
@@ -139,16 +142,26 @@ export default function EditVideoDialog({
               )}
             />
             <DialogFooter>
-              <Button
-                onClick={() => onOpenChange(false)}
-                type="button"
-                variant="outline"
-              >
-                Cancel
-              </Button>
-              <Button disabled={updateVideo.isPending} type="submit">
-                {updateVideo.isPending ? "Saving..." : "Save Changes"}
-              </Button>
+              <div className="flex w-full items-center justify-between gap-2">
+                <DeleteVideoDialog video={video}>
+                  <Button size="sm" type="button" variant="destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </DeleteVideoDialog>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => onOpenChange(false)}
+                    type="button"
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                  <Button disabled={updateVideo.isPending} type="submit">
+                    {updateVideo.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </div>
             </DialogFooter>
           </form>
         </Form>

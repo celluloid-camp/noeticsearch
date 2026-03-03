@@ -47,7 +47,7 @@ import { SelectVideosDialog } from "@/components/select-videos-dialog";
 import { ShareSearchDialog } from "@/components/share-search-dialog";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
@@ -87,7 +87,7 @@ export function SearchChat({
   const { data: search, refetch: refetchSearch } = useSuspenseQuery(
     api.search.load.queryOptions({ id })
   );
-  const videoIds = (search.videoIds ?? []) as number[];
+  const videoIds = search.videoIds ?? [];
   const { mutateAsync: updateSearch } = useMutation(
     api.search.update.mutationOptions({
       onSuccess: () => {
@@ -233,7 +233,7 @@ export function SearchChat({
             {search.title == null ? (
               <Skeleton className="h-4 w-24" />
             ) : (
-              search.title
+              <p className="font-bold text-lg">{search.title}</p>
             )}
           </h1>
         </div>
@@ -272,10 +272,10 @@ export function SearchChat({
           </ButtonGroup>
         </div>
       </header>
-      <div className="flex h-full flex-1 flex-row gap-4">
+      <div className="flex h-full min-h-0 flex-1 flex-row gap-4 px-4 py-4">
         {/* Central Video Grid */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto">
             {captionResults.length > 0 ? (
               <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {captionResults.map((video) => (
@@ -302,15 +302,12 @@ export function SearchChat({
         </div>
 
         {/* Right Side Chat */}
-        <div className="m-4 flex min-h-0 w-96 shrink-0 flex-col overflow-hidden rounded-lg border bg-card">
-          <header className="shrink-0 border-b px-4 py-3">
-            <h2 className="font-semibold text-foreground text-sm">Assistant</h2>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Search in video captions
-            </p>
-          </header>
+        <Card className="flex h-full min-h-0 w-96 flex-col p-0">
+          <CardHeader className="border-b py-3">
+            <CardTitle>Assistant</CardTitle>
+          </CardHeader>
           <Conversation className="min-h-0 flex-1">
-            <ConversationContent className="px-3 py-4">
+            <ConversationContent className="px-3">
               {messages.map((message, messageIndex) => (
                 <Fragment key={message.id}>
                   {message.parts.map((part, i) => {
@@ -469,8 +466,8 @@ export function SearchChat({
             <ConversationScrollButton />
           </Conversation>
 
-          <PromptInput className="bg-transparent" onSubmit={handleSubmit}>
-            <PromptInputBody>
+          <PromptInput className="border-none ring-0" onSubmit={handleSubmit}>
+            <PromptInputBody className="border-none ring-0">
               <PromptInputTextarea
                 onChange={(e) => setInput(e.target.value)}
                 value={input}
@@ -552,7 +549,7 @@ export function SearchChat({
               />
             </PromptInputFooter>
           </PromptInput>
-        </div>
+        </Card>
       </div>
     </div>
   );

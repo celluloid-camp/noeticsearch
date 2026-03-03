@@ -3,6 +3,7 @@
  */
 import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
+import { peertubeInstanceRouter } from "./peertube-instance";
 import { peertubeSearchRouter } from "./peertube-search";
 import { searchRouter } from "./search";
 import { videoRouter } from "./video";
@@ -14,6 +15,7 @@ export const appRouter = router({
     .output(z.string())
     .query(() => "yay!"),
   peertubeSearch: peertubeSearchRouter,
+  peertubeInstance: peertubeInstanceRouter,
   search: searchRouter,
   video: videoRouter,
 });

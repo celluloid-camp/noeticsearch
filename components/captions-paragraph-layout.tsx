@@ -138,7 +138,7 @@ export function CaptionsParagraphLayout({
             {needsParagraphBreak && <span aria-hidden className="block h-3" />}
             <span
               className={cn(
-                "group inline cursor-pointer rounded-sm border border-transparent px-0 py-0.5 leading-snug transition-colors hover:border-primary data-selected:border-primary/40 data-highlight:bg-amber-500/20 data-selected:bg-primary/15",
+                "group inline cursor-pointer rounded-sm border border-transparent px-0 py-0.5 leading-snug transition-colors hover:border-primary data-selected:border-primary data-highlight:bg-amber-500/20 data-selected:bg-primary/15",
                 inlineSpacingClass
               )}
               data-highlight={index === targetCaptionIndex || undefined}

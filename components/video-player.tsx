@@ -1,14 +1,13 @@
 "use client";
 
 import PeerTubeVideo from "@celluloid/peertube-video-element/react";
-import { Settings, Trash2 } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useMediaRef } from "media-chrome/react/media-store";
 import ReactPlayer from "react-player";
 import type { PlayerEntry } from "react-player/players";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { VideoById } from "@/lib/trpc/client";
-import DeleteVideoDialog from "./delete-video-dialog";
 import EditVideoDialog from "./edit-video-dialog";
 
 const MATCH_SRC = /(https?):\/\/([^/]+)\/(?:videos\/watch|w)\/(.+)$/;
@@ -35,7 +34,7 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
   const mediaRefCallback = useMediaRef();
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="mt-4 ml-4 flex h-full w-full flex-col">
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="flex h-full w-full flex-col overflow-hidden">
@@ -81,28 +80,16 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
                       </p>
                     )}
                   </div>
-                  {video.canEdit && (
+                  {video.canEdit ? (
                     <div className="flex shrink-0 items-center gap-2">
                       <EditVideoDialog onSuccess={() => {}} video={video}>
-                        <Button
-                          size="icon-sm"
-                          title="Edit video"
-                          variant="ghost"
-                        >
-                          <Settings className="size-4" />
+                        <Button variant="outline">
+                          <Settings />
+                          <span>Edit</span>
                         </Button>
                       </EditVideoDialog>
-                      <DeleteVideoDialog video={video}>
-                        <Button
-                          size="icon-sm"
-                          title="Delete video"
-                          variant="ghost"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </DeleteVideoDialog>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>

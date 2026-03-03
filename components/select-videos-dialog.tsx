@@ -37,9 +37,9 @@ type TriggerVariant = "compact" | "default";
 
 interface SelectVideosDialogProps {
   onOpenChange: (open: boolean) => void;
-  onSelectionChange: (ids: number[]) => void;
+  onSelectionChange: (ids: string[]) => void;
   open: boolean;
-  selectedIds: number[];
+  selectedIds: string[];
   triggerVariant?: TriggerVariant;
   videos: SelectVideosDialogVideo[];
 }
@@ -140,19 +140,19 @@ export function SelectVideosDialog({
 
   const selectedVideos = useMemo(() => {
     const set = new Set(selectedIds);
-    return videos.filter((v) => set.has(Number(v.id)));
+    return videos.filter((v) => set.has(v.id));
   }, [videos, selectedIds]);
 
-  const handleToggle = (idNum: number, checked: boolean) => {
+  const handleToggle = (id: string, checked: boolean) => {
     if (checked) {
-      onSelectionChange([...selectedIds, idNum]);
+      onSelectionChange([...selectedIds, id]);
     } else {
-      onSelectionChange(selectedIds.filter((id) => id !== idNum));
+      onSelectionChange(selectedIds.filter((_id) => _id !== id));
     }
   };
 
-  const handleRemove = (idNum: number) => {
-    onSelectionChange(selectedIds.filter((id) => id !== idNum));
+  const handleRemove = (id: string) => {
+    onSelectionChange(selectedIds.filter((_id) => _id !== id));
   };
 
   const previewVideos = selectedVideos.slice(
@@ -183,7 +183,7 @@ export function SelectVideosDialog({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                handleRemove(Number(video.id));
+                handleRemove(video.id);
               }}
               type="button"
               variant="secondary"
@@ -223,7 +223,7 @@ export function SelectVideosDialog({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleRemove(Number(video.id));
+                  handleRemove(video.id);
                 }}
                 type="button"
                 variant="secondary"
@@ -336,13 +336,12 @@ export function SelectVideosDialog({
                   </p>
                 ) : (
                   filteredVideos.map((video) => {
-                    const idNum = Number(video.id);
-                    const checked = selectedIds.includes(idNum);
+                    const checked = selectedIds.includes(video.id);
                     return (
                       <VideoRow
                         checked={checked}
                         key={video.id}
-                        onCheckedChange={(c) => handleToggle(idNum, c)}
+                        onCheckedChange={(c) => handleToggle(video.id, c)}
                         video={video}
                       />
                     );
@@ -364,11 +363,10 @@ export function SelectVideosDialog({
                   </p>
                 ) : (
                   selectedVideos.map((video) => {
-                    const idNum = Number(video.id);
                     return (
                       <SelectedRow
                         key={video.id}
-                        onRemove={() => handleRemove(idNum)}
+                        onRemove={() => handleRemove(video.id)}
                         video={video}
                       />
                     );

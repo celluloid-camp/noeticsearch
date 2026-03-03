@@ -6,9 +6,9 @@ import Loading from "./loading";
 
 export default function Home() {
   return (
-    <div className="container mx-auto px-4 py-10">
+    <div className="container mx-auto px-4">
       <Suspense fallback={<Loading />}>
-        <VideoCatalog filter="all" />
+        <VideoCatalog filter="all" title="All Videos" />
       </Suspense>
     </div>
   );

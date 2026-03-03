@@ -1,10 +1,9 @@
+import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
 import {
   index,
-  integer,
   pgTable,
   real,
-  serial,
   text,
   timestamp,
   uniqueIndex,
@@ -16,14 +15,16 @@ import { videoTable } from "./videos";
 export const searchResultTable = pgTable(
   "search_result",
   {
-    id: serial("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
     searchId: text("search_id")
       .notNull()
       .references(() => searchHistoryTable.id, { onDelete: "cascade" }),
-    videoId: integer("video_id")
+    videoId: text("video_id")
       .notNull()
       .references(() => videoTable.id, { onDelete: "cascade" }),
-    captionId: integer("caption_id")
+    captionId: text("caption_id")
       .notNull()
       .references(() => captionsTable.id, { onDelete: "cascade" }),
     accuracy: real("accuracy").notNull().default(0),

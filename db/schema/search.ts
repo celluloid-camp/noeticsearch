@@ -11,7 +11,7 @@ export const searchHistoryTable = pgTable("search_history", {
   filterType: text("filter_type")
     .$type<"all" | "public" | "mine" | "custom">()
     .default("all"),
-  videoIds: jsonb("video_ids").$type<number[]>().default([]),
+  videoIds: jsonb("video_ids").$type<string[]>().default([]),
   userId: text("user_id")
     .notNull()
     .references(() => userTable.id, { onDelete: "cascade" }),

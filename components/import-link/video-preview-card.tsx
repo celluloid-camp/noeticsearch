@@ -1,12 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import type { ImportVideoSchema } from "@/app/import/link/page";
 
-type VideoPreview = ImportVideoSchema["videoPreview"];
+export interface VideoPreviewCardPreview {
+  baseUrl: string;
+  captions: Array<{ language: string; fileUrl: string }>;
+  description: string;
+  thumbnail: string;
+  title: string;
+  videoId: string;
+}
 
 interface VideoPreviewCardProps {
-  preview: VideoPreview;
+  preview: VideoPreviewCardPreview | null;
 }
 
 export function VideoPreviewCard({ preview }: VideoPreviewCardProps) {

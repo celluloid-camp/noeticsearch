@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { searchHistoryTable } from "@/db/schema";
+import { searchHistoryTable, searchResultTable } from "@/db/schema";
 import { getDbErrorMessage } from "@/lib/db";
-import { protectedProcedure, router } from "../trpc";
+import { protectedProcedure, publicProcedure, router } from "../trpc";
 export const searchRouter = router({
   create: protectedProcedure
     .input(
@@ -11,7 +11,7 @@ export const searchRouter = router({
         id: z.string(),
         isPublic: z.boolean().optional(),
         filterType: z.enum(["all", "public", "mine", "custom"]).optional(),
-        videoIds: z.array(z.number()).optional(),
+        videoIds: z.array(z.string()).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -72,6 +72,39 @@ export const searchRouter = router({
         });
       }
       return searchHistory;
+    }),
+  captionsByVideoId: publicProcedure
+    .input(z.object({ videoId: z.string(), searchId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      try {
+        const searchResults = await ctx.db.query.searchResultTable.findMany({
+          columns: {
+            id: true,
+            captionId: true,
+          },
+          where: and(
+            eq(searchResultTable.searchId, input.searchId),
+            eq(searchResultTable.videoId, input.videoId)
+          ),
+        });
+
+        if (searchResults.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Search results not found for this video",
+          });
+        }
+
+        return searchResults.map((result) => result.captionId);
+      } catch (error) {
+        const { message, constraint } = getDbErrorMessage(error);
+        console.error("Failed to get captions by video id:", {
+          message,
+          constraint,
+          originalError: error,
+        });
+        return [];
+      }
     }),
   captionResults: protectedProcedure
     .input(
@@ -197,12 +230,12 @@ export const searchRouter = router({
         (raw as unknown as { rows?: { results: unknown }[] }).rows ?? [];
       const results = (rows[0]?.results as unknown) ?? [];
       return results as {
-        videoId: number;
+        videoId: string;
         videoTitle: string;
         videoThumbnail: string | null;
         videoUrl: string;
         captions: Array<{
-          id: number;
+          id: string;
           thumbnail: string | null;
           text: string;
           headline: string;
@@ -215,8 +248,40 @@ export const searchRouter = router({
       }[];
     }),
   list: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db
+      .select({
+        id: searchHistoryTable.id,
+        title: searchHistoryTable.title,
+        createdAt: searchHistoryTable.createdAt,
+      })
+      .from(searchHistoryTable)
+      .where(eq(searchHistoryTable.userId, ctx.user.id))
+      .limit(10)
+      .orderBy(desc(searchHistoryTable.createdAt));
+
+    const [{ total }] = await ctx.db
+      .select({
+        total: sql<number>`cast(count(*) as integer)`,
+      })
+      .from(searchHistoryTable)
+      .where(eq(searchHistoryTable.userId, ctx.user.id));
+
+    return {
+      items: rows,
+      count: rows.length,
+      totalCount: total,
+    };
+  }),
+  publicList: publicProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user?.id;
     const searchHistories = await ctx.db.query.searchHistoryTable.findMany({
-      where: eq(searchHistoryTable.userId, ctx.user.id),
+      where:
+        userId != null
+          ? and(
+              eq(searchHistoryTable.isPublic, true),
+              ne(searchHistoryTable.userId, userId)
+            )
+          : eq(searchHistoryTable.isPublic, true),
       columns: {
         id: true,
         title: true,
@@ -226,6 +291,7 @@ export const searchRouter = router({
     });
     return searchHistories;
   }),
+
   update: protectedProcedure
     .input(
       z.object({
@@ -233,7 +299,7 @@ export const searchRouter = router({
         filterType: z.enum(["all", "public", "mine", "custom"]).optional(),
         isPublic: z.boolean().optional(),
         title: z.string().nullable().optional(),
-        videoIds: z.array(z.number()).optional(),
+        videoIds: z.array(z.string()).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {

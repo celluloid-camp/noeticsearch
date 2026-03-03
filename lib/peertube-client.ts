@@ -66,9 +66,23 @@ export function parsePeerTubeUrl(
 }
 
 /**
+ * Build a PeerTube watch URL from base URL and video ID
+ */
+export function buildPeerTubeWatchUrl(
+  baseUrl: string,
+  videoId: string
+): string {
+  const base = baseUrl.replace(/\/$/, "");
+  return `${base}/videos/watch/${videoId}`;
+}
+
+/**
  * Validate and fetch video information from PeerTube using the client library
  */
-export async function fetchPeerTubeVideoDetails(url: string) {
+export async function fetchPeerTubeVideoDetails(
+  url: string,
+  options?: { password?: string }
+) {
   const parsed = parsePeerTubeUrl(url);
   if (!parsed) {
     throw new Error("Invalid PeerTube URL format");
@@ -78,10 +92,30 @@ export async function fetchPeerTubeVideoDetails(url: string) {
   const client = createClient({ baseUrl });
 
   try {
-    const { data: videoData } = await getVideo({
+    const headers =
+      options?.password != null
+        ? { "x-peertube-video-password": options.password }
+        : undefined;
+
+    const { data: videoData, error: apiError } = await getVideo({
       client,
       path: { id: videoId },
+      ...(headers ? { headers } : {}),
     });
+
+    if (apiError) {
+      // Handle password-protected videos explicitly so the UI can prompt
+      if ((apiError as { code?: string }).code === "video_requires_password") {
+        const err = new Error("video_requires_password");
+        (err as { code?: string }).code = apiError.code;
+        throw err;
+      }
+
+      throw new Error(
+        (apiError as { message?: string }).message ||
+          "Failed to fetch video information"
+      );
+    }
 
     if (!videoData) {
       throw new Error(`Video not found url: ${url}`);
@@ -110,6 +144,13 @@ export async function fetchPeerTubeVideoDetails(url: string) {
       videoDetails: videoData,
     };
   } catch (error) {
+    // Preserve explicit password-required errors so callers can detect them
+    if (
+      error instanceof Error &&
+      (error as { code?: string }).code === "video_requires_password"
+    ) {
+      throw error;
+    }
     if (error instanceof Error) {
       throw new Error(`Failed to fetch video: ${error.message}`);
     }
@@ -140,14 +181,32 @@ export function resolveAuthorAvatarUrl(
 }
 
 /**
+ * Resolve caption URL from fileUrl or captionPath (relative to baseUrl).
+ */
+function resolveCaptionUrl(
+  caption: VideoCaption & { captionPath?: string },
+  baseUrl: string
+): string {
+  if (caption.fileUrl) {
+    return caption.fileUrl;
+  }
+  if (caption.captionPath) {
+    return new URL(caption.captionPath, baseUrl).toString();
+  }
+  throw new Error("Caption fileUrl or captionPath is required");
+}
+
+/**
  * Fetch and parse subtitles from PeerTube video
  */
-export async function parsePeerTubeVideoCaptions(caption: VideoCaption) {
-  if (!caption.fileUrl) {
-    throw new Error("Caption file URL is required");
-  }
+export async function parsePeerTubeVideoCaptions(
+  url: string,
+  caption: VideoCaption & { captionPath?: string }
+) {
+  const baseUrl = parsePeerTubeUrl(url)?.baseUrl ?? "";
+  const captionUrl = resolveCaptionUrl(caption, baseUrl);
   try {
-    const parsed = await parseResponse(fetch(caption.fileUrl));
+    const parsed = await parseResponse(fetch(captionUrl));
 
     // Convert parsed captions to our format
     return parsed.cues.map((cue) => ({
@@ -189,17 +248,22 @@ export async function fetchPeerTubeCaptionList(
     }
 
     // Return only caption metadata (language and URL)
+    const base = baseUrl.replace(/\/$/, "");
     return captionsData.map((caption) => {
       // Handle language as object { id: "fr", label: "French" } or string
       const language =
         typeof caption.language === "string"
           ? caption.language
           : caption.language?.id || "en";
+      const raw = caption as { fileUrl?: string; captionPath?: string };
+      const fileUrl =
+        raw.fileUrl ||
+        (raw.captionPath ? new URL(raw.captionPath, base).toString() : "");
 
       return {
         language,
         captionData: caption,
-        fileUrl: caption.fileUrl || "",
+        fileUrl,
       };
     });
   } catch (error) {
@@ -212,8 +276,11 @@ export async function fetchPeerTubeCaptionList(
 /**
  * Fetch complete video information including caption list (metadata only)
  */
-export async function fetchPeerTubeVideo(url: string) {
-  const videoInfo = await fetchPeerTubeVideoDetails(url);
+export async function fetchPeerTubeVideo(
+  url: string,
+  options?: { password?: string }
+) {
+  const videoInfo = await fetchPeerTubeVideoDetails(url, options);
   const captions = await fetchPeerTubeCaptionList(
     videoInfo.baseUrl,
     videoInfo.videoId

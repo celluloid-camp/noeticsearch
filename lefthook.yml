@@ -2,12 +2,12 @@
 # https://github.com/evilmartians/lefthook
 
 pre-commit:
-  parallel: true
+  parallel: false
   commands:
-    lint:
-      run: bunx biome check .
     format:
       run: bunx biome format --write .
+    lint:
+      run: bunx biome check .
 
 pre-push:
   parallel: true

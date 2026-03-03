@@ -27,7 +27,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTRPC } from "@/lib/trpc/client";
 
-export function SearchHistorySidebar() {
+export function MySearchSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const api = useTRPC();
@@ -36,7 +36,7 @@ export function SearchHistorySidebar() {
   const [searchToDelete, setSearchToDelete] = useState<string | null>(null);
 
   // Fetch search histories
-  const { data: searchHistories, isLoading: isLoadingSearches } = useQuery(
+  const { data: searchList, isLoading: isLoadingSearches } = useQuery(
     api.search.list.queryOptions()
   );
 
@@ -75,7 +75,7 @@ export function SearchHistorySidebar() {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Searches</SidebarGroupLabel>
+      <SidebarGroupLabel>My searches</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -94,9 +94,9 @@ export function SearchHistorySidebar() {
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
-        ) : searchHistories && searchHistories.length > 0 ? (
+        ) : searchList && searchList.count > 0 ? (
           <SidebarMenu>
-            {searchHistories.map((search) => {
+            {searchList.items.map((search) => {
               const isActive = pathname === `/search/${search.id}`;
               return (
                 <SidebarMenuItem key={search.id}>
@@ -124,11 +124,7 @@ export function SearchHistorySidebar() {
               );
             })}
           </SidebarMenu>
-        ) : (
-          <div className="px-2 py-4 text-center text-muted-foreground text-xs">
-            No searches yet
-          </div>
-        )}
+        ) : null}
       </SidebarGroupContent>
 
       {/* Delete Confirmation Dialog */}

@@ -1,15 +1,27 @@
 "use client";
 
-import { KeyRound, Loader2, Save, User } from "lucide-react";
+import { KeyRound, Loader2, Palette, Save, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Locale } from "@/i18n/config";
+import { i18nConfig } from "@/i18n/config";
+import { setLocaleCookie } from "@/lib/actions/locale";
 import { authClient } from "@/lib/auth-client";
 import { useSession, useUpdateUser } from "@/lib/auth-hooks";
 
-type SettingsTab = "profile" | "security";
+type SettingsTab = "profile" | "security" | "appearance";
 
 export default function SettingsPage() {
   const { user, isPending } = useSession();
@@ -23,6 +35,19 @@ export default function SettingsPage() {
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+
+  const { theme, setTheme } = useTheme();
+  const locale = useLocale() as Locale;
+  const router = useRouter();
+
+  const handleLocaleChange = async (newLocale: Locale) => {
+    await setLocaleCookie(newLocale);
+    router.refresh();
+  };
+
+  const getLocaleLabel = (loc: Locale) => {
+    return loc === "en" ? "English" : "Français";
+  };
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -105,6 +130,17 @@ export default function SettingsPage() {
           >
             <KeyRound className="h-4 w-4 shrink-0" />
             <span className="hidden md:inline">Security</span>
+          </button>
+          <button
+            className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium text-sm transition-colors ${
+              activeTab === "appearance"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            onClick={() => setActiveTab("appearance")}
+          >
+            <Palette className="h-4 w-4 shrink-0" />
+            <span className="hidden md:inline">Appearance</span>
           </button>
         </nav>
 
@@ -195,6 +231,77 @@ export default function SettingsPage() {
                   )}
                 </Button>
               </form>
+            </div>
+          )}
+
+          {activeTab === "appearance" && (
+            <div className="rounded-lg border p-6">
+              <div className="mb-6">
+                <h2 className="font-semibold text-lg">Appearance</h2>
+                <p className="text-muted-foreground text-sm">
+                  Customize how the application looks
+                </p>
+              </div>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Label>Theme</Label>
+                    <p className="text-muted-foreground text-sm">
+                      Select your preferred color scheme
+                    </p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="w-[150px]" variant="outline">
+                        {theme === "light"
+                          ? "Light"
+                          : theme === "dark"
+                            ? "Dark"
+                            : "System"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setTheme("light")}>
+                        Light
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTheme("dark")}>
+                        Dark
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTheme("system")}>
+                        System
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Label>Language</Label>
+                    <p className="text-muted-foreground text-sm">
+                      Select your preferred language
+                    </p>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="w-[150px]" variant="outline">
+                        {getLocaleLabel(locale as Locale)}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {i18nConfig.locales.map((loc) => (
+                        <DropdownMenuItem
+                          key={loc}
+                          onClick={() => handleLocaleChange(loc)}
+                        >
+                          <span className="flex flex-1 items-center">
+                            {getLocaleLabel(loc)}
+                          </span>
+                          {locale === loc && <span className="ml-2">✓</span>}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
             </div>
           )}
         </div>

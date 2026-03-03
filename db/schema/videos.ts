@@ -3,13 +3,13 @@ import type {
   VideoCaption,
   VideoDetails,
 } from "@celluloid/peertube-api/types";
+import { createId } from "@paralleldrive/cuid2";
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
   jsonb,
   pgTable,
-  serial,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -19,7 +19,9 @@ import { searchResultTable } from "./search-result";
 export const videoTable = pgTable(
   "videos",
   {
-    id: serial("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
     userId: text("user_id")
       .notNull()
       .references(() => userTable.id, { onDelete: "cascade" }),
@@ -31,9 +33,13 @@ export const videoTable = pgTable(
     thumbnail: text("thumbnail"),
     isPublic: boolean("is_public").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    publishedAt: timestamp("published_at").notNull().defaultNow(),
     videoDetails: jsonb("video_details").$type<VideoDetails>().notNull(),
     captionList: jsonb("caption_list").$type<VideoCaption[]>(),
     storyboard: jsonb("storyboard").$type<Storyboard>(),
+    isPasswordProtected: boolean("is_password_protected")
+      .notNull()
+      .default(false),
     videoPassword: text("video_password"),
   },
   (table) => [
