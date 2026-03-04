@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsStringEnum, useQueryState } from "nuqs";
-import { useLocale } from "use-intl/react";
+import { useLocale, useTranslations } from "use-intl/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -37,6 +37,7 @@ export default function VideoCatalog({
 }: VideoCatalogProps) {
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations();
   const api = useTRPC();
   const [sortBy, setSortBy] = useQueryState(
     "sort",
@@ -74,17 +75,19 @@ export default function VideoCatalog({
       <div className="flex flex-col items-center justify-center p-8">
         <Empty>
           <EmptyHeader>
-            <EmptyTitle>No videos found</EmptyTitle>
+            <EmptyTitle>{t("video.noVideosFound")}</EmptyTitle>
             <EmptyDescription>
               {filter === "mine"
-                ? "You haven't imported any videos yet."
-                : "Start by importing a video from PeerTube."}
+                ? t("video.noVideosMine") ||
+                  "You haven't imported any videos yet."
+                : t("video.startImport") ||
+                  "Start by importing a video from PeerTube."}
             </EmptyDescription>
           </EmptyHeader>
           {["mine", "all"].includes(filter) ? (
             <Button size="lg" variant="secondary">
               <PlusIcon className="size-4" />
-              <span>Add video</span>
+              <span>{t("video.addVideo")}</span>
             </Button>
           ) : null}
           <EmptyContent />
@@ -102,22 +105,22 @@ export default function VideoCatalog({
             <DropdownMenuTrigger asChild>
               <Button size="lg" variant="outline">
                 {sortBy === "recent"
-                  ? "Recently added"
+                  ? t("video.sortRecent")
                   : sortBy === "published"
-                    ? "Original publication date"
-                    : "Name (A–Z)"}
+                    ? t("video.sortPublished")
+                    : t("video.sortName")}
                 <ChevronDown className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setSortBy("recent")}>
-                Recently added
+                {t("video.sortRecent")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setSortBy("published")}>
-                Original publication date
+                {t("video.sortPublished")}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setSortBy("title")}>
-                Name (A–Z)
+                {t("video.sortName")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -125,7 +128,7 @@ export default function VideoCatalog({
             <Link href="/import">
               <Button size="lg">
                 <PlusIcon className="size-4" />
-                <span>Add video</span>
+                <span>{t("video.addVideo")}</span>
               </Button>
             </Link>
           ) : null}

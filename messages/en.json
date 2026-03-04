@@ -5,7 +5,11 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "close": "Close"
+    "close": "Close",
+    "done": "Done",
+    "user": "User",
+    "success": "Success",
+    "error": "Error"
   },
   "nav": {
     "allVideos": "All Videos",
@@ -16,14 +20,22 @@
     "newSearch": "New search",
     "importVideo": "Import video",
     "signUp": "Sign up",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "library": "Library"
   },
   "search": {
     "title": "Search Assistant",
     "placeholder": "Search in video subtitles...",
     "hint": "Ask me to find words or phrases in your video subtitles.",
     "searching": "Searching for videos...",
-    "noResults": "Search for videos to see results here"
+    "noResults": "Search for videos to see results here",
+    "assistant": "Assistant",
+    "publicSearches": "Public searches",
+    "mySearches": "My searches",
+    "deleteSearch": "Delete Search",
+    "editSearch": "Edit search",
+    "titleField": "Title",
+    "publicField": "Public"
   },
   "video": {
     "peerTube": "PeerTube Video",
@@ -31,6 +43,61 @@
     "deleteVideo": "Delete video",
     "notFound": "Video not found",
     "goBack": "Go Back",
-    "import": "Import video"
+    "import": "Import video",
+    "noVideosFound": "No videos found",
+    "noVideosMine": "You haven't imported any videos yet.",
+    "startImport": "Start by importing a video from PeerTube.",
+    "addVideo": "Add video",
+    "selectVideos": "Select videos",
+    "selectVideosDescription": "Filter and choose which videos to include in this search.",
+    "areYouSure": "Are you sure?",
+    "loadingVideoSource": "Loading video source...",
+    "titleField": "Title",
+    "publicField": "Public",
+    "editDescription": "Update the video title and visibility settings.",
+    "publicDescription": "Make this video visible to everyone",
+    "sortRecent": "Recently added",
+    "sortPublished": "Original publication date",
+    "sortName": "Name (A-Z)",
+    "unknownAuthor": "Unknown author",
+    "selected": "selected",
+    "filterPlaceholder": "Filter by title...",
+    "all": "All"
+  },
+  "captions": {
+    "transcription": "Transcription",
+    "transcript": "Transcript",
+    "search": "Search",
+    "marked": "Marked",
+    "autoScroll": "Auto-scroll",
+    "findPlaceholder": "Find in transcription...",
+    "noMatching": "No matching captions",
+    "noSubtitles": "No subtitles available"
+  },
+  "import": {
+    "title": "Import PeerTube Video",
+    "peerTubeUrl": "PeerTube URL",
+    "passwordProtected": "Video is password protected",
+    "passwordRequired": "Video password required",
+    "searchInstances": "Search PeerTube instances",
+    "instance": "Instance",
+    "results": "Results",
+    "publicVideo": "Public Video"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your account settings",
+    "profile": "Profile",
+    "security": "Security",
+    "appearance": "Appearance",
+    "email": "Email",
+    "name": "Name",
+    "password": "Password",
+    "theme": "Theme",
+    "language": "Language"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Sign up"
   }
 }

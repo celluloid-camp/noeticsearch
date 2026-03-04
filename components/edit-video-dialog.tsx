@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useTRPC, type VideoById } from "@/lib/trpc/client";
+import type { VideoById } from "@/lib/trpc/client";
+import { useTRPC } from "@/lib/trpc/client";
 import DeleteVideoDialog from "./delete-video-dialog";
 
 const editVideoSchema = z.object({
@@ -39,17 +40,20 @@ type EditVideoSchema = z.infer<typeof editVideoSchema>;
 
 interface EditVideoDialogProps {
   children: React.ReactNode;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  open: boolean;
   video: VideoById;
 }
 
-export default function EditVideoDialog({
-  video,
+export function EditVideoDialog({
   children,
+  video,
+  onOpenChange,
+  open,
   onSuccess,
 }: EditVideoDialogProps) {
-  const [open, setOpen] = useState(false);
-  const onOpenChange = setOpen;
+  const t = useTranslations();
   const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -66,8 +70,9 @@ export default function EditVideoDialog({
     api.video.update.mutationOptions({
       onSuccess: () => {
         toast({
-          title: "Video updated",
-          description: "The video has been successfully updated.",
+          title: t("video.editVideo"),
+          description:
+            t("common.success") || "The video has been successfully updated.",
         });
         queryClient.invalidateQueries({
           queryKey: [["video", "getById"], { input: { id: video.id } }],
@@ -80,7 +85,7 @@ export default function EditVideoDialog({
       },
       onError: (error) => {
         toast({
-          title: "Error",
+          title: t("common.error") || "Error",
           description: error.message || "Failed to update video",
           variant: "destructive",
         });
@@ -101,9 +106,10 @@ export default function EditVideoDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Video</DialogTitle>
+          <DialogTitle>{t("video.editVideo")}</DialogTitle>
           <DialogDescription>
-            Update the video title and visibility settings.
+            {t("video.editDescription") ||
+              "Update the video title and visibility settings."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -113,7 +119,7 @@ export default function EditVideoDialog({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t("video.titleField")}</FormLabel>
                   <FormControl>
                     <Textarea className="min-h-[72px] resize-y" {...field} />
                   </FormControl>
@@ -127,9 +133,10 @@ export default function EditVideoDialog({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel>Public</FormLabel>
+                    <FormLabel>{t("video.publicField")}</FormLabel>
                     <p className="text-muted-foreground text-xs">
-                      Make this video visible to everyone
+                      {t("video.publicDescription") ||
+                        "Make this video visible to everyone"}
                     </p>
                   </div>
                   <FormControl>
@@ -146,7 +153,7 @@ export default function EditVideoDialog({
                 <DeleteVideoDialog video={video}>
                   <Button size="sm" type="button" variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t("common.delete")}
                   </Button>
                 </DeleteVideoDialog>
                 <div className="flex items-center gap-2">
@@ -155,10 +162,12 @@ export default function EditVideoDialog({
                     type="button"
                     variant="outline"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button disabled={updateVideo.isPending} type="submit">
-                    {updateVideo.isPending ? "Saving..." : "Save Changes"}
+                    {updateVideo.isPending
+                      ? t("common.loading")
+                      : t("common.save")}
                   </Button>
                 </div>
               </div>

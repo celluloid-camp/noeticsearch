@@ -4,6 +4,7 @@ import { IconVideo, IconWorld } from "@tabler/icons-react";
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MySearchSidebar } from "@/components/search-history-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,6 +37,7 @@ import { PublicSearchSidebar } from "../public-search-sidebar";
 export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations();
   const { data: session } = useSession();
   const { state } = useSidebar();
 
@@ -79,11 +81,11 @@ export function MainSidebar() {
               asChild
               className="flex-1"
               size="lg"
-              tooltip="VisionSearch"
+              tooltip={t("nav.allVideos")}
             >
               <Link href="/">
                 <OurIcon />
-                <span>VisionSearch</span>
+                <span>{t("nav.allVideos")}</span>
               </Link>
             </SidebarMenuButton>
             <SidebarTrigger className="ml-2 shrink-0" />
@@ -93,17 +95,17 @@ export function MainSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Library</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.library")}</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 isActive={activeTab === "all"}
-                tooltip="All Videos"
+                tooltip={t("nav.allVideos")}
               >
                 <Link href="/">
                   <IconVideo className="size-4" />
-                  <span>All Videos</span>
+                  <span>{t("nav.allVideos")}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -113,11 +115,11 @@ export function MainSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activeTab === "mine"}
-                  tooltip="My Videos"
+                  tooltip={t("nav.myVideos")}
                 >
                   <Link href="/mine">
                     <User className="size-4" />
-                    <span>My Videos</span>
+                    <span>{t("nav.myVideos")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -126,11 +128,11 @@ export function MainSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={activeTab === "public"}
-                tooltip="Public Videos"
+                tooltip={t("nav.publicVideos")}
               >
                 <Link href="/public">
                   <IconWorld className="size-4" />
-                  <span>Public Videos</span>
+                  <span>{t("nav.publicVideos")}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -169,7 +171,7 @@ export function MainSidebar() {
                     {isExpanded && (
                       <div className="flex min-w-0 flex-col truncate text-left">
                         <span className="truncate font-medium text-sm">
-                          {session?.user?.name || "User"}
+                          {session?.user?.name || t("common.user")}
                         </span>
                         <span className="truncate text-muted-foreground text-xs">
                           {session?.user?.email}
@@ -181,7 +183,7 @@ export function MainSidebar() {
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel>
                     <p className="font-medium text-sm">
-                      {session?.user?.name || "User"}
+                      {session?.user?.name || t("common.user")}
                     </p>
                     <p className="truncate font-normal text-muted-foreground text-xs">
                       {session?.user?.email}
@@ -191,7 +193,7 @@ export function MainSidebar() {
                   <DropdownMenuItem asChild>
                     <Link href="/settings">
                       <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                      {t("settings.title")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -199,13 +201,13 @@ export function MainSidebar() {
                     variant="destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
+                    {t("nav.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : isExpanded ? (
               <Button onClick={handleSignUpClick} size="sm" type="button">
-                Sign up
+                {t("nav.signUp")}
               </Button>
             ) : (
               <Button

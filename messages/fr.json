@@ -5,7 +5,11 @@
     "cancel": "Annuler",
     "delete": "Supprimer",
     "edit": "Modifier",
-    "close": "Fermer"
+    "close": "Fermer",
+    "done": "Terminé",
+    "user": "Utilisateur",
+    "success": "Succès",
+    "error": "Erreur"
   },
   "nav": {
     "allVideos": "Toutes les vidéos",
@@ -16,14 +20,22 @@
     "newSearch": "Nouvelle recherche",
     "importVideo": "Importer une vidéo",
     "signUp": "S'inscrire",
-    "signOut": "Déconnexion"
+    "signOut": "Déconnexion",
+    "library": "Bibliothèque"
   },
   "search": {
     "title": "Assistant de recherche",
     "placeholder": "Rechercher dans les sous-titres...",
     "hint": "Demandez-moi de trouver des mots ou expressions dans vos sous-titres.",
     "searching": "Recherche de vidéos...",
-    "noResults": "Recherchez des vidéos pour voir les résultats ici"
+    "noResults": "Recherchez des vidéos pour voir les résultats ici",
+    "assistant": "Assistant",
+    "publicSearches": "Recherches publiques",
+    "mySearches": "Mes recherches",
+    "deleteSearch": "Supprimer la recherche",
+    "editSearch": "Modifier la recherche",
+    "titleField": "Titre",
+    "publicField": "Public"
   },
   "video": {
     "peerTube": "Vidéo PeerTube",
@@ -31,6 +43,61 @@
     "deleteVideo": "Supprimer la vidéo",
     "notFound": "Vidéo introuvable",
     "goBack": "Retour",
-    "import": "Importer une vidéo"
+    "import": "Importer une vidéo",
+    "noVideosFound": "Aucune vidéo trouvée",
+    "noVideosMine": "Vous n'avez pas encore importé de vidéos.",
+    "startImport": "Commencez par importer une vidéo depuis PeerTube.",
+    "addVideo": "Ajouter une vidéo",
+    "selectVideos": "Sélectionner des vidéos",
+    "selectVideosDescription": "Filtrez et choisissez les vidéos à inclure dans cette recherche.",
+    "areYouSure": "Êtes-vous sûr ?",
+    "loadingVideoSource": "Chargement de la vidéo...",
+    "titleField": "Titre",
+    "publicField": "Public",
+    "editDescription": "Modifiez le titre et les paramètres de visibilité de la vidéo.",
+    "publicDescription": "Rendre cette vidéo visible par tous",
+    "sortRecent": "Récemment ajouté",
+    "sortPublished": "Date de publication originale",
+    "sortName": "Nom (A-Z)",
+    "unknownAuthor": "Auteur inconnu",
+    "selected": "sélectionné(s)",
+    "filterPlaceholder": "Filtrer par titre...",
+    "all": "Tout"
+  },
+  "captions": {
+    "transcription": "Transcription",
+    "transcript": "Transcription",
+    "search": "Recherche",
+    "marked": "Marqué",
+    "autoScroll": "Défilement auto",
+    "findPlaceholder": "Rechercher dans la transcription...",
+    "noMatching": "Aucun sous-titre correspondant",
+    "noSubtitles": "Aucun sous-titre disponible"
+  },
+  "import": {
+    "title": "Importer une vidéo PeerTube",
+    "peerTubeUrl": "URL PeerTube",
+    "passwordProtected": "La vidéo est protégée par mot de passe",
+    "passwordRequired": "Mot de passe vidéo requis",
+    "searchInstances": "Rechercher des instances PeerTube",
+    "instance": "Instance",
+    "results": "Résultats",
+    "publicVideo": "Vidéo publique"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "description": "Gérer les paramètres du compte",
+    "profile": "Profil",
+    "security": "Sécurité",
+    "appearance": "Apparence",
+    "email": "E-mail",
+    "name": "Nom",
+    "password": "Mot de passe",
+    "theme": "Thème",
+    "language": "Langue"
+  },
+  "auth": {
+    "signIn": "Connexion",
+    "signUp": "S'inscrire"
   }
 }

@@ -75,7 +75,9 @@ export function Header() {
               />
             </svg>
           </div>
-          <h1 className="font-bold text-foreground text-xl">VisionSearch</h1>
+          <h1 className="font-bold text-foreground text-xl">
+            {t("nav.allVideos")}
+          </h1>
         </div>
 
         {/* Right Section */}
@@ -90,7 +92,7 @@ export function Header() {
                 variant="secondary"
               >
                 <Search className="h-4 w-4" />
-                New search
+                {t("nav.newSearch")}
               </Button>
 
               <Link href="/import">
@@ -138,14 +140,14 @@ export function Header() {
                     variant="destructive"
                   >
                     <LogOut className="h-4 w-4" />
-                    Sign out
+                    {t("nav.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
             <Button onClick={handleSignUpClick} type="button">
-              Sign up
+              {t("nav.signUp")}
             </Button>
           )}
         </div>

@@ -9,6 +9,7 @@ import {
   useMediaDispatch,
   useMediaSelector,
 } from "media-chrome/react/media-store";
+import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -98,6 +99,7 @@ function findCaptionIndexAtTime(captions: Caption[], time: number): number {
 
 export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
   const api = useTRPC();
+  const t = useTranslations();
   const [captionHighlightId] = useQueryState("c");
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -293,7 +295,9 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
     <Card className="flex h-full flex-col gap-0 py-0">
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-4">
         <div className="flex flex-col gap-2">
-          <span className="font-medium text-sm">Transcription</span>
+          <span className="font-medium text-sm">
+            {t("captions.transcription")}
+          </span>
         </div>
       </CardHeader>
       <Tabs
@@ -304,9 +308,11 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
         value={activeTab}
       >
         <TabsList className="h-7" variant="line">
-          <TabsTrigger value="transcript">Transcript</TabsTrigger>
-          <TabsTrigger value="search">Search</TabsTrigger>
-          <TabsTrigger value="marked">Marked</TabsTrigger>
+          <TabsTrigger value="transcript">
+            {t("captions.transcript")}
+          </TabsTrigger>
+          <TabsTrigger value="search">{t("captions.search")}</TabsTrigger>
+          <TabsTrigger value="marked">{t("captions.marked")}</TabsTrigger>
         </TabsList>
       </Tabs>
       <div className="border-b px-2 py-1.5">
@@ -319,7 +325,9 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
               <InputGroupInput
                 className="h-8 text-xs"
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Find in transcription..."
+                placeholder={
+                  t("captions.findPlaceholder") || "Find in transcription..."
+                }
                 value={searchQuery}
               />
               {searchQuery && (
@@ -436,13 +444,15 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
           </div>
         ) : (
           <div className="py-8 text-center text-muted-foreground text-sm">
-            {isSearching ? "No matching captions" : "No subtitles available"}
+            {isSearching ? t("captions.noMatching") : t("captions.noSubtitles")}
           </div>
         )}
       </div>
       <CardFooter className="flex items-center justify-end border-t px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">Auto-scroll</span>
+          <span className="text-muted-foreground text-xs">
+            {t("captions.autoScroll")}
+          </span>
           <Switch
             checked={autoScroll}
             onCheckedChange={setAutoScroll}
