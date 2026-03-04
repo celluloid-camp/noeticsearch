@@ -19,7 +19,6 @@ import { Input } from "./ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Skeleton } from "./ui/skeleton";
 import { Switch } from "./ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 
 type CaptionsPanelProps = {
   videoId: string;
@@ -105,9 +104,6 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const subtitleRefs = useRef<Record<number, HTMLSpanElement | null>>({});
   const [autoScroll, setAutoScroll] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    "transcript" | "search" | "marked"
-  >("transcript");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [timestampFrom, setTimestampFrom] = useState("");
@@ -300,7 +296,7 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
           </span>
         </div>
       </CardHeader>
-      <Tabs
+      {/* <Tabs
         className="self-end"
         onValueChange={(value) =>
           setActiveTab(value as "transcript" | "search" | "marked")
@@ -314,7 +310,7 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
           <TabsTrigger value="search">{t("captions.search")}</TabsTrigger>
           <TabsTrigger value="marked">{t("captions.marked")}</TabsTrigger>
         </TabsList>
-      </Tabs>
+      </Tabs> */}
       <div className="border-b px-2 py-1.5">
         <div className="flex items-center gap-2">
           <div className="flex-1">
