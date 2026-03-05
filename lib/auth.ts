@@ -31,7 +31,10 @@ export const auth = betterAuth({
       fallbackLocale: "default",
     }),
   ],
-  trustedOrigins: ["http://localhost:3000", "https://localhost:3000"],
+  trustedOrigins: [
+    "http://localhost:3000",
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
+  ],
   session: {
     cookieCache: {
       enabled: true,
