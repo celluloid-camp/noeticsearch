@@ -6,10 +6,8 @@ import Loading from "../loading";
 
 export default function AllVideosPage() {
   return (
-    <div className="container mx-auto px-4">
-      <Suspense fallback={<Loading />}>
-        <VideoCatalog filter="all" title="All Videos" />
-      </Suspense>
-    </div>
+    <Suspense fallback={<Loading />}>
+      <VideoCatalog filter="all" title="All Videos" />
+    </Suspense>
   );
 }

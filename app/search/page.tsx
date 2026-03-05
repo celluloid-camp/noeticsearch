@@ -41,7 +41,6 @@ import { useTRPC } from "@/lib/trpc/client";
 
 const suggestions = [
   "Trouve le passage où Nietzsche parle du nihilisme",
-  "Compare les définitions de la liberté dans plusieurs conférences",
   "Trouve les moments où il est question de la morale stoïcienne",
 ];
 

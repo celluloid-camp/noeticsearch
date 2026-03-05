@@ -6,10 +6,8 @@ import Loading from "../loading";
 
 export default function MineVideosPage() {
   return (
-    <div className="container mx-auto px-4">
-      <Suspense fallback={<Loading />}>
-        <VideoCatalog filter="mine" />
-      </Suspense>
-    </div>
+    <Suspense fallback={<Loading />}>
+      <VideoCatalog filter="mine" />
+    </Suspense>
   );
 }

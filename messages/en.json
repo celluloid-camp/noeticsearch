@@ -149,6 +149,17 @@
   "app": {
     "name": "NoeticSearch"
   },
+  "hero": {
+    "brand": "noeticsearch",
+    "title": "Search inside",
+    "subtitle": "any video.",
+    "description": "Find exact quotes, terms, and references across video transcripts with precision.",
+    "newSearch": "New search",
+    "myLibrary": "My library",
+    "getStarted": "Get started",
+    "signIn": "Sign in",
+    "browsePublicLibrary": "Browse public library"
+  },
   "auth": {
     "signIn": "Sign in",
     "signUp": "Sign up",

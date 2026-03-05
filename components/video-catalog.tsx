@@ -100,8 +100,8 @@ export default function VideoCatalog({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-3 px-1 pt-4 sm:px-0">
-        <h2 className="font-semibold text-lg">{title}</h2>
+      <div className="flex items-center justify-between gap-3 border-border border-b px-4 pt-4 pb-4">
+        <h2 className="font-mono font-semibold text-lg">{title}</h2>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -137,7 +137,7 @@ export default function VideoCatalog({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {videos.map((video) => (
           <Card
             className="cursor-pointer overflow-hidden p-0 transition-shadow hover:shadow-lg"

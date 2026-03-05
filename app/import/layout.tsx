@@ -54,9 +54,9 @@ export default function ImportLayout({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen w-full justify-center">
-        <Card className="m-4 w-full">
+        <Card className="w-full ring-0">
           <CardHeader>
-            <CardTitle>{t("importVideo")}</CardTitle>
+            <CardTitle className="font-mono">{t("importVideo")}</CardTitle>
             <CardDescription>{t("importDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="flex h-full flex-col gap-6 border-t p-0 md:flex-row md:items-stretch">
