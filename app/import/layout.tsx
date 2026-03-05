@@ -5,13 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const importOptions = [
@@ -56,8 +50,9 @@ export default function ImportLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen w-full justify-center">
         <Card className="w-full ring-0">
           <CardHeader>
-            <CardTitle className="font-mono">{t("importVideo")}</CardTitle>
-            <CardDescription>{t("importDescription")}</CardDescription>
+            <CardTitle className="font-mono text-muted-foreground text-xs uppercase">
+              {t("importVideo")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex h-full flex-col gap-6 border-t p-0 md:flex-row md:items-stretch">
             <aside className="w-full md:w-64 md:self-stretch md:border-border md:border-r">

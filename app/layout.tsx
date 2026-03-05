@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
+import { Geist, IBM_Plex_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import AppLayoutClient from "@/components/app-layout-client";
@@ -12,16 +12,15 @@ import { Agentation } from "agentation";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { TRPCProvider } from "@/lib/trpc/provider";
 
-const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-sans" });
-
 const geistSans = Geist({
-  variable: "--font-geist-sans",
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -57,9 +56,9 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html className={publicSans.variable} lang={locale}>
+    <html lang={locale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${ibmPlexMono.variable} antialiased`}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <TRPCProvider>

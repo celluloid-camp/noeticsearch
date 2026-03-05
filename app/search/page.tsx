@@ -35,6 +35,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { GridPattern } from "@/components/ui/grid-pattern";
 import { InputGroup, InputGroupTextarea } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
 import { useTRPC } from "@/lib/trpc/client";
@@ -132,71 +133,118 @@ export default function SearchPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-full w-full items-center justify-center">
-        <div className="flex w-full max-w-2xl flex-col gap-6">
-          <Form {...form}>
-            <form
-              className="w-full space-y-4"
-              onSubmit={form.handleSubmit(onSubmit)}
-            >
-              <Card className="w-full">
-                <CardHeader className="border-b pb-4">
-                  <CardTitle className="flex items-center gap-2">
-                    <IconSearch className="size-4" /> {t("newSearch")}
-                  </CardTitle>
-                  <CardDescription>{t("hint")}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {/* Search Input Form */}
-                  <FormField
-                    control={form.control}
-                    name="query"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <InputGroup>
-                            <InputGroupTextarea
-                              className="min-h-[140px] resize-none py-3 text-sm"
-                              disabled={isLoading}
-                              placeholder={t("hint")}
-                              {...field}
-                            />
-                          </InputGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+      <div className="relative h-full">
+        <GridPattern
+          className="stroke-border/50"
+          height={50}
+          strokeDasharray="4 2"
+          width={35}
+          x={-1}
+          y={-1}
+        />
+        <div className="relative z-10 flex h-full w-full items-center justify-center">
+          <div className="flex w-full max-w-2xl flex-col gap-6">
+            <Form {...form}>
+              <form
+                className="w-full space-y-4"
+                onSubmit={form.handleSubmit(onSubmit)}
+              >
+                <Card className="w-full bg-background">
+                  <CardHeader className="border-b pb-4">
+                    <CardTitle className="flex items-center gap-2">
+                      <IconSearch className="size-4" /> {t("newSearch")}
+                    </CardTitle>
+                    <CardDescription>{t("hint")}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    {/* Search Input Form */}
+                    <FormField
+                      control={form.control}
+                      name="query"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <InputGroup>
+                              <InputGroupTextarea
+                                className="min-h-[140px] resize-none py-3 text-sm"
+                                disabled={isLoading}
+                                placeholder={t("hint")}
+                                {...field}
+                              />
+                            </InputGroup>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <div className="flex flex-col gap-2 overflow-hidden">
-                    <span className="text-muted-foreground text-xs">
-                      {t("suggestions")}
-                    </span>
-                    <Suggestions>
-                      {suggestions.map((suggestion) => (
-                        <Suggestion
-                          key={suggestion}
-                          onClick={() => {
-                            form.setValue("query", suggestion);
-                          }}
-                          suggestion={suggestion}
-                        />
-                      ))}
-                    </Suggestions>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-3 border-t pt-3">
-                  <div className="flex w-full items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 overflow-hidden">
                       <span className="text-muted-foreground text-xs">
-                        {t("searchIn")}
+                        {t("suggestions")}
                       </span>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="inline-flex items-center gap-2 rounded-md border bg-secondary px-2 py-1 text-xs"
-                            type="button"
-                          >
+                      <Suggestions>
+                        {suggestions.map((suggestion) => (
+                          <Suggestion
+                            key={suggestion}
+                            onClick={() => {
+                              form.setValue("query", suggestion);
+                            }}
+                            suggestion={suggestion}
+                          />
+                        ))}
+                      </Suggestions>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-3 border-t pt-3">
+                    <div className="flex w-full items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground text-xs">
+                          {t("searchIn")}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="inline-flex items-center gap-2 rounded-md border bg-secondary px-2 py-1 text-xs"
+                              type="button"
+                            >
+                              {(() => {
+                                const FILTER_OPTIONS = [
+                                  {
+                                    value: "all",
+                                    label: t("filterAll"),
+                                    icon: Video,
+                                  },
+                                  {
+                                    value: "public",
+                                    label: t("filterPublic"),
+                                    icon: Globe,
+                                  },
+                                  {
+                                    value: "mine",
+                                    label: t("filterMine"),
+                                    icon: User,
+                                  },
+                                  {
+                                    value: "custom",
+                                    label: t("filterCustom"),
+                                    icon: ListFilter,
+                                  },
+                                ] as const;
+                                const current =
+                                  FILTER_OPTIONS.find(
+                                    (opt) => opt.value === filterType
+                                  ) ?? FILTER_OPTIONS[0];
+                                const Icon = current.icon;
+                                return (
+                                  <>
+                                    <Icon className="size-4 shrink-0" />
+                                    <span>{current.label}</span>
+                                  </>
+                                );
+                              })()}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
                             {(() => {
                               const FILTER_OPTIONS = [
                                 {
@@ -220,116 +268,79 @@ export default function SearchPage() {
                                   icon: ListFilter,
                                 },
                               ] as const;
-                              const current =
-                                FILTER_OPTIONS.find(
-                                  (opt) => opt.value === filterType
-                                ) ?? FILTER_OPTIONS[0];
-                              const Icon = current.icon;
-                              return (
-                                <>
-                                  <Icon className="size-4 shrink-0" />
-                                  <span>{current.label}</span>
-                                </>
-                              );
+                              return FILTER_OPTIONS.map((opt) => {
+                                const Icon = opt.icon;
+                                const isActive = filterType === opt.value;
+                                return (
+                                  <DropdownMenuItem
+                                    key={opt.value}
+                                    onSelect={() => {
+                                      form.setValue("filterType", opt.value);
+                                      if (opt.value !== "custom") {
+                                        form.setValue("videoIds", []);
+                                      }
+                                    }}
+                                  >
+                                    <Icon className="size-4 shrink-0" />
+                                    <span>{opt.label}</span>
+                                    {isActive ? (
+                                      <span className="ml-auto text-muted-foreground text-xs">
+                                        {t("filterCurrent")}
+                                      </span>
+                                    ) : null}
+                                  </DropdownMenuItem>
+                                );
+                              });
                             })()}
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          {(() => {
-                            const FILTER_OPTIONS = [
-                              {
-                                value: "all",
-                                label: t("filterAll"),
-                                icon: Video,
-                              },
-                              {
-                                value: "public",
-                                label: t("filterPublic"),
-                                icon: Globe,
-                              },
-                              {
-                                value: "mine",
-                                label: t("filterMine"),
-                                icon: User,
-                              },
-                              {
-                                value: "custom",
-                                label: t("filterCustom"),
-                                icon: ListFilter,
-                              },
-                            ] as const;
-                            return FILTER_OPTIONS.map((opt) => {
-                              const Icon = opt.icon;
-                              const isActive = filterType === opt.value;
-                              return (
-                                <DropdownMenuItem
-                                  key={opt.value}
-                                  onSelect={() => {
-                                    form.setValue("filterType", opt.value);
-                                    if (opt.value !== "custom") {
-                                      form.setValue("videoIds", []);
-                                    }
-                                  }}
-                                >
-                                  <Icon className="size-4 shrink-0" />
-                                  <span>{opt.label}</span>
-                                  {isActive ? (
-                                    <span className="ml-auto text-muted-foreground text-xs">
-                                      {t("filterCurrent")}
-                                    </span>
-                                  ) : null}
-                                </DropdownMenuItem>
-                              );
-                            });
-                          })()}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[0.7rem] text-muted-foreground">
+                          {t("publicField")}
+                        </span>
+                        <Switch
+                          checked={form.watch("isPublic")}
+                          onCheckedChange={(value) =>
+                            form.setValue("isPublic", value)
+                          }
+                        />
+                        <button
+                          aria-label="Send search"
+                          className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground text-xs disabled:opacity-50"
+                          disabled={isSubmitDisabled}
+                          type="submit"
+                        >
+                          {t("searchButton")}{" "}
+                          <IconCornerDownLeft className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[0.7rem] text-muted-foreground">
-                        {t("publicField")}
-                      </span>
-                      <Switch
-                        checked={form.watch("isPublic")}
-                        onCheckedChange={(value) =>
-                          form.setValue("isPublic", value)
-                        }
-                      />
-                      <button
-                        aria-label="Send search"
-                        className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground text-xs disabled:opacity-50"
-                        disabled={isSubmitDisabled}
-                        type="submit"
-                      >
-                        {t("searchButton")}{" "}
-                        <IconCornerDownLeft className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  {filterType === "custom" && (
-                    <div className="flex w-full flex-col gap-2">
-                      <FormField
-                        control={form.control}
-                        name="videoIds"
-                        render={({ field: videosField }) => (
-                          <>
-                            <SelectVideosDialog
-                              onOpenChange={setCustomVideoDialogOpen}
-                              onSelectionChange={videosField.onChange}
-                              open={customVideoDialogOpen}
-                              selectedIds={videosField.value}
-                              videos={videos}
-                            />
-                            <FormMessage />
-                          </>
-                        )}
-                      />
-                    </div>
-                  )}
-                </CardFooter>
-              </Card>
-            </form>
-          </Form>
+                    {filterType === "custom" && (
+                      <div className="flex w-full flex-col gap-2">
+                        <FormField
+                          control={form.control}
+                          name="videoIds"
+                          render={({ field: videosField }) => (
+                            <>
+                              <SelectVideosDialog
+                                onOpenChange={setCustomVideoDialogOpen}
+                                onSelectionChange={videosField.onChange}
+                                open={customVideoDialogOpen}
+                                selectedIds={videosField.value}
+                                videos={videos}
+                              />
+                              <FormMessage />
+                            </>
+                          )}
+                        />
+                      </div>
+                    )}
+                  </CardFooter>
+                </Card>
+              </form>
+            </Form>
+          </div>
         </div>
       </div>
     </ProtectedRoute>

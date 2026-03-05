@@ -234,16 +234,18 @@ export function MainSidebar() {
             </div>
           )}
         </div>
+      </SidebarFooter>
+      <SidebarFooter className="border-sidebar-border border-t">
         {isExpanded && (
           <div className="flex items-center gap-3 px-1 pb-1">
             <Link
-              className="text-muted-foreground text-xs hover:text-foreground"
+              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
               href="/about"
             >
               About
             </Link>
             <Link
-              className="text-muted-foreground text-xs hover:text-foreground"
+              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
               href="/privacy"
             >
               Privacy
