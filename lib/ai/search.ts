@@ -17,7 +17,7 @@ function extractSearchToolOutput(messages: UIMessage[]) {
       const part = msg.parts[j] as Record<string, unknown>;
 
       const isSearchTool =
-        part.type === "tool-searchVideoCaptions" ||
+        part.type === "tool-search_video" ||
         (part.type === "dynamic-tool" &&
           part.toolName === "searchVideoCaptions");
 
@@ -127,11 +127,15 @@ export async function loadSearchHistory(id: string) {
     columns: {
       messages: true,
       title: true,
+      filterType: true,
+      videoIds: true,
     },
   });
 
   return {
     messages: searchHistory?.messages ?? [],
     title: searchHistory?.title ?? null,
+    filterType: searchHistory?.filterType ?? "all",
+    videoIds: searchHistory?.videoIds ?? [],
   };
 }

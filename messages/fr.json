@@ -21,7 +21,8 @@
     "importVideo": "Importer une vidéo",
     "signUp": "S'inscrire",
     "signOut": "Déconnexion",
-    "library": "Bibliothèque"
+    "library": "Bibliothèque",
+    "addVideo": "Ajouter une vidéo"
   },
   "search": {
     "title": "Assistant de recherche",
@@ -35,7 +36,18 @@
     "deleteSearch": "Supprimer la recherche",
     "editSearch": "Modifier la recherche",
     "titleField": "Titre",
-    "publicField": "Public"
+    "publicField": "Public",
+    "newSearch": "Nouvelle recherche",
+    "searchIn": "Rechercher dans",
+    "suggestions": "Suggestions",
+    "searchButton": "Rechercher",
+    "filterAll": "Toutes les vidéos",
+    "filterPublic": "Vidéos publiques",
+    "filterMine": "Mes vidéos",
+    "filterCustom": "Personnalisé",
+    "filterCurrent": "Actuel",
+    "queryRequired": "La requête de recherche est requise",
+    "selectVideo": "Veuillez sélectionner au moins une vidéo"
   },
   "video": {
     "peerTube": "Vidéo PeerTube",
@@ -82,7 +94,12 @@
     "searchInstances": "Rechercher des instances PeerTube",
     "instance": "Instance",
     "results": "Résultats",
-    "publicVideo": "Vidéo publique"
+    "publicVideo": "Vidéo publique",
+    "importVideo": "Importer une vidéo",
+    "importFromLink": "Importer depuis un lien",
+    "searchPeertube": "Rechercher sur PeerTube",
+    "uploadVideo": "Téléverser une vidéo",
+    "importDescription": "Choisissez comment ajouter une vidéo à votre bibliothèque."
   },
   "settings": {
     "title": "Paramètres",
@@ -94,10 +111,65 @@
     "name": "Nom",
     "password": "Mot de passe",
     "theme": "Thème",
-    "language": "Langue"
+    "language": "Langue",
+    "profileTab": "Profil",
+    "securityTab": "Sécurité",
+    "appearanceTab": "Apparence",
+    "updateProfile": "Mettre à jour les informations du profil",
+    "emailCannotChange": "Votre e-mail ne peut pas être modifié",
+    "enterName": "Entrez votre nom",
+    "saving": "Enregistrement...",
+    "saveChanges": "Enregistrer",
+    "resetPassword": "Réinitialiser votre mot de passe par e-mail",
+    "enterEmailReset": "Entrez votre e-mail pour recevoir le lien de réinitialisation",
+    "resetEmailSent": "E-mail de réinitialisation envoyé ! Vérifiez votre boîte de réception.",
+    "sending": "Envoi en cours...",
+    "sendResetEmail": "Envoyer l'e-mail de réinitialisation",
+    "customizeAppearance": "Personnaliser l'apparence de l'application",
+    "selectColorScheme": "Choisissez votre schéma de couleurs préféré",
+    "selectLanguage": "Choisissez votre langue préférée",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système",
+    "profileUpdated": "Profil mis à jour avec succès",
+    "failedUpdateProfile": "Échec de la mise à jour du profil",
+    "failedSendReset": "Échec de l'envoi de l'e-mail de réinitialisation",
+    "resetSentIfExists": "Si un compte existe, un e-mail de réinitialisation a été envoyé"
+  },
+  "sidebar": {
+    "mySearches": "Mes recherches",
+    "publicSearches": "Recherches publiques",
+    "newSearch": "Nouvelle recherche",
+    "deleteSearch": "Supprimer la recherche",
+    "areYouSureDelete": "Êtes-vous sûr de vouloir supprimer cette recherche ? Cette action est irréversible.",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "deleting": "Suppression..."
+  },
+  "app": {
+    "name": "NoeticSearch"
   },
   "auth": {
     "signIn": "Connexion",
-    "signUp": "S'inscrire"
+    "signUp": "S'inscrire",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "name": "Nom",
+    "signInTitle": "Connexion",
+    "signInDescription": "Entrez votre e-mail et mot de passe pour vous connecter",
+    "signUpTitle": "Créer un compte",
+    "signUpDescription": "Entrez vos informations pour créer un nouveau compte",
+    "signInButton": "Se connecter",
+    "signingInButton": "Connexion en cours...",
+    "signUpButton": "Créer un compte",
+    "creatingAccountButton": "Création du compte...",
+    "noAccount": "Vous n'avez pas de compte ?",
+    "hasAccount": "Vous avez déjà un compte ?",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "passwordMinLength": "Doit contenir au moins 8 caractères",
+    "signInFailed": "Échec de la connexion",
+    "signUpFailed": "Échec de l'inscription",
+    "unexpectedError": "Une erreur inattendue s'est produite"
   }
 }

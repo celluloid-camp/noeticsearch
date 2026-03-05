@@ -1,1 +1,0 @@
-ALTER TABLE "peertube_instances" ADD COLUMN "is_index" boolean DEFAULT false NOT NULL;

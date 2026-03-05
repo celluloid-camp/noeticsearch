@@ -4,7 +4,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink, TRPCClientError } from "@trpc/client";
 import SuperJSON from "superjson";
 import type { AppRouter } from "@/api";
-import { env } from "@/env";
 import { TRPCProvider as TRPCContextProvider } from "./client";
 import { makeQueryClient } from "./query-client";
 
@@ -29,7 +28,10 @@ function getUrl() {
     if (typeof window !== "undefined") {
       return "";
     }
-    return env.BASE_URL;
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`;
+    }
+    return "http://localhost:3000";
   })();
   return `${base}/api/trpc`;
 }

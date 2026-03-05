@@ -1,7 +1,7 @@
 "use client";
 
 import { IconVideo, IconWorld } from "@tabler/icons-react";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, PlusIcon, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -38,6 +38,7 @@ export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations();
+  const tApp = useTranslations("app");
   const { data: session } = useSession();
   const { state } = useSidebar();
 
@@ -45,10 +46,10 @@ export function MainSidebar() {
   const isExpanded = state === "expanded";
 
   const getActiveTab = (): "all" | "public" | "mine" => {
-    if (pathname === "/public") {
+    if (pathname === "/library/public") {
       return "public";
     }
-    if (pathname === "/mine") {
+    if (pathname === "/library/mine") {
       return "mine";
     }
     return "all";
@@ -77,15 +78,10 @@ export function MainSidebar() {
       <SidebarHeader className="border-sidebar-border border-b">
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center">
-            <SidebarMenuButton
-              asChild
-              className="flex-1"
-              size="lg"
-              tooltip={t("nav.allVideos")}
-            >
-              <Link href="/">
+            <SidebarMenuButton asChild size="lg" tooltip={tApp("name")}>
+              <Link className="flex flex-1 items-center gap-2" href="/">
                 <OurIcon />
-                <span>{t("nav.allVideos")}</span>
+                <span className="font-mono text-lg">{tApp("name")}</span>
               </Link>
             </SidebarMenuButton>
             <SidebarTrigger className="ml-2 shrink-0" />
@@ -94,16 +90,31 @@ export function MainSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {isLoggedIn ? <MySearchSidebar /> : null}
+        <PublicSearchSidebar />
+
         <SidebarGroup>
           <SidebarGroupLabel>{t("nav.library")}</SidebarGroupLabel>
+
           <SidebarMenu>
+            {isLoggedIn ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild size="sm">
+                  <Link href="/import">
+                    <PlusIcon className="size-4" />
+                    <span>{t("nav.addVideo")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 isActive={activeTab === "all"}
                 tooltip={t("nav.allVideos")}
               >
-                <Link href="/">
+                <Link href="/library/all">
                   <IconVideo className="size-4" />
                   <span>{t("nav.allVideos")}</span>
                 </Link>
@@ -117,7 +128,7 @@ export function MainSidebar() {
                   isActive={activeTab === "mine"}
                   tooltip={t("nav.myVideos")}
                 >
-                  <Link href="/mine">
+                  <Link href="/library/mine">
                     <User className="size-4" />
                     <span>{t("nav.myVideos")}</span>
                   </Link>
@@ -130,7 +141,7 @@ export function MainSidebar() {
                 isActive={activeTab === "public"}
                 tooltip={t("nav.publicVideos")}
               >
-                <Link href="/public">
+                <Link href="/library/public">
                   <IconWorld className="size-4" />
                   <span>{t("nav.publicVideos")}</span>
                 </Link>
@@ -138,9 +149,6 @@ export function MainSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-
-        <MySearchSidebar />
-        <PublicSearchSidebar />
       </SidebarContent>
 
       <SidebarFooter className="border-sidebar-border border-t">
@@ -206,7 +214,7 @@ export function MainSidebar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : isExpanded ? (
-              <Button onClick={handleSignUpClick} size="sm" type="button">
+              <Button onClick={handleSignUpClick} size="lg" type="button">
                 {t("nav.signUp")}
               </Button>
             ) : (

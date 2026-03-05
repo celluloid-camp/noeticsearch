@@ -39,7 +39,7 @@ export interface ImportVideoConfirmFormInput {
 interface ImportVideoConfirmFormProps {
   baseUrl: string;
   onSuccess?: (video: { id: string }) => void;
-  videoId: string;
+  videoId: number;
   videoPassword?: string;
 }
 
@@ -119,6 +119,7 @@ export function ImportVideoConfirmForm({
       <div className="flex h-full flex-col justify-center border-l p-6">
         <p className="text-destructive text-sm">
           {error instanceof Error ? error.message : "Failed to load video info"}
+          {baseUrl} {videoId}
         </p>
       </div>
     );

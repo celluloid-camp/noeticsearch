@@ -24,11 +24,12 @@ export function SearchInfoPanel({
   const { data: search } = useSuspenseQuery(
     api.search.load.queryOptions({ id: searchId })
   );
-  const { data: captionResults = [] } = useSuspenseQuery(
-    api.search.captionResults.queryOptions({ id: searchId })
-  );
+  const { data: captionResults = { results: [], canEdit: false } } =
+    useSuspenseQuery(api.search.captionResults.queryOptions({ id: searchId }));
 
-  const otherVideos = captionResults.filter((v) => v.videoId !== videoId);
+  const otherVideos = captionResults.results.filter(
+    (v) => v.videoId !== videoId
+  );
 
   return (
     <Collapsible defaultOpen>

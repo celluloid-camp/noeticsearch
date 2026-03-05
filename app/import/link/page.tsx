@@ -172,7 +172,7 @@ export default function ImportLinkPage() {
     });
     form.reset();
     setPendingImport(null);
-    router.push(`/video/${video.id}`);
+    router.replace(`/video/${video.id}`);
   };
 
   const handlePasswordSubmit = async () => {

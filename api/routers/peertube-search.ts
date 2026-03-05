@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { peerTubeWatchUrl, searchPeerTubeVideos } from "@/lib/peertube-client";
-import { publicProcedure, router } from "../trpc";
+import { searchPeerTubeVideos } from "@/lib/peertube-client";
+import { protectedProcedure, router } from "../trpc";
 
 export const peertubeSearchRouter = router({
-  searchVideos: publicProcedure
+  searchVideos: protectedProcedure
     .input(
       z.object({
         baseUrl: z.url(),
@@ -35,6 +35,7 @@ export const peertubeSearchRouter = router({
               ? new URL(raw.thumbnailPath, base).toString()
               : undefined);
           return {
+            id: v.id ?? 0,
             uuid: v.uuid,
             shortUUID: v.shortUUID,
             name: v.name,
@@ -43,7 +44,6 @@ export const peertubeSearchRouter = router({
             account: v.account,
             channel: v.channel,
             publishedAt: v.publishedAt,
-            watchUrl: peerTubeWatchUrl(input.baseUrl, v.shortUUID ?? ""),
           };
         }),
       };

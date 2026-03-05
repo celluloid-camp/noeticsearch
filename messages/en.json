@@ -21,7 +21,8 @@
     "importVideo": "Import video",
     "signUp": "Sign up",
     "signOut": "Sign out",
-    "library": "Library"
+    "library": "Library",
+    "addVideo": "Add video"
   },
   "search": {
     "title": "Search Assistant",
@@ -35,7 +36,18 @@
     "deleteSearch": "Delete Search",
     "editSearch": "Edit search",
     "titleField": "Title",
-    "publicField": "Public"
+    "publicField": "Public",
+    "newSearch": "New search",
+    "searchIn": "Search in",
+    "suggestions": "Suggestions",
+    "searchButton": "Search",
+    "filterAll": "All videos",
+    "filterPublic": "Public videos",
+    "filterMine": "My videos",
+    "filterCustom": "Custom",
+    "filterCurrent": "Current",
+    "queryRequired": "Search query is required",
+    "selectVideo": "Please select at least one video"
   },
   "video": {
     "peerTube": "PeerTube Video",
@@ -82,7 +94,12 @@
     "searchInstances": "Search PeerTube instances",
     "instance": "Instance",
     "results": "Results",
-    "publicVideo": "Public Video"
+    "publicVideo": "Public Video",
+    "importVideo": "Import video",
+    "importFromLink": "Import from link",
+    "searchPeertube": "Search PeerTube",
+    "uploadVideo": "Upload video",
+    "importDescription": "Choose how you want to add a video to your library."
   },
   "settings": {
     "title": "Settings",
@@ -94,10 +111,65 @@
     "name": "Name",
     "password": "Password",
     "theme": "Theme",
-    "language": "Language"
+    "language": "Language",
+    "profileTab": "Profile",
+    "securityTab": "Security",
+    "appearanceTab": "Appearance",
+    "updateProfile": "Update your profile information",
+    "emailCannotChange": "Your email cannot be changed",
+    "enterName": "Enter your name",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes",
+    "resetPassword": "Reset your password via email",
+    "enterEmailReset": "Enter your email to receive reset link",
+    "resetEmailSent": "Password reset email sent! Check your inbox.",
+    "sending": "Sending...",
+    "sendResetEmail": "Send Reset Email",
+    "customizeAppearance": "Customize how the application looks",
+    "selectColorScheme": "Select your preferred color scheme",
+    "selectLanguage": "Select your preferred language",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System",
+    "profileUpdated": "Profile updated successfully",
+    "failedUpdateProfile": "Failed to update profile",
+    "failedSendReset": "Failed to send reset email",
+    "resetSentIfExists": "If an account exists, a reset email has been sent"
+  },
+  "sidebar": {
+    "mySearches": "My searches",
+    "publicSearches": "Public searches",
+    "newSearch": "New search",
+    "deleteSearch": "Delete search",
+    "areYouSureDelete": "Are you sure you want to delete this search? This action cannot be undone.",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting..."
+  },
+  "app": {
+    "name": "NoeticSearch"
   },
   "auth": {
     "signIn": "Sign in",
-    "signUp": "Sign up"
+    "signUp": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "signInTitle": "Sign in",
+    "signInDescription": "Enter your email and password to sign in to your account",
+    "signUpTitle": "Create an account",
+    "signUpDescription": "Enter your details to create a new account",
+    "signInButton": "Sign in",
+    "signingInButton": "Signing in...",
+    "signUpButton": "Create account",
+    "creatingAccountButton": "Creating account...",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordMinLength": "Must be at least 8 characters",
+    "signInFailed": "Sign in failed",
+    "signUpFailed": "Sign up failed",
+    "unexpectedError": "An unexpected error occurred"
   }
 }

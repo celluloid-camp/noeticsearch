@@ -85,10 +85,12 @@ export default function VideoCatalog({
             </EmptyDescription>
           </EmptyHeader>
           {["mine", "all"].includes(filter) ? (
-            <Button size="lg" variant="secondary">
-              <PlusIcon className="size-4" />
-              <span>{t("video.addVideo")}</span>
-            </Button>
+            <Link href="/import">
+              <Button size="lg" variant="secondary">
+                <PlusIcon className="size-4" />
+                <span>{t("video.addVideo")}</span>
+              </Button>
+            </Link>
           ) : null}
           <EmptyContent />
         </Empty>

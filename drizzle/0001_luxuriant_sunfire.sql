@@ -1,1 +1,0 @@
-ALTER TABLE "videos" ADD COLUMN "published_at" timestamp DEFAULT now() NOT NULL;

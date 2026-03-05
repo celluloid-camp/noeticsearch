@@ -8,7 +8,7 @@ import type { PlayerEntry } from "react-player/players";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { VideoById } from "@/lib/trpc/client";
-import EditVideoDialog from "./edit-video-dialog";
+import { EditVideoDialog } from "./edit-video-dialog";
 
 const MATCH_SRC = /(https?):\/\/([^/]+)\/(?:videos\/watch|w)\/(.+)$/;
 function canPlay(src: string): boolean {

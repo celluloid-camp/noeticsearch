@@ -167,8 +167,8 @@ export const videoRouter = router({
           .split(/[,\s]+/)
           .map((k) => k.trim())
           .filter(Boolean);
-        const tsQuery = sql`to_tsquery('french', lower(unaccent(${keywords.join(
-          " | "
+        const tsQuery = sql`websearch_to_tsquery('french', lower(unaccent(${keywords.join(
+          " OR "
         )})))`;
 
         try {
@@ -287,8 +287,8 @@ export const videoRouter = router({
         }));
       }
 
-      const tsQuery = sql`to_tsquery('french', lower(unaccent(${keywordsArray.join(
-        " | "
+      const tsQuery = sql`websearch_to_tsquery('french', lower(unaccent(${keywordsArray.join(
+        " OR "
       )})))`;
 
       const rows = await ctx.db

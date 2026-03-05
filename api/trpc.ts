@@ -1,16 +1,19 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
+import { headers } from "next/headers";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export async function createTRPCContext(opts: FetchCreateContextFnOptions) {
-  const { req } = opts;
+export async function createTRPCContext(_opts: FetchCreateContextFnOptions) {
+  // const { req } = opts;
+
+  const reqheaders = await headers();
 
   // Get session from Better Auth
   const session = await auth.api.getSession({
-    headers: req.headers,
+    headers: reqheaders,
   });
 
   const user = session?.user;
@@ -35,6 +38,7 @@ const t = initTRPC.context<Context>().create({
 
 const isAuthed = t.middleware(({ ctx, next }) => {
   if (ctx.user === undefined || ctx.user.id === undefined) {
+    console.log("ctx.user", ctx.user);
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({ ctx: { ...ctx, user: ctx.user } });

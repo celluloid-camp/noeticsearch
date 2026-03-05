@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+import { Agentation } from "agentation";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { TRPCProvider } from "@/lib/trpc/provider";
 
@@ -24,7 +25,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VisionSearch - Video Subtitle Search Platform",
+  title: "NoeticSearch - Video Subtitle Search Platform",
   description:
     "Search for text in video subtitles. Add PeerTube videos and search their content with AI assistance.",
   generator: "v0.app",
@@ -78,7 +79,7 @@ export default async function RootLayout({
           </TRPCProvider>
         </NextIntlClientProvider>
         <Analytics />
-        {/* {process.env.NODE_ENV === "development" && <Agentation />} */}
+        {process.env.NODE_ENV === "development" && <Agentation />}
       </body>
     </html>
   );

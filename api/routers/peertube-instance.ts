@@ -1,10 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { peertubeInstanceTable } from "@/db/schema";
 import { protectedProcedure, router } from "../trpc";
 
 export const peertubeInstanceRouter = router({
-  listPublic: protectedProcedure
+  list: protectedProcedure
     .input(
       z
         .object({
@@ -13,6 +13,7 @@ export const peertubeInstanceRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
       const limit = input?.limit ?? 10;
 
       const instances = await ctx.db
@@ -22,9 +23,17 @@ export const peertubeInstanceRouter = router({
           title: peertubeInstanceTable.title,
           description: peertubeInstanceTable.description,
           thumbnail: peertubeInstanceTable.thumbnail,
+          isIndex: peertubeInstanceTable.isIndex,
         })
         .from(peertubeInstanceTable)
-        .where(eq(peertubeInstanceTable.isPublic, true))
+        .where(
+          and(
+            or(
+              eq(peertubeInstanceTable.isPublic, true),
+              eq(peertubeInstanceTable.userId, userId)
+            )
+          )
+        )
         .limit(limit);
 
       return instances;

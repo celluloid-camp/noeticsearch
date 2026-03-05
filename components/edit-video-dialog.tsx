@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -40,9 +41,9 @@ type EditVideoSchema = z.infer<typeof editVideoSchema>;
 
 interface EditVideoDialogProps {
   children: React.ReactNode;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
-  open: boolean;
+  open?: boolean;
   video: VideoById;
 }
 
@@ -50,9 +51,16 @@ export function EditVideoDialog({
   children,
   video,
   onOpenChange,
-  open,
+  open: openProp,
   onSuccess,
 }: EditVideoDialogProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = (value: boolean) => {
+    setInternalOpen(value);
+    onOpenChange?.(value);
+  };
+
   const t = useTranslations();
   const { toast } = useToast();
   const api = useTRPC();
@@ -80,7 +88,7 @@ export function EditVideoDialog({
         queryClient.invalidateQueries({
           queryKey: [["video", "getAll"]],
         });
-        onOpenChange(false);
+        setOpen(false);
         onSuccess?.();
       },
       onError: (error) => {
@@ -102,7 +110,7 @@ export function EditVideoDialog({
   };
 
   return (
-    <Dialog onOpenChange={onOpenChange} open={open}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -158,7 +166,7 @@ export function EditVideoDialog({
                 </DeleteVideoDialog>
                 <div className="flex items-center gap-2">
                   <Button
-                    onClick={() => onOpenChange(false)}
+                    onClick={() => setOpen(false)}
                     type="button"
                     variant="outline"
                   >

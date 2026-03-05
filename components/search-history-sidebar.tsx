@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -28,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTRPC } from "@/lib/trpc/client";
 
 export function MySearchSidebar() {
+  const t = useTranslations("sidebar");
   const pathname = usePathname();
   const router = useRouter();
   const api = useTRPC();
@@ -75,14 +77,14 @@ export function MySearchSidebar() {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>My searches</SidebarGroupLabel>
+      <SidebarGroupLabel>{t("mySearches")}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="sm">
               <Link href="/search">
                 <PlusIcon className="size-4" />
-                <span>New search</span>
+                <span>{t("newSearch")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -116,7 +118,7 @@ export function MySearchSidebar() {
                   <SidebarMenuAction
                     onClick={(e) => handleDeleteClick(e, search.id)}
                     showOnHover
-                    title="Delete search"
+                    title={t("deleteSearch")}
                   >
                     <Trash2 className="size-4" />
                   </SidebarMenuAction>
@@ -131,20 +133,19 @@ export function MySearchSidebar() {
       <AlertDialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Search</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteSearch")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this search? This action cannot be
-              undone.
+              {t("areYouSureDelete")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={deleteSearch.isPending}
               onClick={handleConfirmDelete}
             >
-              {deleteSearch.isPending ? "Deleting..." : "Delete"}
+              {deleteSearch.isPending ? t("deleting") : t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

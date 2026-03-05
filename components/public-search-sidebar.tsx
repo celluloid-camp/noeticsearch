@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -15,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTRPC } from "@/lib/trpc/client";
 
 export function PublicSearchSidebar() {
+  const t = useTranslations("sidebar");
   const pathname = usePathname();
   const api = useTRPC();
 
@@ -25,7 +27,7 @@ export function PublicSearchSidebar() {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Public searches</SidebarGroupLabel>
+      <SidebarGroupLabel>{t("publicSearches")}</SidebarGroupLabel>
       <SidebarGroupContent>
         {isLoadingSearches ? (
           <div className="space-y-2 px-2">
