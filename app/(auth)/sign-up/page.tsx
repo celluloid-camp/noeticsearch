@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { signUp } from "@/lib/auth-client";
 
 export default function SignUpPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [name, setName] = useState<string>("");
@@ -35,13 +37,13 @@ export default function SignUpPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Sign up failed");
+        setError(result.error.message || t("signUpFailed"));
       } else {
         router.push("/");
         router.refresh();
       }
     } catch (_err) {
-      setError("An unexpected error occurred");
+      setError(t("unexpectedError"));
     } finally {
       setLoading(false);
     }
@@ -52,11 +54,9 @@ export default function SignUpPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="font-bold text-2xl">
-            Create an account
+            {t("signUpTitle")}
           </CardTitle>
-          <CardDescription>
-            Enter your details to create a new account
-          </CardDescription>
+          <CardDescription>{t("signUpDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -67,7 +67,7 @@ export default function SignUpPage() {
             )}
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="name">
-                Name
+                {t("name")}
               </label>
               <Input
                 id="name"
@@ -80,7 +80,7 @@ export default function SignUpPage() {
             </div>
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="email">
-                Email
+                {t("email")}
               </label>
               <Input
                 id="email"
@@ -93,7 +93,7 @@ export default function SignUpPage() {
             </div>
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="password">
-                Password
+                {t("password")}
               </label>
               <Input
                 id="password"
@@ -104,18 +104,18 @@ export default function SignUpPage() {
                 value={password}
               />
               <p className="text-muted-foreground text-xs">
-                Must be at least 8 characters
+                {t("passwordMinLength")}
               </p>
             </div>
             <Button className="w-full" disabled={loading} type="submit">
-              {loading ? "Creating account..." : "Create account"}
+              {loading ? t("creatingAccountButton") : t("signUpButton")}
             </Button>
           </form>
 
           <p className="mt-4 text-center text-muted-foreground text-sm">
-            Already have an account?{" "}
+            {t("hasAccount")}{" "}
             <Link className="text-primary hover:underline" href="/sign-in">
-              Sign in
+              {t("signIn")}
             </Link>
           </p>
         </CardContent>

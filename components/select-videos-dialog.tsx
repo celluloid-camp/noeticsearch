@@ -2,6 +2,7 @@
 
 import { ListFilter, Plus, Search, X } from "lucide-react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -120,6 +121,7 @@ export function SelectVideosDialog({
   triggerVariant = "default",
   videos,
 }: SelectVideosDialogProps) {
+  const t = useTranslations();
   const [scope, setScope] = useState<ScopeFilter>("all");
   const [filter, setFilter] = useState("");
 
@@ -193,13 +195,13 @@ export function SelectVideosDialog({
           </div>
         ))}
         <span className="truncate text-[11px] text-muted-foreground">
-          {selectedVideos.length} selected
+          {selectedVideos.length} {t("video.selected") || "selected"}
         </span>
       </div>
     ) : isCompact ? (
       <div className="flex items-center gap-1.5">
         <ListFilter className="size-3.5 shrink-0" />
-        <span className="text-xs">Select videos</span>
+        <span className="text-xs">{t("video.selectVideos")}</span>
       </div>
     ) : previewVideos.length > 0 ? (
       <div className="flex flex-col items-start gap-1.5">
@@ -234,7 +236,9 @@ export function SelectVideosDialog({
           ))}
         </div>
         <span className="truncate text-xs/relaxed">
-          {selectedVideos.length > 0 ? `${selectedVideos.length} selected` : ""}
+          {selectedVideos.length > 0
+            ? `${selectedVideos.length} ${t("video.selected") || "selected"}`
+            : ""}
         </span>
       </div>
     ) : (
@@ -260,9 +264,10 @@ export function SelectVideosDialog({
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] min-h-[60vh] flex-col gap-4 sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Select videos</DialogTitle>
+          <DialogTitle>{t("video.selectVideos")}</DialogTitle>
           <DialogDescription>
-            Filter and choose which videos to include in this search.
+            {t("video.selectVideosDescription") ||
+              "Filter and choose which videos to include in this search."}
           </DialogDescription>
         </DialogHeader>
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
@@ -274,7 +279,9 @@ export function SelectVideosDialog({
               </InputGroupAddon>
               <InputGroupInput
                 onChange={(event) => setFilter(event.target.value)}
-                placeholder="Filter by title..."
+                placeholder={
+                  t("video.filterPlaceholder") || "Filter by title..."
+                }
                 value={filter}
               />
               <InputGroupAddon align="inline-end">
@@ -289,7 +296,7 @@ export function SelectVideosDialog({
                   variant="outline"
                 >
                   <ToggleGroupItem
-                    aria-label="All videos"
+                    aria-label={t("video.allVideos")}
                     asChild
                     className="border-none"
                     value="all"
@@ -298,11 +305,11 @@ export function SelectVideosDialog({
                       size="xs"
                       variant={scope === "all" ? "secondary" : "ghost"}
                     >
-                      All
+                      {t("video.all")}
                     </InputGroupButton>
                   </ToggleGroupItem>
                   <ToggleGroupItem
-                    aria-label="Public videos"
+                    aria-label={t("nav.publicVideos")}
                     asChild
                     className="border-none"
                     value="public"
@@ -377,7 +384,9 @@ export function SelectVideosDialog({
           </div>
         </div>
         <DialogFooter showCloseButton={false}>
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
+          <Button onClick={() => onOpenChange(false)}>
+            {t("common.done")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

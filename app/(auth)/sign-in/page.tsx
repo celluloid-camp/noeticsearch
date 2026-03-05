@@ -3,6 +3,7 @@
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type ChangeEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import {
 import { signIn } from "@/lib/auth-client";
 
 export default function SignInPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState("");
@@ -40,13 +42,13 @@ export default function SignInPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Sign in failed");
+        setError(result.error.message || t("signInFailed"));
       } else {
         router.push("/");
         router.refresh();
       }
     } catch (_err) {
-      setError("An unexpected error occurred");
+      setError(t("unexpectedError"));
     } finally {
       setLoading(false);
     }
@@ -56,10 +58,10 @@ export default function SignInPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="font-bold text-2xl">Sign in</CardTitle>
-          <CardDescription>
-            Enter your email and password to sign in to your account
-          </CardDescription>
+          <CardTitle className="font-bold text-2xl">
+            {t("signInTitle")}
+          </CardTitle>
+          <CardDescription>{t("signInDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
@@ -70,7 +72,7 @@ export default function SignInPage() {
             )}
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="email">
-                Email
+                {t("email")}
               </label>
               <Input
                 id="email"
@@ -85,7 +87,7 @@ export default function SignInPage() {
             </div>
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="password">
-                Password
+                {t("password")}
               </label>
               <InputGroup>
                 <InputGroupInput
@@ -100,7 +102,7 @@ export default function SignInPage() {
                 <InputGroupAddon align="inline-end">
                   <button
                     aria-label={
-                      showPassword ? "Hide password" : "Show password"
+                      showPassword ? t("hidePassword") : t("showPassword")
                     }
                     className="rounded-sm p-1 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword((prev) => !prev)}
@@ -121,14 +123,14 @@ export default function SignInPage() {
               size="lg"
               type="submit"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? t("signingInButton") : t("signInButton")}
             </Button>
           </form>
 
           <p className="mt-4 text-center text-muted-foreground text-sm">
-            Don&apos;t have an account?{" "}
+            {t("noAccount")}{" "}
             <Link className="text-primary hover:underline" href="/sign-up">
-              Sign up
+              {t("signUp")}
             </Link>
           </p>
         </CardContent>

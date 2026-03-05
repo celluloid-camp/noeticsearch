@@ -6,10 +6,8 @@ import Loading from "../loading";
 
 export default function PublicVideosPage() {
   return (
-    <div className="container mx-auto px-4">
-      <Suspense fallback={<Loading />}>
-        <VideoCatalog filter="public" />
-      </Suspense>
-    </div>
+    <Suspense fallback={<Loading />}>
+      <VideoCatalog filter="public" title="Public Videos" />
+    </Suspense>
   );
 }

@@ -38,13 +38,13 @@ export const searchRouter = router({
         });
       }
     }),
-  load: protectedProcedure
+  load: publicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       const searchHistory = await ctx.db.query.searchHistoryTable.findFirst({
         where: and(
-          eq(searchHistoryTable.id, input.id),
-          eq(searchHistoryTable.userId, ctx.user.id)
+          eq(searchHistoryTable.id, input.id)
+          // eq(searchHistoryTable.userId, ctx.user.id)
         ),
         with: {
           user: {
@@ -106,21 +106,25 @@ export const searchRouter = router({
         return [];
       }
     }),
-  captionResults: protectedProcedure
+  captionResults: publicProcedure
     .input(
       z.object({
         id: z.string(),
       })
     )
     .query(async ({ input, ctx }) => {
+      const userId = ctx.user?.id;
       const searchHistory = await ctx.db.query.searchHistoryTable.findFirst({
         where: and(
           eq(searchHistoryTable.id, input.id),
-          eq(searchHistoryTable.userId, ctx.user.id)
+          userId != null
+            ? sql`(${searchHistoryTable.isPublic} = true OR ${searchHistoryTable.userId} = ${userId})`
+            : eq(searchHistoryTable.isPublic, true)
         ),
         columns: {
           id: true,
           keywords: true,
+          userId: true,
         },
       });
 
@@ -176,7 +180,7 @@ export const searchRouter = router({
                       ELSE 'simple'::regconfig
                     END,
                     lower(unaccent(coalesce("captionText", ''))),
-                    to_tsquery(
+                    websearch_to_tsquery(
                       CASE language
                         WHEN 'fr' THEN 'french'::regconfig
                         WHEN 'en' THEN 'english'::regconfig
@@ -229,23 +233,28 @@ export const searchRouter = router({
       const rows =
         (raw as unknown as { rows?: { results: unknown }[] }).rows ?? [];
       const results = (rows[0]?.results as unknown) ?? [];
-      return results as {
-        videoId: string;
-        videoTitle: string;
-        videoThumbnail: string | null;
-        videoUrl: string;
-        captions: Array<{
-          id: string;
-          thumbnail: string | null;
-          text: string;
-          headline: string;
-          startTime: number;
-          endTime: number;
-          language: string;
-          rank: number;
-          accuracy: number;
-        }>;
-      }[];
+      const canEdit = userId != null && searchHistory.userId === userId;
+
+      return {
+        canEdit,
+        results: results as {
+          videoId: string;
+          videoTitle: string;
+          videoThumbnail: string | null;
+          videoUrl: string;
+          captions: Array<{
+            id: string;
+            thumbnail: string | null;
+            text: string;
+            headline: string;
+            startTime: number;
+            endTime: number;
+            language: string;
+            rank: number;
+            accuracy: number;
+          }>;
+        }[],
+      };
     }),
   list: protectedProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db
@@ -286,6 +295,46 @@ export const searchRouter = router({
         id: true,
         title: true,
         createdAt: true,
+      },
+      orderBy: [desc(searchHistoryTable.createdAt)],
+    });
+    return searchHistories;
+  }),
+
+  publicExpanded: publicProcedure.query(async ({ ctx }) => {
+    const searchHistories = await ctx.db.query.searchHistoryTable.findMany({
+      where: eq(searchHistoryTable.isPublic, true),
+      columns: {
+        id: true,
+        title: true,
+        createdAt: true,
+        keywords: true,
+      },
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        results: {
+          limit: 10,
+          columns: {
+            id: true,
+            videoId: true,
+            captionId: true,
+          },
+          with: {
+            video: {
+              columns: {
+                id: true,
+                title: true,
+                thumbnail: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [desc(searchHistoryTable.createdAt)],
     });

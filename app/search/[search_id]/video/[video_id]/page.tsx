@@ -5,12 +5,12 @@ import { AlertTriangle, ArrowLeftIcon } from "lucide-react";
 import { MediaProvider } from "media-chrome/react/media-store";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
-import Loading from "@/app/loading";
 import { CaptionsPanel } from "@/components/captions-panel";
 import { SearchInfoPanel } from "@/components/search-info-panel";
 import { Button } from "@/components/ui/button";
 import VideoPlayer from "@/components/video-player";
 import { useTRPC } from "@/lib/trpc/client";
+import Loading from "./loading";
 
 export default function SearchVideoPage() {
   const router = useRouter();
@@ -65,7 +65,7 @@ export default function SearchVideoPage() {
         <VideoPlayer video={video} />
 
         {/* Right: Search info panel + Transcript */}
-        <div className="mx-4 my-4 flex w-2/3 flex-col space-y-4">
+        <div className="mx-4 my-4 flex w-96 shrink-0 flex-col space-y-4">
           <Suspense
             fallback={
               <div className="h-24 shrink-0 animate-pulse rounded-lg bg-muted" />

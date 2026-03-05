@@ -1,9 +1,10 @@
 "use client";
 
 import { IconVideo, IconWorld } from "@tabler/icons-react";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, PlusIcon, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MySearchSidebar } from "@/components/search-history-sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,6 +37,8 @@ import { PublicSearchSidebar } from "../public-search-sidebar";
 export function MainSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations();
+  const tApp = useTranslations("app");
   const { data: session } = useSession();
   const { state } = useSidebar();
 
@@ -43,10 +46,10 @@ export function MainSidebar() {
   const isExpanded = state === "expanded";
 
   const getActiveTab = (): "all" | "public" | "mine" => {
-    if (pathname === "/public") {
+    if (pathname === "/library/public") {
       return "public";
     }
-    if (pathname === "/mine") {
+    if (pathname === "/library/mine") {
       return "mine";
     }
     return "all";
@@ -75,15 +78,10 @@ export function MainSidebar() {
       <SidebarHeader className="border-sidebar-border border-b">
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center">
-            <SidebarMenuButton
-              asChild
-              className="flex-1"
-              size="lg"
-              tooltip="VisionSearch"
-            >
-              <Link href="/">
+            <SidebarMenuButton asChild size="lg" tooltip={tApp("name")}>
+              <Link className="flex flex-1 items-center gap-2" href="/">
                 <OurIcon />
-                <span>VisionSearch</span>
+                <span className="font-mono text-lg">{tApp("name")}</span>
               </Link>
             </SidebarMenuButton>
             <SidebarTrigger className="ml-2 shrink-0" />
@@ -92,18 +90,33 @@ export function MainSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {isLoggedIn ? <MySearchSidebar /> : null}
+        <PublicSearchSidebar />
+
         <SidebarGroup>
-          <SidebarGroupLabel>Library</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("nav.library")}</SidebarGroupLabel>
+
           <SidebarMenu>
+            {isLoggedIn ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild size="sm">
+                  <Link href="/import">
+                    <PlusIcon className="size-4" />
+                    <span>{t("nav.addVideo")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
+
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 isActive={activeTab === "all"}
-                tooltip="All Videos"
+                tooltip={t("nav.allVideos")}
               >
-                <Link href="/">
+                <Link href="/library/all">
                   <IconVideo className="size-4" />
-                  <span>All Videos</span>
+                  <span>{t("nav.allVideos")}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -113,11 +126,11 @@ export function MainSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={activeTab === "mine"}
-                  tooltip="My Videos"
+                  tooltip={t("nav.myVideos")}
                 >
-                  <Link href="/mine">
+                  <Link href="/library/mine">
                     <User className="size-4" />
-                    <span>My Videos</span>
+                    <span>{t("nav.myVideos")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -126,19 +139,16 @@ export function MainSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={activeTab === "public"}
-                tooltip="Public Videos"
+                tooltip={t("nav.publicVideos")}
               >
-                <Link href="/public">
+                <Link href="/library/public">
                   <IconWorld className="size-4" />
-                  <span>Public Videos</span>
+                  <span>{t("nav.publicVideos")}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
-
-        <MySearchSidebar />
-        <PublicSearchSidebar />
       </SidebarContent>
 
       <SidebarFooter className="border-sidebar-border border-t">
@@ -169,7 +179,7 @@ export function MainSidebar() {
                     {isExpanded && (
                       <div className="flex min-w-0 flex-col truncate text-left">
                         <span className="truncate font-medium text-sm">
-                          {session?.user?.name || "User"}
+                          {session?.user?.name || t("common.user")}
                         </span>
                         <span className="truncate text-muted-foreground text-xs">
                           {session?.user?.email}
@@ -181,7 +191,7 @@ export function MainSidebar() {
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel>
                     <p className="font-medium text-sm">
-                      {session?.user?.name || "User"}
+                      {session?.user?.name || t("common.user")}
                     </p>
                     <p className="truncate font-normal text-muted-foreground text-xs">
                       {session?.user?.email}
@@ -191,7 +201,7 @@ export function MainSidebar() {
                   <DropdownMenuItem asChild>
                     <Link href="/settings">
                       <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                      {t("settings.title")}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -199,13 +209,13 @@ export function MainSidebar() {
                     variant="destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign out
+                    {t("nav.signOut")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : isExpanded ? (
-              <Button onClick={handleSignUpClick} size="sm" type="button">
-                Sign up
+              <Button onClick={handleSignUpClick} size="lg" type="button">
+                {t("nav.signUp")}
               </Button>
             ) : (
               <Button
@@ -224,6 +234,22 @@ export function MainSidebar() {
             </div>
           )}
         </div>
+        {isExpanded && (
+          <div className="flex items-center gap-3 px-1 pb-1">
+            <Link
+              className="text-muted-foreground text-xs hover:text-foreground"
+              href="/about"
+            >
+              About
+            </Link>
+            <Link
+              className="text-muted-foreground text-xs hover:text-foreground"
+              href="/privacy"
+            >
+              Privacy
+            </Link>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

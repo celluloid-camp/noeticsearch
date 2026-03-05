@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772545870903,
-      "tag": "0000_yellow_flatman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772550180947,
-      "tag": "0001_luxuriant_sunfire",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772580145840,
-      "tag": "0002_flaky_clint_barton",
+      "when": 1772628428284,
+      "tag": "0000_slimy_jasper_sitwell",
       "breakpoints": true
     }
   ]

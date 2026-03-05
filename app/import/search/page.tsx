@@ -4,8 +4,9 @@ import { IconSearch } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
+import { PeerTubeSearchResults } from "@/components/import-link/peertube-search-results";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,61 +24,33 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/use-toast";
-import { parsePeerTubeUrl } from "@/lib/peertube-client";
-import { useTRPC } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 
-type PeerTubeBaseUrl = string;
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
+export type PeerTubeInstance = RouterOutput["peertubeInstance"]["list"][number];
 
 export default function ImportSearchPage() {
   const router = useRouter();
   const api = useTRPC();
   const { toast } = useToast();
   const { data: instances } = useQuery(
-    api.peertubeInstance.listPublic.queryOptions({
+    api.peertubeInstance.list.queryOptions({
       limit: 10,
     })
   );
 
-  const peertubeInstances = useMemo(
-    () =>
-      (instances ?? []).map((instance) => ({
-        label: instance.title,
-        baseUrl: instance.host,
-        thumbnailUrl: instance.thumbnail,
-      })),
-    [instances]
-  );
+  const [selectedInstance, setSelectedInstance] =
+    useState<PeerTubeInstance | null>(null);
 
-  const defaultBaseUrl = peertubeInstances[0]?.baseUrl ?? "";
-  const [selectedBaseUrl, setSelectedBaseUrl] =
-    useState<PeerTubeBaseUrl>(defaultBaseUrl);
+  const activeInstance = selectedInstance ?? instances?.[0] ?? null;
   const [query, setQuery] = useState("");
-  const [submittedSearch, setSubmittedSearch] = useState<{
-    baseUrl: PeerTubeBaseUrl;
-    search: string;
-  } | null>(null);
-  const [selectedWatchUrl, setSelectedWatchUrl] = useState<string | null>(null);
+  const [submittedSearch, setSubmittedSearch] = useState<string | null>(null);
+
+  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [pendingImport, setPendingImport] = useState<{
-    videoId: string;
+    videoId: number;
     baseUrl: string;
   } | null>(null);
-  const { data, isLoading, isError, error } = useQuery({
-    ...api.peertubeSearch.searchVideos.queryOptions({
-      baseUrl: submittedSearch?.baseUrl || defaultBaseUrl,
-      search: submittedSearch?.search ?? "",
-    }),
-    enabled: !!submittedSearch?.search && !!defaultBaseUrl,
-  });
 
   const handleImportSuccess = (video: { id: string }) => {
     toast({
@@ -85,8 +58,8 @@ export default function ImportSearchPage() {
       description: "Video imported successfully!",
     });
     setPendingImport(null);
-    setSelectedWatchUrl(null);
-    router.push(`/video/${video.id}`);
+    setSelectedVideoId(null);
+    router.replace(`/video/${video.id}`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -95,46 +68,38 @@ export default function ImportSearchPage() {
     if (!q) {
       return;
     }
-    setSubmittedSearch({ baseUrl: selectedBaseUrl, search: q });
-    setSelectedWatchUrl(null);
+    setSubmittedSearch(q);
+    setSelectedVideoId(null);
   };
 
   const handleResetSearch = () => {
     setQuery("");
     setSubmittedSearch(null);
-    setSelectedWatchUrl(null);
+    setSelectedVideoId(null);
     setPendingImport(null);
+    setSelectedInstance(null);
   };
 
-  const handleSelectVideo = (watchUrl: string) => {
-    if (selectedWatchUrl === watchUrl) {
-      setSelectedWatchUrl(null);
+  const handleSelectVideo = (videoId: number) => {
+    if (selectedVideoId === videoId) {
+      setSelectedVideoId(null);
       setPendingImport(null);
       return;
     }
-    const parsed = parsePeerTubeUrl(watchUrl);
-    if (!parsed) {
-      toast({
-        title: "Error",
-        description: "Invalid PeerTube URL format.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSelectedWatchUrl(watchUrl);
+
     setPendingImport({
-      videoId: parsed.videoId,
-      baseUrl: parsed.baseUrl,
+      videoId,
+      baseUrl: activeInstance?.host ?? "",
     });
   };
 
   return (
     <div className="flex h-full w-full flex-col md:flex-row md:items-start">
-      {!selectedWatchUrl && (
+      {!pendingImport && (
         <div className="h-full w-full border-r md:w-2/5">
           <Card className="border-none bg-transparent shadow-none ring-0">
             <CardHeader>
-              <CardTitle>Search PeerTube instances</CardTitle>
+              <CardTitle>PeerTube instances</CardTitle>
               <CardDescription>
                 Choose an instance and search for videos to import.
               </CardDescription>
@@ -150,42 +115,31 @@ export default function ImportSearchPage() {
                         type="button"
                         variant="outline"
                       >
-                        {(() => {
-                          const selected =
-                            peertubeInstances.find(
-                              ({ baseUrl }) => baseUrl === selectedBaseUrl
-                            ) ?? peertubeInstances[0];
-
-                          if (!selected) {
-                            return (
-                              <span className="text-muted-foreground text-sm">
-                                No public instances configured
-                              </span>
-                            );
-                          }
-
-                          return (
-                            <div className="flex items-center gap-3">
-                              {selected.thumbnailUrl ? (
-                                <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
-                                  <Image
-                                    alt={selected.label}
-                                    className="object-cover"
-                                    fill
-                                    src={selected.thumbnailUrl}
-                                    unoptimized
-                                  />
-                                </div>
-                              ) : null}
-                              <div className="flex flex-col text-left">
-                                <span>{selected.label}</span>
-                                <span className="text-muted-foreground text-xs">
-                                  {selected.baseUrl}
-                                </span>
+                        {activeInstance ? (
+                          <div className="flex items-center gap-3">
+                            {activeInstance.thumbnail ? (
+                              <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-white">
+                                <Image
+                                  alt={activeInstance.title}
+                                  className="object-cover"
+                                  fill
+                                  src={activeInstance.thumbnail}
+                                  unoptimized
+                                />
                               </div>
+                            ) : null}
+                            <div className="flex flex-col text-left">
+                              <span>{activeInstance.title}</span>
+                              <span className="text-muted-foreground text-xs">
+                                {activeInstance.host}
+                              </span>
                             </div>
-                          );
-                        })()}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">
+                            No public instances configured
+                          </span>
+                        )}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -193,36 +147,32 @@ export default function ImportSearchPage() {
                       className=""
                       style={{ width: "var(--radix-popper-anchor-width)" }}
                     >
-                      {peertubeInstances.map(
-                        ({ label, baseUrl, thumbnailUrl }) => (
-                          <DropdownMenuItem
-                            key={baseUrl}
-                            onSelect={() =>
-                              setSelectedBaseUrl(baseUrl as PeerTubeBaseUrl)
-                            }
-                          >
-                            <div className="flex items-center gap-3">
-                              {thumbnailUrl ? (
-                                <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
-                                  <Image
-                                    alt={label}
-                                    className="object-cover"
-                                    fill
-                                    src={thumbnailUrl}
-                                    unoptimized
-                                  />
-                                </div>
-                              ) : null}
-                              <div className="flex flex-col text-left">
-                                <span>{label}</span>
-                                <span className="text-muted-foreground text-xs">
-                                  {baseUrl}
-                                </span>
+                      {(instances ?? []).map((instance) => (
+                        <DropdownMenuItem
+                          key={instance.host}
+                          onSelect={() => setSelectedInstance(instance)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {instance.thumbnail ? (
+                              <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
+                                <Image
+                                  alt={instance.title}
+                                  className="object-cover"
+                                  fill
+                                  src={instance.thumbnail}
+                                  unoptimized
+                                />
                               </div>
+                            ) : null}
+                            <div className="flex flex-col text-left">
+                              <span>{instance.title}</span>
+                              <span className="text-muted-foreground text-xs">
+                                {instance.host}
+                              </span>
                             </div>
-                          </DropdownMenuItem>
-                        )
-                      )}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -251,120 +201,13 @@ export default function ImportSearchPage() {
 
       {submittedSearch && (
         <div className="w-full border-r md:h-[calc(100vh-5rem)] md:w-1/2">
-          <Card className="flex h-full flex-col border-none bg-transparent shadow-none ring-0">
-            <CardHeader className="flex items-center justify-between gap-2">
-              <div>
-                <CardTitle>Results</CardTitle>
-                <CardDescription>
-                  {(() => {
-                    if (isLoading) {
-                      return "Searching…";
-                    }
-                    if (isError) {
-                      return error?.message ?? "Search failed.";
-                    }
-                    if (submittedSearch && data) {
-                      return `${data.total} video(s) found.`;
-                    }
-                    return "Results will appear here after you start a search.";
-                  })()}
-                </CardDescription>
-              </div>
-              <Button
-                disabled={isLoading && !isError}
-                onClick={handleResetSearch}
-                size="sm"
-                variant="ghost"
-              >
-                Reset
-              </Button>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full pr-1">
-                {!(submittedSearch || isLoading || isError) && (
-                  <p className="text-muted-foreground text-sm">
-                    Start by searching for videos in the form on the left.
-                  </p>
-                )}
-                {submittedSearch && isLoading && (
-                  <div className="flex justify-center py-8">
-                    <Spinner className="size-8" />
-                  </div>
-                )}
-                {submittedSearch && isError && (
-                  <p className="text-destructive text-sm">
-                    {error instanceof Error ? error.message : "Search failed."}
-                  </p>
-                )}
-                {submittedSearch &&
-                  data &&
-                  data.data.length === 0 &&
-                  !isLoading &&
-                  !isError && (
-                    <p className="text-muted-foreground text-sm">
-                      No videos found. Try different keywords.
-                    </p>
-                  )}
-                {submittedSearch &&
-                  data &&
-                  data.data.length > 0 &&
-                  !isError && (
-                    <div className="space-y-2">
-                      {data.data.map((v) => {
-                        const author =
-                          v.channel?.displayName ??
-                          v.channel?.name ??
-                          v.account?.displayName ??
-                          v.account?.name ??
-                          null;
-                        const isSelected = selectedWatchUrl === v.watchUrl;
-
-                        return (
-                          <button
-                            className={cn(
-                              "flex w-full gap-3 rounded-md p-3 text-left text-xs/relaxed transition-colors hover:bg-muted/60",
-                              isSelected && "border-ring bg-muted"
-                            )}
-                            key={v.watchUrl}
-                            onClick={() => handleSelectVideo(v.watchUrl)}
-                            type="button"
-                          >
-                            <div className="relative aspect-video w-48 shrink-0 overflow-hidden rounded-md bg-muted">
-                              {v.thumbnailUrl ? (
-                                <Image
-                                  alt={v.name ?? ""}
-                                  className="object-cover"
-                                  fill
-                                  src={v.thumbnailUrl}
-                                  unoptimized
-                                />
-                              ) : null}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="line-clamp-2 font-medium text-foreground text-sm">
-                                {v.name}
-                              </p>
-                              {(author || v.duration) && (
-                                <p className="mt-0.5 text-muted-foreground text-xs">
-                                  {[
-                                    author,
-                                    v.duration
-                                      ? formatDuration(v.duration)
-                                      : null,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </p>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <PeerTubeSearchResults
+            baseUrl={activeInstance?.host ?? ""}
+            onReset={handleResetSearch}
+            onVideoSelect={handleSelectVideo}
+            search={submittedSearch}
+            selectedVideoId={selectedVideoId}
+          />
         </div>
       )}
 

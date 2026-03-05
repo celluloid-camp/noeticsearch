@@ -12,20 +12,20 @@ CREATE TABLE "account" (
 	"refresh_token_expires_at" timestamp,
 	"scope" text,
 	"password" text,
-	"created_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "session" (
 	"id" text PRIMARY KEY NOT NULL,
-	"expires_at" timestamp,
+	"expires_at" timestamp NOT NULL,
 	"token" text NOT NULL,
-	"created_at" timestamp,
-	"updated_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp NOT NULL,
 	"ip_address" text,
 	"user_agent" text,
-	"impersonated_by" text,
 	"user_id" text NOT NULL,
+	"impersonated_by" text,
 	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
@@ -33,14 +33,14 @@ CREATE TABLE "user" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"email" text NOT NULL,
-	"email_verified" boolean NOT NULL,
+	"email_verified" boolean DEFAULT false NOT NULL,
 	"image" text,
-	"role" text DEFAULT 'user' NOT NULL,
-	"banExpires" timestamp(3),
-	"banReason" text,
-	"banned" boolean,
-	"created_at" timestamp NOT NULL,
-	"updated_at" timestamp NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"role" text,
+	"banned" boolean DEFAULT false,
+	"ban_reason" text,
+	"ban_expires" timestamp,
 	CONSTRAINT "user_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
@@ -49,8 +49,8 @@ CREATE TABLE "verification" (
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
 	"expires_at" timestamp NOT NULL,
-	"created_at" timestamp,
-	"updated_at" timestamp
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "captions" (
@@ -80,6 +80,7 @@ CREATE TABLE "peertube_instances" (
 	"host" text NOT NULL,
 	"title" text NOT NULL,
 	"description" text,
+	"is_index" boolean DEFAULT false NOT NULL,
 	"thumbnail" text NOT NULL,
 	"is_public" boolean DEFAULT false NOT NULL
 );
@@ -117,6 +118,7 @@ CREATE TABLE "videos" (
 	"thumbnail" text,
 	"is_public" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
+	"published_at" timestamp DEFAULT now() NOT NULL,
 	"video_details" jsonb NOT NULL,
 	"caption_list" jsonb,
 	"storyboard" jsonb,
@@ -134,6 +136,9 @@ ALTER TABLE "search_result" ADD CONSTRAINT "search_result_search_id_search_histo
 ALTER TABLE "search_result" ADD CONSTRAINT "search_result_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "search_result" ADD CONSTRAINT "search_result_caption_id_captions_id_fk" FOREIGN KEY ("caption_id") REFERENCES "public"."captions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "videos" ADD CONSTRAINT "videos_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "account_userId_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "session_userId_idx" ON "session" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "verification_identifier_idx" ON "verification" USING btree ("identifier");--> statement-breakpoint
 CREATE INDEX "captions_search_index" ON "captions" USING gin ((
 			setweight(
 				to_tsvector(

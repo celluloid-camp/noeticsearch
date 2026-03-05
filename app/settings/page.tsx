@@ -2,7 +2,7 @@
 
 import { KeyRound, Loader2, Palette, Save, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ import { useSession, useUpdateUser } from "@/lib/auth-hooks";
 type SettingsTab = "profile" | "security" | "appearance";
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
   const { user, isPending } = useSession();
   const { mutate: updateUser, isPending: isUpdating } = useUpdateUser();
 
@@ -63,11 +64,11 @@ export default function SettingsPage() {
       { name },
       {
         onSuccess: () => {
-          toast.success("Profile updated successfully");
+          toast.success(t("profileUpdated"));
           setIsNameChanged(false);
         },
         onError: (error) => {
-          toast.error(error.message || "Failed to update profile");
+          toast.error(error.message || t("failedUpdateProfile"));
         },
       }
     );
@@ -83,10 +84,10 @@ export default function SettingsPage() {
     });
 
     if (error) {
-      toast.error(error.message || "Failed to send reset email");
+      toast.error(error.message || t("failedSendReset"));
     } else {
       setResetSuccess(true);
-      toast.success("If an account exists, a reset email has been sent");
+      toast.success(t("resetSentIfExists"));
     }
 
     setIsResetting(false);
@@ -103,8 +104,8 @@ export default function SettingsPage() {
   return (
     <div className="flex min-w-0 flex-col gap-6 overflow-y-auto p-6">
       <div>
-        <h1 className="font-bold text-2xl">Settings</h1>
-        <p className="text-muted-foreground">Manage your account settings</p>
+        <h1 className="font-bold text-2xl">{t("title")}</h1>
+        <p className="text-muted-foreground">{t("description")}</p>
       </div>
 
       <div className="flex flex-col gap-8 md:flex-row">
@@ -118,7 +119,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("profile")}
           >
             <User className="h-4 w-4 shrink-0" />
-            <span className="hidden md:inline">Profile</span>
+            <span className="hidden md:inline">{t("profileTab")}</span>
           </button>
           <button
             className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium text-sm transition-colors ${
@@ -129,7 +130,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("security")}
           >
             <KeyRound className="h-4 w-4 shrink-0" />
-            <span className="hidden md:inline">Security</span>
+            <span className="hidden md:inline">{t("securityTab")}</span>
           </button>
           <button
             className={`flex items-center gap-3 rounded-md px-3 py-2 font-medium text-sm transition-colors ${
@@ -140,7 +141,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("appearance")}
           >
             <Palette className="h-4 w-4 shrink-0" />
-            <span className="hidden md:inline">Appearance</span>
+            <span className="hidden md:inline">{t("appearanceTab")}</span>
           </button>
         </nav>
 
@@ -148,14 +149,14 @@ export default function SettingsPage() {
           {activeTab === "profile" && (
             <div className="rounded-lg border p-6">
               <div className="mb-6">
-                <h2 className="font-semibold text-lg">Profile</h2>
+                <h2 className="font-semibold text-lg">{t("profile")}</h2>
                 <p className="text-muted-foreground text-sm">
-                  Update your profile information
+                  {t("updateProfile")}
                 </p>
               </div>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("email")}</Label>
                   <Input
                     defaultValue={user.email}
                     disabled
@@ -163,16 +164,16 @@ export default function SettingsPage() {
                     type="email"
                   />
                   <p className="text-muted-foreground text-xs">
-                    Your email cannot be changed
+                    {t("emailCannotChange")}
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name">{t("name")}</Label>
                   <Input
                     defaultValue={user.name ?? ""}
                     id="name"
                     onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="Enter your name"
+                    placeholder={t("enterName")}
                     value={name}
                   />
                 </div>
@@ -183,12 +184,12 @@ export default function SettingsPage() {
                   {isUpdating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      {t("saving")}
                     </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Save Changes
+                      {t("saveChanges")}
                     </>
                   )}
                 </Button>
@@ -199,35 +200,35 @@ export default function SettingsPage() {
           {activeTab === "security" && (
             <div className="rounded-lg border p-6">
               <div className="mb-6">
-                <h2 className="font-semibold text-lg">Password</h2>
+                <h2 className="font-semibold text-lg">{t("password")}</h2>
                 <p className="text-muted-foreground text-sm">
-                  Reset your password via email
+                  {t("resetPassword")}
                 </p>
               </div>
               <form className="space-y-4" onSubmit={handleRequestPasswordReset}>
                 <div className="space-y-2">
-                  <Label htmlFor="reset-email">Email</Label>
+                  <Label htmlFor="reset-email">{t("email")}</Label>
                   <Input
                     id="reset-email"
                     onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="Enter your email to receive reset link"
+                    placeholder={t("enterEmailReset")}
                     type="email"
                     value={resetEmail}
                   />
                 </div>
                 {resetSuccess && (
                   <p className="text-green-600 text-sm dark:text-green-400">
-                    Password reset email sent! Check your inbox.
+                    {t("resetEmailSent")}
                   </p>
                 )}
                 <Button disabled={!resetEmail || isResetting} type="submit">
                   {isResetting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      {t("sending")}
                     </>
                   ) : (
-                    "Send Reset Email"
+                    t("sendResetEmail")
                   )}
                 </Button>
               </form>
@@ -237,47 +238,47 @@ export default function SettingsPage() {
           {activeTab === "appearance" && (
             <div className="rounded-lg border p-6">
               <div className="mb-6">
-                <h2 className="font-semibold text-lg">Appearance</h2>
+                <h2 className="font-semibold text-lg">{t("appearance")}</h2>
                 <p className="text-muted-foreground text-sm">
-                  Customize how the application looks
+                  {t("customizeAppearance")}
                 </p>
               </div>
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <Label>Theme</Label>
+                    <Label>{t("theme")}</Label>
                     <p className="text-muted-foreground text-sm">
-                      Select your preferred color scheme
+                      {t("selectColorScheme")}
                     </p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button className="w-[150px]" variant="outline">
                         {theme === "light"
-                          ? "Light"
+                          ? t("light")
                           : theme === "dark"
-                            ? "Dark"
-                            : "System"}
+                            ? t("dark")
+                            : t("system")}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setTheme("light")}>
-                        Light
+                        {t("light")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setTheme("dark")}>
-                        Dark
+                        {t("dark")}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setTheme("system")}>
-                        System
+                        {t("system")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <Label>Language</Label>
+                    <Label>{t("language")}</Label>
                     <p className="text-muted-foreground text-sm">
-                      Select your preferred language
+                      {t("selectLanguage")}
                     </p>
                   </div>
                   <DropdownMenu>

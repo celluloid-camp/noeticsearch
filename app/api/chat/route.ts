@@ -13,11 +13,17 @@ import { z } from "zod";
 import { searchPrompt } from "@/lib/ai/prompts";
 import { loadSearchHistory, saveSearchHistory } from "@/lib/ai/search";
 import { saveChat } from "@/lib/ai/store";
-import { tools } from "@/lib/ai/tools";
+import { searchVideoTool, setSearchTitle } from "@/lib/ai/tools";
 import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  const { message, id }: { message: UIMessage; id: string } = await req.json();
+  const {
+    message,
+    id,
+  }: {
+    message: UIMessage;
+    id: string;
+  } = await req.json();
 
   const session = await auth.api.getSession({
     headers: req.headers,
@@ -30,7 +36,12 @@ export async function POST(req: Request) {
     return new Response("No search ID provided", { status: 400 });
   }
 
-  const { messages: previousMessages, title } = await loadSearchHistory(id);
+  const {
+    messages: previousMessages,
+    title,
+    filterType,
+    videoIds,
+  } = await loadSearchHistory(id);
 
   const validatedMessages = await validateUIMessages({
     // append the new message to the previous messages:
@@ -50,7 +61,14 @@ export async function POST(req: Request) {
       videoIds: z.array(z.string()).default([]),
     }),
     instructions: searchPrompt,
-    tools,
+    tools: {
+      search_video: searchVideoTool({
+        filter: filterType,
+        videoIds,
+        userId,
+      }),
+      setSearchTitle,
+    },
     prepareCall: ({ options, ...settings }) => ({
       ...settings,
       instructions:
