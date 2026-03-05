@@ -1,6 +1,6 @@
 import { StaticPageLayout } from "@/components/static-page-layout";
 
-export default async function AboutPage() { 
+export default async function AboutPage() {
   return (
     <StaticPageLayout>
       {/* Header */}
