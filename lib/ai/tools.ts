@@ -64,11 +64,13 @@ export const searchVideoTool = ({
     description: "Search videos in the database using caption full-text search",
     inputSchema: searchVideoCaptionsInputSchema,
     execute: async ({ keywords, limit }) => {
-      const terms = keywords.map((k) => k.trim().toLowerCase()).filter(Boolean);
+      const terms = keywords
+        .map((k) => k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""))
+        .filter(Boolean);
       if (terms.length === 0) {
         return [];
       }
-      const combined = terms.join(" OR ");
+      const prefixQuery = terms.map((t) => `${t}:*`).join(" | ");
 
       const filterCondition =
         filter === "public"
@@ -104,13 +106,13 @@ export const searchVideoTool = ({
 						END,
 						lower(unaccent(coalesce(c.text, '')))
 					) AS document,
-				websearch_to_tsquery(
+				to_tsquery(
 					CASE c.language
 						WHEN 'fr' THEN 'french'::regconfig
 						WHEN 'en' THEN 'english'::regconfig
 						ELSE 'simple'::regconfig
 					END,
-					lower(unaccent(${combined}))
+					lower(unaccent(${prefixQuery}))
 				) AS query
 					FROM captions c
 					INNER JOIN videos v ON v.id = c.video_id

@@ -2,7 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Film, RefreshCw, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import React from "react";
 import { useForm } from "react-hook-form";
@@ -45,6 +46,60 @@ interface EditVideoDialogProps {
   onSuccess?: () => void;
   open?: boolean;
   video: VideoById;
+}
+
+interface VideoThumbnailProps {
+  isSyncing: boolean;
+  onSync: () => void;
+  src: string;
+  title: string;
+}
+
+function VideoThumbnail({ src, title, onSync, isSyncing }: VideoThumbnailProps) {
+  const [error, setError] = React.useState(false);
+  const [cacheBuster, setCacheBuster] = React.useState(0);
+  const t = useTranslations();
+  const showFallback = error || !src || src === "/placeholder.svg";
+
+  const handleSync = () => {
+    setError(false);
+    setCacheBuster((n) => n + 1);
+    onSync();
+  };
+
+  const imgSrc = cacheBuster > 0 ? `${src}${src.includes("?") ? "&" : "?"}v=${cacheBuster}` : src;
+
+  return (
+    <div className="flex w-48 shrink-0 flex-col gap-2">
+      {showFallback ? (
+        <div className="flex aspect-video w-full items-center justify-center rounded-md bg-muted">
+          <Film className="size-8 text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="relative aspect-video w-full overflow-hidden rounded-md">
+          <Image
+            alt={title}
+            className="object-cover"
+            fill
+            onError={() => setError(true)}
+            sizes="192px"
+            src={imgSrc}
+          />
+        </div>
+      )}
+      <Button
+        className="w-full"
+        disabled={isSyncing}
+        onClick={handleSync}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        <RefreshCw className={isSyncing ? "animate-spin" : ""} />
+        {t("video.syncThumbnail")}
+      </Button>
+    </div>
+  );
 }
 
 export function EditVideoDialog({
@@ -101,6 +156,27 @@ export function EditVideoDialog({
     })
   );
 
+  const syncThumbnail = useMutation(
+    api.video.syncThumbnail.mutationOptions({
+      onSuccess: () => {
+        toast({ title: t("video.syncThumbnail"), description: t("common.success") });
+        queryClient.invalidateQueries({
+          queryKey: [["video", "getById"], { input: { id: video.id } }],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [["video", "getAll"]],
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: t("common.error") || "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    })
+  );
+
   const onSubmit = (data: EditVideoSchema) => {
     updateVideo.mutate({
       id: video.id,
@@ -112,7 +188,7 @@ export function EditVideoDialog({
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("video.editVideo")}</DialogTitle>
           <DialogDescription>
@@ -122,40 +198,53 @@ export function EditVideoDialog({
         </DialogHeader>
         <Form {...form}>
           <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("video.titleField")}</FormLabel>
-                  <FormControl>
-                    <Textarea className="min-h-[72px] resize-y" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="isPublic"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel>{t("video.publicField")}</FormLabel>
-                    <p className="text-muted-foreground text-xs">
-                      {t("video.publicDescription") ||
-                        "Make this video visible to everyone"}
-                    </p>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            <div className="flex gap-4">
+              <VideoThumbnail
+                isSyncing={syncThumbnail.isPending}
+                onSync={() => syncThumbnail.mutate({ id: video.id })}
+                src={video.thumbnail}
+                title={video.title}
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("video.titleField")}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          className="min-h-[72px] resize-y"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isPublic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel>{t("video.publicField")}</FormLabel>
+                        <p className="text-muted-foreground text-xs">
+                          {t("video.publicDescription") ||
+                            "Make this video visible to everyone"}
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
             <DialogFooter>
               <div className="flex w-full items-center justify-between gap-2">
                 <DeleteVideoDialog video={video}>

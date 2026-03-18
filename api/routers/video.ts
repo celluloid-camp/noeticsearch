@@ -7,6 +7,7 @@ import { getDbErrorMessage } from "@/lib/db";
 import {
   computeSpriteUrl,
   fetchPeerTubeVideo,
+  fetchPeerTubeVideoDetails,
   parsePeerTubeVideoCaptions,
   resolveAuthorAvatarUrl,
 } from "@/lib/peertube-client";
@@ -163,13 +164,13 @@ export const videoRouter = router({
       const trimmed = input.keywords?.trim();
 
       if (trimmed) {
-        const keywords = trimmed
+        const prefixQuery = trimmed
           .split(/[,\s]+/)
-          .map((k) => k.trim())
-          .filter(Boolean);
-        const tsQuery = sql`websearch_to_tsquery('french', lower(unaccent(${keywords.join(
-          " OR "
-        )})))`;
+          .map((k) => k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""))
+          .filter(Boolean)
+          .map((k) => `${k}:*`)
+          .join(" | ");
+        const tsQuery = sql`to_tsquery('french', lower(unaccent(${prefixQuery})))`;
 
         try {
           const captions = await ctx.db
@@ -248,17 +249,19 @@ export const videoRouter = router({
         },
       });
 
+      const sanitize = (k: string) =>
+        k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+
       const savedKeywords =
-        searchHistory?.keywords?.map((k) => k.trim()).filter(Boolean) ?? [];
+        searchHistory?.keywords?.map(sanitize).filter(Boolean) ?? [];
       const additionalKeywords =
         input.keywords
           ?.split(/[,\s]+/)
-          .map((k) => k.trim())
+          .map(sanitize)
           .filter(Boolean) ?? [];
       const keywordsArray = [...savedKeywords, ...additionalKeywords];
 
       if (keywordsArray.length === 0) {
-        // Fallback: no keywords stored, return un-highlighted captions
         const rows = await ctx.db
           .select({
             id: captionsTable.id,
@@ -287,9 +290,43 @@ export const videoRouter = router({
         }));
       }
 
-      const tsQuery = sql`websearch_to_tsquery('french', lower(unaccent(${keywordsArray.join(
-        " OR "
-      )})))`;
+      const hasAdditionalKeywords = additionalKeywords.length > 0;
+
+      const highlightQuery = keywordsArray.map((k) => `${k}:*`).join(" | ");
+      const highlightTsQuery = sql`to_tsquery('french', lower(unaccent(${highlightQuery})))`;
+
+      if (hasAdditionalKeywords) {
+        const filterQuery = additionalKeywords.map((k) => `${k}:*`).join(" | ");
+        const filterTsQuery = sql`to_tsquery('french', lower(unaccent(${filterQuery})))`;
+
+        const rows = await ctx.db
+          .select({
+            id: captionsTable.id,
+            text: captionsTable.text,
+            startTime: captionsTable.startTime,
+            endTime: captionsTable.endTime,
+            headline: sql<string>`ts_headline(
+              'french',
+              ${captionsTable.text},
+              ${highlightTsQuery},
+              'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
+            )`,
+          })
+          .from(captionsTable)
+          .where(
+            sql`${eq(captionsTable.videoId, videoId)} AND to_tsvector('french', lower(unaccent(coalesce(${captionsTable.text}, '')))) @@ ${filterTsQuery}`
+          )
+          .orderBy(asc(captionsTable.startTime));
+
+        return rows.map((sub) => ({
+          id: sub.id,
+          text: sub.text,
+          headline: sub.headline,
+          timestamp: formatTimestamp(sub.startTime),
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }));
+      }
 
       const rows = await ctx.db
         .select({
@@ -300,7 +337,7 @@ export const videoRouter = router({
           headline: sql<string>`ts_headline(
             'french',
             ${captionsTable.text},
-            ${tsQuery},
+            ${highlightTsQuery},
             'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
           )`,
         })
@@ -467,6 +504,47 @@ export const videoRouter = router({
         .set({ title: input.title, isPublic: input.isPublic })
         .where(eq(videoTable.id, videoId));
       return { success: true };
+    }),
+
+  syncThumbnail: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [video] = await ctx.db
+        .select({
+          id: videoTable.id,
+          url: videoTable.url,
+          userId: videoTable.userId,
+          isPasswordProtected: videoTable.isPasswordProtected,
+          videoPassword: videoTable.videoPassword,
+        })
+        .from(videoTable)
+        .where(eq(videoTable.id, input.id))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to update this video");
+      }
+
+      const details = await fetchPeerTubeVideoDetails(video.url, {
+        password: video.isPasswordProtected
+          ? (video.videoPassword ?? undefined)
+          : undefined,
+      });
+
+      if (!details.thumbnail) {
+        throw new Error("No thumbnail available from PeerTube");
+      }
+
+      await ctx.db
+        .update(videoTable)
+        .set({ thumbnail: details.thumbnail })
+        .where(eq(videoTable.id, input.id));
+
+      return { thumbnail: details.thumbnail };
     }),
 
   search: publicProcedure

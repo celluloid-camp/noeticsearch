@@ -68,6 +68,7 @@
     "publicField": "Public",
     "editDescription": "Modifiez le titre et les paramètres de visibilité de la vidéo.",
     "publicDescription": "Rendre cette vidéo visible par tous",
+    "syncThumbnail": "Synchroniser la miniature",
     "sortRecent": "Récemment ajouté",
     "sortPublished": "Date de publication originale",
     "sortName": "Nom (A-Z)",

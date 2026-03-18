@@ -136,8 +136,9 @@ export const searchRouter = router({
       }
 
       const keywords = (searchHistory.keywords ?? [])
-        .map((k) => k.trim().toLowerCase())
+        .map((k) => k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""))
         .filter(Boolean)
+        .map((k) => `${k}:*`)
         .join(" | ");
 
       const raw = await ctx.db.execute(
@@ -180,7 +181,7 @@ export const searchRouter = router({
                       ELSE 'simple'::regconfig
                     END,
                     lower(unaccent(coalesce("captionText", ''))),
-                    websearch_to_tsquery(
+                    to_tsquery(
                       CASE language
                         WHEN 'fr' THEN 'french'::regconfig
                         WHEN 'en' THEN 'english'::regconfig

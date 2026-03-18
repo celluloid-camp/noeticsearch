@@ -68,6 +68,7 @@
     "publicField": "Public",
     "editDescription": "Update the video title and visibility settings.",
     "publicDescription": "Make this video visible to everyone",
+    "syncThumbnail": "Sync thumbnail",
     "sortRecent": "Recently added",
     "sortPublished": "Original publication date",
     "sortName": "Name (A-Z)",
