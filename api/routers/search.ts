@@ -136,7 +136,12 @@ export const searchRouter = router({
       }
 
       const keywords = (searchHistory.keywords ?? [])
-        .map((k) => k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""))
+        .map((k) =>
+          k
+            .trim()
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}]/gu, "")
+        )
         .filter(Boolean)
         .map((k) => `${k}:*`)
         .join(" | ");

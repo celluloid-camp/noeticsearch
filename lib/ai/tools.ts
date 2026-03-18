@@ -65,7 +65,12 @@ export const searchVideoTool = ({
     inputSchema: searchVideoCaptionsInputSchema,
     execute: async ({ keywords, limit }) => {
       const terms = keywords
-        .map((k) => k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""))
+        .map((k) =>
+          k
+            .trim()
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}]/gu, "")
+        )
         .filter(Boolean);
       if (terms.length === 0) {
         return [];

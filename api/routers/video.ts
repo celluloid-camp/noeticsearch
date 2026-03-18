@@ -166,7 +166,12 @@ export const videoRouter = router({
       if (trimmed) {
         const prefixQuery = trimmed
           .split(/[,\s]+/)
-          .map((k) => k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, ""))
+          .map((k) =>
+            k
+              .trim()
+              .toLowerCase()
+              .replace(/[^\p{L}\p{N}]/gu, "")
+          )
           .filter(Boolean)
           .map((k) => `${k}:*`)
           .join(" | ");
@@ -250,7 +255,10 @@ export const videoRouter = router({
       });
 
       const sanitize = (k: string) =>
-        k.trim().toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+        k
+          .trim()
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]/gu, "");
 
       const savedKeywords =
         searchHistory?.keywords?.map(sanitize).filter(Boolean) ?? [];

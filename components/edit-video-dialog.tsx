@@ -55,7 +55,12 @@ interface VideoThumbnailProps {
   title: string;
 }
 
-function VideoThumbnail({ src, title, onSync, isSyncing }: VideoThumbnailProps) {
+function VideoThumbnail({
+  src,
+  title,
+  onSync,
+  isSyncing,
+}: VideoThumbnailProps) {
   const [error, setError] = React.useState(false);
   const [cacheBuster, setCacheBuster] = React.useState(0);
   const t = useTranslations();
@@ -67,7 +72,10 @@ function VideoThumbnail({ src, title, onSync, isSyncing }: VideoThumbnailProps) 
     onSync();
   };
 
-  const imgSrc = cacheBuster > 0 ? `${src}${src.includes("?") ? "&" : "?"}v=${cacheBuster}` : src;
+  const imgSrc =
+    cacheBuster > 0
+      ? `${src}${src.includes("?") ? "&" : "?"}v=${cacheBuster}`
+      : src;
 
   return (
     <div className="flex w-48 shrink-0 flex-col gap-2">
@@ -159,7 +167,10 @@ export function EditVideoDialog({
   const syncThumbnail = useMutation(
     api.video.syncThumbnail.mutationOptions({
       onSuccess: () => {
-        toast({ title: t("video.syncThumbnail"), description: t("common.success") });
+        toast({
+          title: t("video.syncThumbnail"),
+          description: t("common.success"),
+        });
         queryClient.invalidateQueries({
           queryKey: [["video", "getById"], { input: { id: video.id } }],
         });
