@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
 import {
   Conversation,
@@ -62,10 +63,10 @@ import type { SearchVideoCaptionsUITool } from "@/lib/ai/tools";
 import { useTRPC } from "@/lib/trpc/client";
 
 const FILTER_OPTIONS = [
-  { value: "all", label: "All videos", icon: Video },
-  { value: "public", label: "Public videos", icon: Globe },
-  { value: "mine", label: "My videos", icon: User },
-  { value: "custom", label: "Custom", icon: ListFilter },
+  { value: "all", labelKey: "filterAll", icon: Video },
+  { value: "public", labelKey: "filterPublic", icon: Globe },
+  { value: "mine", labelKey: "filterMine", icon: User },
+  { value: "custom", labelKey: "filterCustom", icon: ListFilter },
 ] as const;
 
 export function SearchAssistant({
@@ -79,6 +80,8 @@ export function SearchAssistant({
   const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [customVideoDialogOpen, setCustomVideoDialogOpen] = useState(false);
+  const tSearch = useTranslations("search");
+  const tCommon = useTranslations("common");
 
   const { data: search, refetch: refetchSearch } = useSuspenseQuery(
     api.search.load.queryOptions({ id: chatId })
@@ -128,7 +131,7 @@ export function SearchAssistant({
   return (
     <Card className="flex h-full min-h-0 w-96 shrink-0 flex-col p-0">
       <CardHeader className="border-b py-3">
-        <CardTitle>Assistant</CardTitle>
+        <CardTitle>{tSearch("newSearch")}</CardTitle>
       </CardHeader>
 
       <Conversation className="min-h-0 flex-1">
@@ -149,13 +152,13 @@ export function SearchAssistant({
                         {message.role === "assistant" && isLastMessage && (
                           <MessageActions>
                             <MessageAction
-                              label="Retry"
+                              label={tCommon("retry")}
                               onClick={() => regenerate()}
                             >
                               <RefreshCcwIcon className="size-3" />
                             </MessageAction>
                             <MessageAction
-                              label="Copy"
+                              label={tCommon("copy")}
                               onClick={() =>
                                 navigator.clipboard.writeText(part.text)
                               }
@@ -177,7 +180,7 @@ export function SearchAssistant({
                             key={`${message.id}-${i}`}
                             spread={3}
                           >
-                            Searching videos...
+                            {tSearch("searching")}
                           </Shimmer>
                         );
                       case "output-available": {
@@ -200,7 +203,7 @@ export function SearchAssistant({
                                   const videoId = video.videoId.toString();
                                   const thumbnail =
                                     video.videoThumbnail || "/placeholder.svg";
-                                  const title = video.videoTitle || "Untitled";
+                                  const title = video.videoTitle || "";
                                   const captions = video.captions ?? [];
                                   return (
                                     <CarouselItem
@@ -209,7 +212,11 @@ export function SearchAssistant({
                                     >
                                       <Card className="flex w-full flex-col gap-0 overflow-hidden border py-0">
                                         <Link
-                                          aria-label={`Open ${title}`}
+                                          aria-label={
+                                            title
+                                              ? tSearch("openVideo", { title })
+                                              : undefined
+                                          }
                                           className="relative aspect-video w-full shrink-0 bg-muted"
                                           href={`/search/${chatId}/video/${videoId}`}
                                         >
@@ -236,7 +243,9 @@ export function SearchAssistant({
                                           </Link>
                                           {captions.length > 0 && (
                                             <p className="text-muted-foreground text-xs">
-                                              {captions.length} results found
+                                              {tSearch("resultsFound", {
+                                                count: captions.length,
+                                              })}
                                             </p>
                                           )}
                                         </CardContent>
@@ -276,7 +285,7 @@ export function SearchAssistant({
           {status === "streaming" && (
             <div className="mt-2">
               <Shimmer className="text-xs" duration={3} spread={3}>
-                Searching...
+                {tSearch("searching")}
               </Shimmer>
             </div>
           )}
@@ -288,6 +297,7 @@ export function SearchAssistant({
         <PromptInputBody className="border-none ring-0">
           <PromptInputTextarea
             onChange={(e) => setInput(e.target.value)}
+            placeholder={tSearch("placeholder")}
             value={input}
           />
         </PromptInputBody>
@@ -296,7 +306,7 @@ export function SearchAssistant({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <InputGroupButton
-                  aria-label="Change search scope"
+                  aria-label={tSearch("changeScope")}
                   size="sm"
                   type="button"
                   variant="outline"
@@ -310,7 +320,7 @@ export function SearchAssistant({
                     return (
                       <>
                         <Icon className="size-4 shrink-0" />
-                        <span>{current.label}</span>
+                        <span>{tSearch(current.labelKey)}</span>
                       </>
                     );
                   })()}
@@ -335,10 +345,10 @@ export function SearchAssistant({
                       }}
                     >
                       <Icon className="size-4 shrink-0" />
-                      <span>{opt.label}</span>
+                      <span>{tSearch(opt.labelKey)}</span>
                       {isActive && (
                         <span className="ml-auto text-muted-foreground text-xs">
-                          Current
+                          {tSearch("filterCurrent")}
                         </span>
                       )}
                     </DropdownMenuItem>

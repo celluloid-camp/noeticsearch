@@ -11,7 +11,9 @@
     "success": "Success",
     "error": "Error",
     "share": "Share",
-    "export": "Export"
+    "export": "Export",
+    "retry": "Retry",
+    "copy": "Copy"
   },
   "nav": {
     "allVideos": "All Videos",
@@ -24,7 +26,10 @@
     "signUp": "Sign up",
     "signOut": "Sign out",
     "library": "Library",
-    "addVideo": "Add video"
+    "addVideo": "Add video",
+    "about": "About",
+    "privacy": "Privacy",
+    "termsOfService": "Terms of Service"
   },
   "search": {
     "title": "Search Assistant",
@@ -50,7 +55,10 @@
     "filterCustom": "Custom",
     "filterCurrent": "Current",
     "queryRequired": "Search query is required",
-    "selectVideo": "Please select at least one video"
+    "selectVideo": "Please select at least one video",
+    "openVideo": "Open {title}",
+    "changeScope": "Change search scope",
+    "resultsFound": "{count, plural, one {# result found} other {# results found}}"
   },
   "video": {
     "peerTube": "PeerTube Video",
@@ -104,7 +112,24 @@
     "importFromLink": "Import from link",
     "searchPeertube": "Search PeerTube",
     "uploadVideo": "Upload video",
-    "importDescription": "Choose how you want to add a video to your library."
+    "importDescription": "Choose how you want to add a video to your library.",
+    "guideTitle": "How to import from PeerTube",
+    "guideDescription": "Follow these steps to prepare a PeerTube video so you can import and search it in NoeticSearch.",
+    "guideStep1": "1. Open your PeerTube instance in a new tab and navigate to the video you want to import.",
+    "guideStep2": "2. Copy the full video URL from your browser address bar (it should start with https://).",
+    "guideStep3": "3. Paste the URL into the field on the left and wait for the green checkmark to confirm it can be imported.",
+    "searchGuideTitle": "How to import from search",
+    "searchGuideDescription": "Use the PeerTube search on the left to find a public video you want to import into NoeticSearch.",
+    "searchGuideStep1": "1. Choose a PeerTube instance, or keep the default one if it already looks correct.",
+    "searchGuideStep2": "2. Enter a video title or keywords in the search box and run the search to see matching videos.",
+    "searchGuideStep3": "3. Click a result to preview it here and continue the import.",
+    "importSuccessDescription": "Video imported successfully!",
+    "peerTubeInstancesTitle": "PeerTube instances",
+    "searchImportDescription": "Choose an instance and search for videos to import.",
+    "noPublicInstances": "No public instances configured",
+    "searchVideosLabel": "Search",
+    "searchVideosPlaceholder": "Video title or keywords...",
+    "searchVideosSubmit": "Search"
   },
   "settings": {
     "title": "Settings",
@@ -161,9 +186,17 @@
     "description": "Find exact quotes, terms, and references across video transcripts with precision.",
     "newSearch": "New search",
     "myLibrary": "My library",
+    "addCorpus": "Add a video corpus",
+    "advancedSearch": "Advanced search",
     "getStarted": "Get started",
     "signIn": "Sign in",
-    "browsePublicLibrary": "Browse public library"
+    "browsePublicLibrary": "Browse public library",
+    "tutorialTitle": "How to search inside videos",
+    "tutorialDescription": "Watch a quick walkthrough of how to search inside your imported videos.",
+    "tutorialCta": "Click to play the tutorial",
+    "corpusTutorialTitle": "How to add new corpus videos",
+    "corpusTutorialDescription": "Learn how to import new PeerTube videos into your corpus so they become searchable inside NoeticSearch.",
+    "corpusTutorialCta": "Click to learn how to add videos"
   },
   "about": {
     "title": "Search inside",

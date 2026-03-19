@@ -8,6 +8,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -56,12 +57,13 @@ const importVideoSchema = z.object({
 export type ImportVideoSchema = z.infer<typeof importVideoSchema>;
 
 type PendingImport = {
-  videoId: string;
+  videoId: number;
   baseUrl: string;
   videoPassword?: string;
 };
 
 export default function ImportLinkPage() {
+  const t = useTranslations("import");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -133,7 +135,7 @@ export default function ImportLinkPage() {
           setPendingImport(null);
         } else {
           setPendingImport({
-            videoId: videoInfo.videoId,
+            videoId: Number(videoInfo.videoId),
             baseUrl: videoInfo.baseUrl,
           });
         }
@@ -202,7 +204,7 @@ export default function ImportLinkPage() {
       }
 
       setPendingImport({
-        videoId: videoInfo.videoId,
+        videoId: Number(videoInfo.videoId),
         baseUrl: videoInfo.baseUrl,
         videoPassword: passwordInput,
       });
@@ -242,11 +244,8 @@ export default function ImportLinkPage() {
             >
               <Card className="border-none bg-transparent shadow-none ring-0">
                 <CardHeader>
-                  <CardTitle>Import PeerTube Video</CardTitle>
-                  <CardDescription>
-                    Import a video from PeerTube by providing its URL. The video
-                    metadata and subtitles will be automatically fetched.
-                  </CardDescription>
+                  <CardTitle>{t("title")}</CardTitle>
+                  <CardDescription>{t("importDescription")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -319,7 +318,21 @@ export default function ImportLinkPage() {
                 videoId={pendingImport.videoId}
                 videoPassword={pendingImport.videoPassword}
               />
-            ) : null}
+            ) : (
+              <Card className="hidden border-none shadow-none ring-0 md:flex">
+                <CardHeader>
+                  <CardTitle>{t("guideTitle")}</CardTitle>
+                  <CardDescription>{t("guideDescription")}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-muted-foreground text-sm">
+                    <li>{t("guideStep1")}</li>
+                    <li>{t("guideStep2")}</li>
+                    <li>{t("guideStep3")}</li>
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </Form>
 

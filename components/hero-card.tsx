@@ -1,11 +1,28 @@
 "use client";
 
-import { BookOpen, Globe, Search } from "lucide-react";
+import { Globe, PlayCircle, Plus, Search } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import ReactPlayer from "react-player";
 import OurIcon from "@/components/icons/ouricon";
 import { PublicSearchesGrid } from "@/components/public-searches-grid";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemHeader,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { useSession } from "@/lib/auth-client";
 import { GridPattern } from "./ui/grid-pattern";
 
@@ -13,6 +30,8 @@ export function HeroCard() {
   const { data: session } = useSession();
   const isSignedIn = !!session?.user;
   const t = useTranslations("hero");
+  const tutorialUrl = "https://peertube.example.com/w/tutorial-search";
+  const corpusTutorialUrl = "https://peertube.example.com/w/tutorial-corpus";
 
   return (
     <div className="relative h-full">
@@ -50,15 +69,15 @@ export function HeroCard() {
               {isSignedIn ? (
                 <>
                   <Button asChild size="lg">
-                    <Link href="/search">
-                      <Search className="mr-1.5 size-3.5" />
-                      {t("newSearch")}
+                    <Link href="/import">
+                      <Plus className="mr-1.5 size-3.5" />
+                      {t("addCorpus")}
                     </Link>
                   </Button>
                   <Button asChild size="lg" variant="outline">
                     <Link href="/library/mine">
-                      <BookOpen className="mr-1.5 size-3.5" />
-                      {t("myLibrary")}
+                      <Search className="mr-1.5 size-3.5" />
+                      {t("advancedSearch")}
                     </Link>
                   </Button>
                 </>
@@ -79,6 +98,101 @@ export function HeroCard() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Tutorial cards */}
+        <div className="mb-10 border-border border-b px-10 pb-10">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Corpus tutorial card */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="w-full text-left" type="button">
+                  <Item size="sm" variant="outline">
+                    <ItemMedia variant="image">
+                      <div className="relative h-16 w-28 overflow-hidden rounded-sm bg-muted">
+                        <Image
+                          alt={t("corpusTutorialTitle")}
+                          className="object-cover transition group-hover:scale-[1.02]"
+                          fill
+                          sizes="64px"
+                          src="/placeholder.svg"
+                        />
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
+                          <PlayCircle className="size-4 text-background" />
+                        </div>
+                      </div>
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemHeader>
+                        <ItemTitle>{t("corpusTutorialTitle")}</ItemTitle>
+                      </ItemHeader>
+                      <ItemDescription>
+                        {t("corpusTutorialDescription")}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>{t("corpusTutorialTitle")}</DialogTitle>
+                </DialogHeader>
+                <div className="relative mt-2 aspect-video w-full overflow-hidden rounded-md bg-black">
+                  <ReactPlayer
+                    controls
+                    height="100%"
+                    src={corpusTutorialUrl}
+                    width="100%"
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Search tutorial card */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="w-full text-left" type="button">
+                  <Item size="sm" variant="outline">
+                    <ItemMedia variant="image">
+                      <div className="relative h-16 w-28 overflow-hidden rounded-sm bg-muted">
+                        <Image
+                          alt={t("tutorialTitle")}
+                          className="object-cover transition group-hover:scale-[1.02]"
+                          fill
+                          sizes="64px"
+                          src="/placeholder.svg"
+                        />
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
+                          <PlayCircle className="size-4 text-background" />
+                        </div>
+                      </div>
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemHeader>
+                        <ItemTitle>{t("tutorialTitle")}</ItemTitle>
+                      </ItemHeader>
+                      <ItemDescription>
+                        {t("tutorialDescription")}
+                      </ItemDescription>
+                    </ItemContent>
+                  </Item>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>{t("tutorialTitle")}</DialogTitle>
+                </DialogHeader>
+                <div className="relative mt-2 aspect-video w-full overflow-hidden rounded-md bg-black">
+                  <ReactPlayer
+                    controls
+                    height="100%"
+                    src={tutorialUrl}
+                    width="100%"
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 

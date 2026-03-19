@@ -4,6 +4,7 @@ import { IconSearch } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
 import { PeerTubeSearchResults } from "@/components/import-link/peertube-search-results";
@@ -33,6 +34,8 @@ export default function ImportSearchPage() {
   const router = useRouter();
   const api = useTRPC();
   const { toast } = useToast();
+  const t = useTranslations("import");
+  const tCommon = useTranslations("common");
   const { data: instances } = useQuery(
     api.peertubeInstance.list.queryOptions({
       limit: 10,
@@ -54,8 +57,8 @@ export default function ImportSearchPage() {
 
   const handleImportSuccess = (video: { id: string }) => {
     toast({
-      title: "Success",
-      description: "Video imported successfully!",
+      title: tCommon("success"),
+      description: t("importSuccessDescription"),
     });
     setPendingImport(null);
     setSelectedVideoId(null);
@@ -99,15 +102,13 @@ export default function ImportSearchPage() {
         <div className="h-full w-full border-r md:w-2/5">
           <Card className="border-none bg-transparent shadow-none ring-0">
             <CardHeader>
-              <CardTitle>PeerTube instances</CardTitle>
-              <CardDescription>
-                Choose an instance and search for videos to import.
-              </CardDescription>
+              <CardTitle>{t("peerTubeInstancesTitle")}</CardTitle>
+              <CardDescription>{t("searchImportDescription")}</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-1 flex-col gap-2">
-                  <Label>Instance</Label>
+                  <Label>{t("instance")}</Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -137,7 +138,7 @@ export default function ImportSearchPage() {
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">
-                            No public instances configured
+                            {t("noPublicInstances")}
                           </span>
                         )}
                       </Button>
@@ -177,12 +178,12 @@ export default function ImportSearchPage() {
                   </DropdownMenu>
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
-                  <Label htmlFor="search">Search</Label>
+                  <Label htmlFor="search">{t("searchVideosLabel")}</Label>
                   <Input
                     className="h-12 text-md"
                     id="search"
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Video title or keywords..."
+                    placeholder={t("searchVideosPlaceholder")}
                     type="search"
                     value={query}
                   />
@@ -191,7 +192,7 @@ export default function ImportSearchPage() {
               <CardFooter className="mt-4 flex justify-end">
                 <Button disabled={!query.trim()} size="lg" type="submit">
                   <IconSearch className="size-4 shrink-0" />
-                  Search
+                  {t("searchVideosSubmit")}
                 </Button>
               </CardFooter>
             </form>
@@ -218,6 +219,24 @@ export default function ImportSearchPage() {
             onSuccess={handleImportSuccess}
             videoId={pendingImport.videoId}
           />
+        </div>
+      )}
+
+      {pendingImport || submittedSearch ? null : (
+        <div className="hidden w-full md:block md:w-1/2">
+          <Card className="border-none shadow-none ring-0">
+            <CardHeader>
+              <CardTitle>{t("searchGuideTitle")}</CardTitle>
+              <CardDescription>{t("searchGuideDescription")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-muted-foreground text-sm">
+                <li>{t("searchGuideStep1")}</li>
+                <li>{t("searchGuideStep2")}</li>
+                <li>{t("searchGuideStep3")}</li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

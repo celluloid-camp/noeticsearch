@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTRPC } from "@/lib/trpc/client";
+import { Button } from "./ui/button";
 
 export function MySearchSidebar() {
   const t = useTranslations("sidebar");
@@ -77,19 +78,18 @@ export function MySearchSidebar() {
 
   return (
     <SidebarGroup>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <Button asChild className="w-full" variant="secondary">
+            <Link href="/search">
+              <PlusIcon className="size-4" />
+              <span>{t("newSearch")}</span>
+            </Link>
+          </Button>
+        </SidebarMenuItem>
+      </SidebarMenu>
       <SidebarGroupLabel>{t("mySearches")}</SidebarGroupLabel>
       <SidebarGroupContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild size="sm">
-              <Link href="/search">
-                <PlusIcon className="size-4" />
-                <span>{t("newSearch")}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
         {isLoadingSearches ? (
           <div className="space-y-2 px-2">
             <Skeleton className="h-8 w-full" />

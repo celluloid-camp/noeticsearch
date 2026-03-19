@@ -11,7 +11,6 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { SelectVideosDialog } from "@/components/select-videos-dialog";
 import {
@@ -39,11 +38,6 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 import { InputGroup, InputGroupTextarea } from "@/components/ui/input-group";
 import { Switch } from "@/components/ui/switch";
 import { useTRPC } from "@/lib/trpc/client";
-
-const suggestions = [
-  "Trouve le passage où Nietzsche parle du nihilisme",
-  "Trouve les moments où il est question de la morale stoïcienne",
-];
 
 const searchSchema = z
   .object({
@@ -177,23 +171,6 @@ export default function SearchPage() {
                         </FormItem>
                       )}
                     />
-
-                    <div className="flex flex-col gap-2 overflow-hidden">
-                      <span className="text-muted-foreground text-xs">
-                        {t("suggestions")}
-                      </span>
-                      <Suggestions>
-                        {suggestions.map((suggestion) => (
-                          <Suggestion
-                            key={suggestion}
-                            onClick={() => {
-                              form.setValue("query", suggestion);
-                            }}
-                            suggestion={suggestion}
-                          />
-                        ))}
-                      </Suggestions>
-                    </div>
                   </CardContent>
                   <CardFooter className="flex flex-col gap-3 border-t pt-3">
                     <div className="flex w-full items-center justify-between gap-3">

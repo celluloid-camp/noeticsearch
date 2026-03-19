@@ -39,6 +39,7 @@ export function MainSidebar() {
   const router = useRouter();
   const t = useTranslations();
   const tApp = useTranslations("app");
+  const tNav = useTranslations("nav");
   const { data: session } = useSession();
   const { state } = useSidebar();
 
@@ -94,20 +95,20 @@ export function MainSidebar() {
         <PublicSearchSidebar />
 
         <SidebarGroup>
+          {isLoggedIn ? (
+            <SidebarMenuItem>
+              <Button asChild className="w-full" variant="secondary">
+                <Link href="/import">
+                  <PlusIcon className="size-4" />
+                  <span>{t("nav.addVideo")}</span>
+                </Link>
+              </Button>
+            </SidebarMenuItem>
+          ) : null}
+
           <SidebarGroupLabel>{t("nav.library")}</SidebarGroupLabel>
 
           <SidebarMenu>
-            {isLoggedIn ? (
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild size="sm">
-                  <Link href="/import">
-                    <PlusIcon className="size-4" />
-                    <span>{t("nav.addVideo")}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ) : null}
-
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -150,6 +151,30 @@ export function MainSidebar() {
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-sidebar-border border-t">
+        {isExpanded && (
+          <div className="flex flex-col gap-1 px-1 pb-1">
+            <Link
+              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
+              href="/about"
+            >
+              {tNav("about")}
+            </Link>
+            <Link
+              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
+              href="/privacy"
+            >
+              {tNav("privacy")}
+            </Link>
+            <Link
+              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
+              href="/terms"
+            >
+              {tNav("termsOfService")}
+            </Link>
+          </div>
+        )}
+      </SidebarFooter>
 
       <SidebarFooter className="border-sidebar-border border-t">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -234,24 +259,6 @@ export function MainSidebar() {
             </div>
           )}
         </div>
-      </SidebarFooter>
-      <SidebarFooter className="border-sidebar-border border-t">
-        {isExpanded && (
-          <div className="flex items-center gap-3 px-1 pb-1">
-            <Link
-              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
-              href="/about"
-            >
-              About
-            </Link>
-            <Link
-              className="font-mono text-muted-foreground text-xs uppercase hover:text-foreground"
-              href="/privacy"
-            >
-              Privacy
-            </Link>
-          </div>
-        )}
       </SidebarFooter>
     </Sidebar>
   );

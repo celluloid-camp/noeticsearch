@@ -11,7 +11,9 @@
     "success": "Succès",
     "error": "Erreur",
     "share": "Partager",
-    "export": "Exporter"
+    "export": "Exporter",
+    "retry": "Réessayer",
+    "copy": "Copier"
   },
   "nav": {
     "allVideos": "Toutes les vidéos",
@@ -24,12 +26,15 @@
     "signUp": "S'inscrire",
     "signOut": "Déconnexion",
     "library": "Bibliothèque",
-    "addVideo": "Ajouter une vidéo"
+    "addVideo": "Ajouter une vidéo",
+    "about": "À propos",
+    "privacy": "Mention légales",
+    "termsOfService": "Conditions d'utilisation"
   },
   "search": {
     "title": "Assistant de recherche",
     "placeholder": "Rechercher dans les sous-titres...",
-    "hint": "Demandez-moi de trouver des mots ou expressions dans vos sous-titres.",
+    "hint": "Trouver des mots ou expressions dans vos sous-titres.",
     "searching": "Recherche de vidéos...",
     "noResults": "Aucun résultat",
     "noResultsHint": "Posez une question sur vos vidéos pour voir les sous-titres et segments correspondants ici.",
@@ -39,18 +44,21 @@
     "deleteSearch": "Supprimer la recherche",
     "editSearch": "Modifier la recherche",
     "titleField": "Titre",
-    "publicField": "Public",
-    "newSearch": "Nouvelle recherche",
+    "publicField": "Render cette recherche publique",
+    "newSearch": "Recherche avancée",
     "searchIn": "Rechercher dans",
     "suggestions": "Suggestions",
     "searchButton": "Rechercher",
     "filterAll": "Toutes les vidéos",
     "filterPublic": "Vidéos publiques",
     "filterMine": "Mes vidéos",
-    "filterCustom": "Personnalisé",
+    "filterCustom": "Personnalisé la sélection",
     "filterCurrent": "Actuel",
     "queryRequired": "La requête de recherche est requise",
-    "selectVideo": "Veuillez sélectionner au moins une vidéo"
+    "selectVideo": "Veuillez sélectionner au moins une vidéo",
+    "openVideo": "Ouvrir {title}",
+    "changeScope": "Modifier le périmètre de recherche",
+    "resultsFound": "{count, plural, one {# résultat trouvé} other {# résultats trouvés}}"
   },
   "video": {
     "peerTube": "Vidéo PeerTube",
@@ -104,7 +112,24 @@
     "importFromLink": "Importer depuis un lien",
     "searchPeertube": "Rechercher sur PeerTube",
     "uploadVideo": "Téléverser une vidéo",
-    "importDescription": "Choisissez comment ajouter une vidéo à votre bibliothèque."
+    "importDescription": "Choisissez comment ajouter une vidéo à votre bibliothèque.",
+    "guideTitle": "Comment importer depuis PeerTube",
+    "guideDescription": "Suivez ces étapes pour préparer une vidéo PeerTube afin de pouvoir l'importer et la rechercher dans NoeticSearch.",
+    "guideStep1": "1. Ouvrez votre instance PeerTube dans un nouvel onglet et allez sur la vidéo que vous souhaitez importer.",
+    "guideStep2": "2. Copiez l'URL complète de la vidéo depuis la barre d'adresse de votre navigateur (elle doit commencer par https://).",
+    "guideStep3": "3. Collez l'URL dans le champ de gauche et attendez le coche vert confirmant qu'elle peut être importée.",
+    "searchGuideTitle": "Comment importer depuis la recherche",
+    "searchGuideDescription": "Utilisez la recherche PeerTube à gauche pour trouver une vidéo publique à importer dans NoeticSearch.",
+    "searchGuideStep1": "1. Choisissez une instance PeerTube, ou gardez celle par défaut si elle vous convient.",
+    "searchGuideStep2": "2. Entrez un titre de vidéo ou des mots-clés dans le champ de recherche et lancez la recherche pour voir les vidéos correspondantes.",
+    "searchGuideStep3": "3. Cliquez sur un résultat pour l'ouvrir ici et poursuivre l'import.",
+    "importSuccessDescription": "Vidéo importée avec succès !",
+    "peerTubeInstancesTitle": "Instances PeerTube",
+    "searchImportDescription": "Choisissez une instance et recherchez des vidéos à importer.",
+    "noPublicInstances": "Aucune instance publique configurée",
+    "searchVideosLabel": "Recherche",
+    "searchVideosPlaceholder": "Titre de la vidéo ou mots-clés...",
+    "searchVideosSubmit": "Rechercher"
   },
   "settings": {
     "title": "Paramètres",
@@ -142,7 +167,7 @@
     "resetSentIfExists": "Si un compte existe, un e-mail de réinitialisation a été envoyé"
   },
   "sidebar": {
-    "mySearches": "Mes recherches",
+    "mySearches": "Mes recherches récentes",
     "publicSearches": "Recherches publiques",
     "newSearch": "Nouvelle recherche",
     "deleteSearch": "Supprimer la recherche",
@@ -161,9 +186,17 @@
     "description": "Trouvez des citations exactes, des termes et des références dans les transcriptions de vidéos avec précision.",
     "newSearch": "Nouvelle recherche",
     "myLibrary": "Ma bibliothèque",
+    "addCorpus": "Ajouter un corpus de vidéos",
+    "advancedSearch": "Recherche avancée",
     "getStarted": "Commencer",
     "signIn": "Connexion",
-    "browsePublicLibrary": "Parcourir la bibliothèque publique"
+    "browsePublicLibrary": "Parcourir la bibliothèque publique",
+    "tutorialTitle": "Comment rechercher dans vos vidéos",
+    "tutorialDescription": "Regardez un court tutoriel pour rechercher dans vos vidéos importées.",
+    "tutorialCta": "Cliquer pour lancer le tutoriel",
+    "corpusTutorialTitle": "Comment ajouter de nouvelles vidéos au corpus",
+    "corpusTutorialDescription": "Découvrez comment importer de nouvelles vidéos PeerTube dans votre corpus pour les rendre consultables dans NoeticSearch.",
+    "corpusTutorialCta": "Cliquer pour apprendre à ajouter des vidéos"
   },
   "about": {
     "title": "Recherchez dans",
