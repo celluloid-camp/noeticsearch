@@ -1,7 +1,8 @@
+import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { withWorkflow } from "workflow/next";
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -11,4 +12,4 @@ const nextConfig = {
 };
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
-export default withNextIntl(nextConfig);
+export default withWorkflow(withNextIntl(nextConfig));

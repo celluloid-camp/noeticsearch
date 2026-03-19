@@ -6,6 +6,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { GlobeIcon, Loader2, LockIcon, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { EditSearchDialog } from "@/components/edit-search-dialog";
 import { ExportSearchDialog } from "@/components/export-search-dialog";
 import { ShareSearchDialog } from "@/components/share-search-dialog";
@@ -40,6 +41,7 @@ function SearchResultVideoItem({
   video: CaptionResult;
   searchId: string;
 }) {
+  const t = useTranslations();
   const videoId = video.videoId.toString();
   const videoThumbnail = video.videoThumbnail || "/placeholder.svg";
   const title = video.videoTitle || "Untitled";
@@ -76,7 +78,7 @@ function SearchResultVideoItem({
           <div className="space-y-0.5 p-2">
             {captions.length === 0 ? (
               <p className="py-2 text-center text-muted-foreground text-xs">
-                No captions
+                {t("captions.noSubtitles")}
               </p>
             ) : (
               captions.map((caption) => (
@@ -115,7 +117,7 @@ export function SearchChat({
   initialMessages: UIMessage[];
 }) {
   const api = useTRPC();
-
+  const t = useTranslations();
   const { data: session } = useSession();
   const { data: search } = useSuspenseQuery(
     api.search.load.queryOptions({ id })
@@ -153,14 +155,14 @@ export function SearchChat({
             >
               <Button type="button" variant="outline">
                 <IconEdit className="size-4" />
-                Edit
+                {t("common.edit")}
               </Button>
             </EditSearchDialog>
           )}
           <ShareSearchDialog isPublic={search.isPublic}>
             <Button type="button" variant="outline">
               <IconShare className="size-4" />
-              Share
+              {t("common.share")}
             </Button>
           </ShareSearchDialog>
           <ExportSearchDialog
@@ -174,7 +176,7 @@ export function SearchChat({
               variant="outline"
             >
               <IconDownload className="size-4" />
-              Export
+              {t("common.export")}
             </Button>
           </ExportSearchDialog>
         </ButtonGroup>
@@ -202,11 +204,10 @@ export function SearchChat({
                     <Search className="size-5" />
                   </div>
                   <h2 className="font-semibold text-foreground text-sm">
-                    No results yet
+                    {t("search.noResults")}
                   </h2>
                   <p className="text-muted-foreground text-xs">
-                    Ask a question about your videos to see matching captions
-                    and segments here.
+                    {t("search.noResultsHint")}
                   </p>
                 </div>
               </div>

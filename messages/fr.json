@@ -9,7 +9,9 @@
     "done": "Terminé",
     "user": "Utilisateur",
     "success": "Succès",
-    "error": "Erreur"
+    "error": "Erreur",
+    "share": "Partager",
+    "export": "Exporter"
   },
   "nav": {
     "allVideos": "Toutes les vidéos",
@@ -29,7 +31,8 @@
     "placeholder": "Rechercher dans les sous-titres...",
     "hint": "Demandez-moi de trouver des mots ou expressions dans vos sous-titres.",
     "searching": "Recherche de vidéos...",
-    "noResults": "Recherchez des vidéos pour voir les résultats ici",
+    "noResults": "Aucun résultat",
+    "noResultsHint": "Posez une question sur vos vidéos pour voir les sous-titres et segments correspondants ici.",
     "assistant": "Assistant",
     "publicSearches": "Recherches publiques",
     "mySearches": "Mes recherches",
@@ -69,6 +72,7 @@
     "editDescription": "Modifiez le titre et les paramètres de visibilité de la vidéo.",
     "publicDescription": "Rendre cette vidéo visible par tous",
     "syncThumbnail": "Synchroniser la miniature",
+    "fullscreen": "Plein ecran",
     "sortRecent": "Récemment ajouté",
     "sortPublished": "Date de publication originale",
     "sortName": "Nom (A-Z)",
@@ -218,5 +222,19 @@
     "signInFailed": "Échec de la connexion",
     "signUpFailed": "Échec de l'inscription",
     "unexpectedError": "Une erreur inattendue s'est produite"
+  },
+  "transcription": {
+    "title": "Transcription lisible",
+    "pending": "En attente",
+    "processing": "Génération…",
+    "completed": "Transcription prête",
+    "failed": "Échec de la transcription",
+    "notGenerated": "Pas encore générée",
+    "explanation": "Une transcription lisible générée par IA, sans modifier les mots ni le sens d'origine.",
+    "generate": "Générer la transcription",
+    "regenerate": "Régénérer",
+    "retry": "Réessayer",
+    "openFullscreen": "Ouvrir plein écran",
+    "download": "Télécharger"
   }
 }

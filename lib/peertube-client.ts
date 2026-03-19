@@ -213,7 +213,10 @@ export async function parsePeerTubeVideoCaptions(
       text: cue.text || "",
       startTime: cue.startTime,
       endTime: cue.endTime,
-      language: caption.language || "en",
+      language:
+        typeof caption.language === "string"
+          ? caption.language
+          : caption.language?.id || "en",
       cue,
     }));
   } catch (error) {

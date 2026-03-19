@@ -1,6 +1,12 @@
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { start } from "workflow/api";
 import { z } from "zod";
-import { captionsTable, searchHistoryTable, videoTable } from "@/db/schema";
+import {
+  captionsTable,
+  searchHistoryTable,
+  transcriptionsTable,
+  videoTable,
+} from "@/db/schema";
 import { chaptersTable } from "@/db/schema/chapters";
 import { searchResultTable } from "@/db/schema/search-result";
 import { getDbErrorMessage } from "@/lib/db";
@@ -11,6 +17,7 @@ import {
   parsePeerTubeVideoCaptions,
   resolveAuthorAvatarUrl,
 } from "@/lib/peertube-client";
+import { naturalizeCaptions } from "@/workflows/naturalize-captions";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 
 export const videoRouter = router({
@@ -69,7 +76,7 @@ export const videoRouter = router({
         await ctx.db.insert(captionsTable).values(
           parsedCaptions.map((caption) => ({
             videoId: video.id,
-            language: caption.language as string,
+            language: caption.language,
             text: caption.text,
             startTime: caption.startTime,
             endTime: caption.endTime,
@@ -92,6 +99,17 @@ export const videoRouter = router({
           );
         }
 
+        const captionLanguage = parsedCaptions[0]?.language ?? "fr";
+        await ctx.db.insert(transcriptionsTable).values({
+          videoId: video.id,
+          language: captionLanguage,
+          status: "pending",
+        });
+
+        start(naturalizeCaptions, [video.id]).catch((err) =>
+          console.error("Failed to start naturalize workflow:", err)
+        );
+
         return {
           id: video.id,
         };
@@ -99,6 +117,97 @@ export const videoRouter = router({
         console.error(error);
         throw new Error("Failed to import video");
       }
+    }),
+
+  generateTranscription: protectedProcedure
+    .input(z.object({ videoId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [video] = await ctx.db
+        .select({ id: videoTable.id, userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, input.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to generate transcription");
+      }
+
+      const existing = await ctx.db.query.transcriptionsTable.findFirst({
+        where: eq(transcriptionsTable.videoId, input.videoId),
+        columns: { id: true, status: true },
+      });
+
+      if (existing?.status === "pending" || existing?.status === "processing") {
+        return { status: "already_running" as const };
+      }
+
+      if (existing) {
+        await ctx.db
+          .update(transcriptionsTable)
+          .set({
+            status: "pending",
+            error: null,
+            text: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(transcriptionsTable.id, existing.id));
+      } else {
+        const caption = await ctx.db.query.captionsTable.findFirst({
+          where: eq(captionsTable.videoId, input.videoId),
+          columns: { language: true },
+        });
+
+        await ctx.db.insert(transcriptionsTable).values({
+          videoId: input.videoId,
+          language: caption?.language ?? "fr",
+          status: "pending",
+        });
+      }
+
+      start(naturalizeCaptions, [input.videoId]).catch((err) =>
+        console.error("Failed to start naturalize workflow:", err)
+      );
+
+      return { status: "started" as const };
+    }),
+
+  getTranscription: publicProcedure
+    .input(z.object({ videoId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const transcription = await ctx.db.query.transcriptionsTable.findFirst({
+        where: eq(transcriptionsTable.videoId, input.videoId),
+        columns: {
+          id: true,
+          status: true,
+          language: true,
+          text: true,
+          error: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!transcription) {
+        return null;
+      }
+
+      if (transcription.text) {
+        try {
+          const parsed = JSON.parse(transcription.text);
+          if (typeof parsed === "object" && parsed !== null) {
+            transcription.text =
+              parsed[transcription.language] ??
+              Object.values(parsed)[0] ??
+              transcription.text;
+          }
+        } catch {
+          // already plain text
+        }
+      }
+
+      return transcription;
     }),
 
   getById: publicProcedure

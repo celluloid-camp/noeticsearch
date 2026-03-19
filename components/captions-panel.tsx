@@ -290,11 +290,9 @@ export function CaptionsPanel({ videoId, searchId }: CaptionsPanelProps) {
   return (
     <Card className="flex h-full flex-col gap-0 py-0">
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-4">
-        <div className="flex flex-col gap-2">
-          <span className="font-medium text-sm">
-            {t("captions.transcription")}
-          </span>
-        </div>
+        <span className="font-medium text-sm">
+          {t("captions.transcription")}
+        </span>
       </CardHeader>
       {/* <Tabs
         className="self-end"

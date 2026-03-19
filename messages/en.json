@@ -9,7 +9,9 @@
     "done": "Done",
     "user": "User",
     "success": "Success",
-    "error": "Error"
+    "error": "Error",
+    "share": "Share",
+    "export": "Export"
   },
   "nav": {
     "allVideos": "All Videos",
@@ -29,7 +31,8 @@
     "placeholder": "Search in video subtitles...",
     "hint": "Ask me to find words or phrases in your video subtitles.",
     "searching": "Searching for videos...",
-    "noResults": "Search for videos to see results here",
+    "noResults": "No results yet",
+    "noResultsHint": "Ask a question about your videos to see matching captions and segments here.",
     "assistant": "Assistant",
     "publicSearches": "Public searches",
     "mySearches": "My searches",
@@ -69,6 +72,7 @@
     "editDescription": "Update the video title and visibility settings.",
     "publicDescription": "Make this video visible to everyone",
     "syncThumbnail": "Sync thumbnail",
+    "fullscreen": "Fullscreen",
     "sortRecent": "Recently added",
     "sortPublished": "Original publication date",
     "sortName": "Name (A-Z)",
@@ -218,5 +222,19 @@
     "signInFailed": "Sign in failed",
     "signUpFailed": "Sign up failed",
     "unexpectedError": "An unexpected error occurred"
+  },
+  "transcription": {
+    "title": "Readable Transcript",
+    "pending": "Pending",
+    "processing": "Generating…",
+    "completed": "Transcription ready",
+    "failed": "Transcription failed",
+    "notGenerated": "Not generated yet",
+    "explanation": "AI-generated readable transcription that preserves the original words and meaning.",
+    "generate": "Generate transcript",
+    "regenerate": "Regenerate",
+    "retry": "Retry",
+    "openFullscreen": "Open fullscreen",
+    "download": "Download"
   }
 }
