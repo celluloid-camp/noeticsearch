@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Geist, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Merriweather } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import AppLayoutClient from "@/components/app-layout-client";
@@ -11,10 +11,16 @@ import "./globals.css";
 import { Agentation } from "agentation";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { TRPCProvider } from "@/lib/trpc/provider";
+import { cn } from "@/lib/utils";
 
-const geistSans = Geist({
-  variable: "--font-sans",
+const merriweatherHeading = Merriweather({
   subsets: ["latin"],
+  variable: "--font-heading",
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
 });
 
 const ibmPlexMono = IBM_Plex_Mono({
@@ -56,9 +62,16 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html
+      className={cn(
+        "font-sans",
+        ibmPlexSans.variable,
+        merriweatherHeading.variable
+      )}
+      lang={locale}
+    >
       <body
-        className={`${geistSans.variable} ${ibmPlexMono.variable} antialiased`}
+        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} antialiased`}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <TRPCProvider>
