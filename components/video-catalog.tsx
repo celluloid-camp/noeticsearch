@@ -204,17 +204,35 @@ export default function VideoCatalog({
 
 export function VideoCatalogSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <Card className="overflow-hidden p-0" key={i}>
-          <Skeleton className="aspect-video w-full" />
-          <CardContent className="space-y-2 px-4 pt-0 pb-4">
-            <Skeleton className="mb-2 h-4 w-full" />
-            <Skeleton className="h-3 w-2/3" />
-            <Skeleton className="h-3 w-1/3" />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3 border-border border-b px-4 pt-4 pb-4">
+        <Skeleton className="h-6 w-36" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-10 w-36" />
+          <Skeleton className="h-10 w-28" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Card className="overflow-hidden p-0" key={i}>
+            <Skeleton className="aspect-video w-full" />
+            <CardContent className="px-4 pt-0 pb-4">
+              <Skeleton className="mb-2 h-4 w-full" />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="size-8 rounded-full" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <Skeleton className="h-3 w-14" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
