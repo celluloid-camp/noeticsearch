@@ -70,10 +70,10 @@ export function parsePeerTubeUrl(
  */
 export function buildPeerTubeWatchUrl(
   baseUrl: string,
-  videoId: number
+  videoId: string
 ): string {
   const base = baseUrl.replace(/\/$/, "");
-  return `${base}/videos/watch/${videoId}`;
+  return `${base}/w/${videoId}`;
 }
 
 /**

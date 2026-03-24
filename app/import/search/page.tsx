@@ -51,7 +51,7 @@ export default function ImportSearchPage() {
 
   const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
   const [pendingImport, setPendingImport] = useState<{
-    videoId: number;
+    videoId: string;
     baseUrl: string;
   } | null>(null);
 
@@ -91,7 +91,7 @@ export default function ImportSearchPage() {
     }
 
     setPendingImport({
-      videoId,
+      videoId: String(videoId),
       baseUrl: activeInstance?.host ?? "",
     });
   };

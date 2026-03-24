@@ -41,11 +41,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { fetchPeerTubeVideo, parsePeerTubeUrl } from "@/lib/peertube-client";
 
@@ -57,7 +53,7 @@ const importVideoSchema = z.object({
 export type ImportVideoSchema = z.infer<typeof importVideoSchema>;
 
 type PendingImport = {
-  videoId: number;
+  videoId: string;
   baseUrl: string;
   videoPassword?: string;
 };
@@ -135,7 +131,7 @@ export default function ImportLinkPage() {
           setPendingImport(null);
         } else {
           setPendingImport({
-            videoId: Number(videoInfo.videoId),
+            videoId: videoInfo.videoId,
             baseUrl: videoInfo.baseUrl,
           });
         }
@@ -204,7 +200,7 @@ export default function ImportLinkPage() {
       }
 
       setPendingImport({
-        videoId: Number(videoInfo.videoId),
+        videoId: videoInfo.videoId,
         baseUrl: videoInfo.baseUrl,
         videoPassword: passwordInput,
       });
@@ -257,14 +253,14 @@ export default function ImportLinkPage() {
                           <FormLabel>PeerTube URL</FormLabel>
                           <FormControl>
                             <div className="space-y-2">
-                              <InputGroup>
-                                <InputGroupInput
+                              <div className="relative">
+                                <Textarea
                                   aria-invalid={!!form.formState.errors.url}
+                                  className="min-h-28 resize-y pr-10"
                                   placeholder="https://peertube.example.com/w/..."
-                                  type="url"
                                   {...field}
                                 />
-                                <InputGroupAddon align="inline-end">
+                                <div className="absolute top-5 right-3 -translate-y-1/2">
                                   {isValidating ? (
                                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                                   ) : pendingImport &&
@@ -273,13 +269,12 @@ export default function ImportLinkPage() {
                                   ) : form.formState.errors.url ? (
                                     <AlertCircle className="h-4 w-4 text-destructive" />
                                   ) : null}
-                                </InputGroupAddon>
-                              </InputGroup>
+                                </div>
+                              </div>
                             </div>
                           </FormControl>
                           <FormDescription className="text-xs">
-                            Enter the full URL to your PeerTube video (e.g.,
-                            https://peertube.example.com/w/abc123)
+                            {t("urlFieldHint")}
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -289,19 +284,16 @@ export default function ImportLinkPage() {
                     {passwordRequired ? (
                       <Alert className="border-amber-400">
                         <AlertTriangle className="text-amber-500" />
-                        <AlertTitle>Video is password protected</AlertTitle>
+                        <AlertTitle>{t("passwordProtectedTitle")}</AlertTitle>
                         <AlertDescription>
-                          <p>
-                            This PeerTube video requires a password. Add the
-                            video password to validate and import it.
-                          </p>
+                          <p>{t("passwordProtectedDescription")}</p>
                           <Button
                             className="mt-2"
                             onClick={() => setPasswordDialogOpen(true)}
                             size="sm"
                             type="button"
                           >
-                            Enter password
+                            {t("enterPassword")}
                           </Button>
                         </AlertDescription>
                       </Alert>
@@ -319,7 +311,7 @@ export default function ImportLinkPage() {
                 videoPassword={pendingImport.videoPassword}
               />
             ) : (
-              <Card className="hidden border-none shadow-none ring-0 md:flex">
+              <Card className="hidden border-l shadow-none ring-0 md:flex">
                 <CardHeader>
                   <CardTitle>{t("guideTitle")}</CardTitle>
                   <CardDescription>{t("guideDescription")}</CardDescription>
@@ -349,15 +341,14 @@ export default function ImportLinkPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Video password required</DialogTitle>
+              <DialogTitle>{t("videoPasswordRequiredTitle")}</DialogTitle>
               <DialogDescription>
-                This PeerTube video is protected by a password. Enter the video
-                password to validate and import it.
+                {t("videoPasswordRequiredDescription")}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
               <label className="font-medium text-sm" htmlFor="video-password">
-                Password
+                {t("passwordLabel")}
               </label>
               <Input
                 autoFocus
@@ -381,14 +372,14 @@ export default function ImportLinkPage() {
                 type="button"
                 variant="outline"
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 disabled={!passwordInput || passwordLoading}
                 onClick={handlePasswordSubmit}
                 type="button"
               >
-                {passwordLoading ? "Validating..." : "Continue"}
+                {passwordLoading ? t("validating") : t("continue")}
               </Button>
             </DialogFooter>
           </DialogContent>

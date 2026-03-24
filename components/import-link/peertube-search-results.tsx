@@ -3,6 +3,7 @@
 import { IconRefresh } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ export function PeerTubeSearchResults({
   selectedVideoId,
 }: PeerTubeSearchResultsProps) {
   const api = useTRPC();
+  const t = useTranslations("import");
   const [localSelected, setLocalSelected] = useState<number | null>(null);
 
   const activeSelected = selectedVideoId ?? localSelected;
@@ -57,20 +59,20 @@ export function PeerTubeSearchResults({
 
   let description: string;
   if (isLoading) {
-    description = "Searching…";
+    description = t("searching");
   } else if (isError) {
-    description = error?.message ?? "Search failed.";
+    description = error?.message ?? t("searchFailed");
   } else if (data) {
-    description = `${data.total} video(s) found.`;
+    description = t("videosFound", { count: data.total });
   } else {
-    description = "Results will appear here after you start a search.";
+    description = t("resultsPlaceholder");
   }
 
   return (
     <Card className="flex h-full flex-col border-none bg-transparent shadow-none ring-0">
       <CardHeader className="flex items-center justify-between gap-2">
         <div>
-          <CardTitle>Results</CardTitle>
+          <CardTitle>{t("results")}</CardTitle>
           <CardDescription>{description}</CardDescription>
           {baseUrl}
         </div>
@@ -81,7 +83,7 @@ export function PeerTubeSearchResults({
           variant="outline"
         >
           <IconRefresh />
-          Reset
+          {t("reset")}
         </Button>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
@@ -101,12 +103,12 @@ export function PeerTubeSearchResults({
           )}
           {isError && (
             <p className="text-destructive text-sm">
-              {error instanceof Error ? error.message : "Search failed."}
+              {error instanceof Error ? error.message : t("searchFailed")}
             </p>
           )}
           {data?.data.length === 0 && (
             <p className="text-muted-foreground text-sm">
-              No videos found. Try different keywords.
+              {t("noVideosFoundTryKeywords")}
             </p>
           )}
           {!isError && data && data.data.length > 0 && (

@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { VideoPreviewCard } from "@/components/import-link/video-preview-card";
@@ -39,7 +40,7 @@ export interface ImportVideoConfirmFormInput {
 interface ImportVideoConfirmFormProps {
   baseUrl: string;
   onSuccess?: (video: { id: string }) => void;
-  videoId: number;
+  videoId: string;
   videoPassword?: string;
 }
 
@@ -50,6 +51,7 @@ export function ImportVideoConfirmForm({
   onSuccess,
 }: ImportVideoConfirmFormProps) {
   const api = useTRPC();
+  const t = useTranslations("import");
   const { toast } = useToast();
   const watchUrl = buildPeerTubeWatchUrl(baseUrl, videoId);
 
@@ -76,8 +78,8 @@ export function ImportVideoConfirmForm({
       },
       onError: (err) => {
         toast({
-          title: "Import failed",
-          description: err.message ?? "Failed to import video.",
+          title: t("importFailedTitle"),
+          description: err.message ?? t("importFailedDescription"),
           variant: "destructive",
         });
       },
@@ -118,8 +120,7 @@ export function ImportVideoConfirmForm({
     return (
       <div className="flex h-full flex-col justify-center border-l p-6">
         <p className="text-destructive text-sm">
-          {error instanceof Error ? error.message : "Failed to load video info"}
-          {baseUrl} {videoId}
+          {error instanceof Error ? error.message : t("failedToLoadVideoInfo")}
         </p>
       </div>
     );
@@ -141,10 +142,9 @@ export function ImportVideoConfirmForm({
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel>Public Video</FormLabel>
+                      <FormLabel>{t("publicVideo")}</FormLabel>
                       <FormDescription className="text-xs">
-                        Make this video visible to other users. If disabled,
-                        only you can see it.
+                        {t("makeVideoVisibleDescription")}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -163,10 +163,10 @@ export function ImportVideoConfirmForm({
                   {importVideo.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Importing...
+                      {t("importing")}
                     </>
                   ) : (
-                    "Import Video"
+                    t("importVideo")
                   )}
                 </Button>
               </div>
