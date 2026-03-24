@@ -1,6 +1,11 @@
 "use client";
 
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
 import { GridPattern } from "@/components/ui/grid-pattern";
 import { Skeleton } from "@/components/ui/skeleton";
 
