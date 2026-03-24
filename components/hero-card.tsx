@@ -75,7 +75,7 @@ export function HeroCard() {
                     </Link>
                   </Button>
                   <Button asChild size="lg" variant="outline">
-                    <Link href="/library/mine">
+                    <Link href="/search">
                       <Search className="mr-1.5 size-3.5" />
                       {t("advancedSearch")}
                     </Link>
