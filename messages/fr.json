@@ -98,7 +98,22 @@
     "autoScroll": "Défilement auto",
     "findPlaceholder": "Rechercher dans la transcription...",
     "noMatching": "Aucun sous-titre correspondant",
-    "noSubtitles": "Aucun sous-titre disponible"
+    "noSubtitles": "Aucun sous-titre disponible",
+    "editCaption": "Modifier le sous-titre",
+    "deleteCaption": "Supprimer le sous-titre",
+    "shareCaption": "Copier le lien",
+    "editCaptionTitle": "Modifier le sous-titre",
+    "captionText": "Texte du sous-titre",
+    "captionTextRequired": "Le texte du sous-titre est requis",
+    "editCaptionSuccess": "Sous-titre mis à jour",
+    "editCaptionError": "Échec de la mise à jour du sous-titre",
+    "deleteCaptionTitle": "Supprimer le sous-titre",
+    "deleteCaptionDescription": "Êtes-vous sûr de vouloir supprimer ce sous-titre ? Cette action est irréversible.",
+    "deleteCaptionSuccess": "Sous-titre supprimé",
+    "deleteCaptionError": "Échec de la suppression du sous-titre",
+    "shareCaptionSuccess": "Lien copié dans le presse-papiers",
+    "shareCaptionError": "Échec de la copie du lien",
+    "timeRange": "Plage horaire"
   },
   "import": {
     "title": "Importer une vidéo PeerTube",

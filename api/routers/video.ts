@@ -664,6 +664,83 @@ export const videoRouter = router({
       return { thumbnail: details.thumbnail };
     }),
 
+  updateCaption: protectedProcedure
+    .input(
+      z.object({
+        captionId: z.string(),
+        text: z.string().min(1, "Caption text is required"),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const trimmedText = input.text.trim();
+      if (!trimmedText) {
+        throw new Error("Caption text is required");
+      }
+
+      const caption = await ctx.db.query.captionsTable.findFirst({
+        where: eq(captionsTable.id, input.captionId),
+        columns: { id: true, videoId: true },
+      });
+
+      if (!caption) {
+        throw new Error("Caption not found");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, caption.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to edit this caption");
+      }
+
+      await ctx.db
+        .update(captionsTable)
+        .set({ text: trimmedText })
+        .where(eq(captionsTable.id, input.captionId));
+
+      return { success: true };
+    }),
+
+  deleteCaption: protectedProcedure
+    .input(z.object({ captionId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const caption = await ctx.db.query.captionsTable.findFirst({
+        where: eq(captionsTable.id, input.captionId),
+        columns: { id: true, videoId: true },
+      });
+
+      if (!caption) {
+        throw new Error("Caption not found");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, caption.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to delete this caption");
+      }
+
+      await ctx.db
+        .delete(captionsTable)
+        .where(eq(captionsTable.id, input.captionId));
+
+      return { success: true };
+    }),
+
   search: publicProcedure
     .input(z.object({ term: z.string() }))
     .query(async ({ input, ctx }) => {
