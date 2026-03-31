@@ -761,6 +761,81 @@ export const videoRouter = router({
       return { success: true };
     }),
 
+  updateTranscription: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+        text: z
+          .string()
+          .min(1, "Transcription text is required")
+          .max(1_000_000, "Transcription text is too long")
+          .refine((v) => v.trim().length > 0, {
+            message: "Transcription text cannot be blank",
+          }),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const [video] = await ctx.db
+        .select({ id: videoTable.id, userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, input.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to edit this transcription");
+      }
+
+      const now = new Date();
+      const existing = await ctx.db.query.transcriptionsTable.findFirst({
+        where: eq(transcriptionsTable.videoId, input.videoId),
+        columns: { id: true },
+      });
+
+      if (existing) {
+        const [updated] = await ctx.db
+          .update(transcriptionsTable)
+          .set({
+            text: input.text,
+            status: "completed",
+            error: null,
+            updatedAt: now,
+          })
+          .where(eq(transcriptionsTable.id, existing.id))
+          .returning({
+            status: transcriptionsTable.status,
+            text: transcriptionsTable.text,
+            updatedAt: transcriptionsTable.updatedAt,
+          });
+        return updated;
+      }
+
+      const caption = await ctx.db.query.captionsTable.findFirst({
+        where: eq(captionsTable.videoId, input.videoId),
+        columns: { language: true },
+      });
+
+      const [inserted] = await ctx.db
+        .insert(transcriptionsTable)
+        .values({
+          videoId: input.videoId,
+          language: caption?.language ?? "fr",
+          text: input.text,
+          status: "completed",
+          updatedAt: now,
+        })
+        .returning({
+          status: transcriptionsTable.status,
+          text: transcriptionsTable.text,
+          updatedAt: transcriptionsTable.updatedAt,
+        });
+
+      return inserted;
+    }),
+
   search: publicProcedure
     .input(z.object({ term: z.string() }))
     .query(async ({ input, ctx }) => {

@@ -306,7 +306,19 @@
     "regenerate": "Régénérer",
     "retry": "Réessayer",
     "openFullscreen": "Ouvrir plein écran",
-    "download": "Télécharger"
+    "download": "Télécharger",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "saving": "Enregistrement…",
+    "saveSuccess": "Transcription enregistrée",
+    "saveError": "Échec de l'enregistrement de la transcription",
+    "unsavedChangesTitle": "Modifications non enregistrées",
+    "unsavedChangesDescription": "Vous avez des modifications non enregistrées. Voulez-vous les ignorer ?",
+    "discard": "Ignorer",
+    "continueEditing": "Continuer la modification",
+    "textRequired": "Le texte de la transcription est requis",
+    "textTooLong": "Le texte de la transcription est trop long"
   },
   "folders": {
     "title": "Mes dossiers",

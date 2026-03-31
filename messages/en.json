@@ -306,7 +306,19 @@
     "regenerate": "Regenerate",
     "retry": "Retry",
     "openFullscreen": "Open fullscreen",
-    "download": "Download"
+    "download": "Download",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "saveSuccess": "Transcription saved",
+    "saveError": "Failed to save transcription",
+    "unsavedChangesTitle": "Unsaved changes",
+    "unsavedChangesDescription": "You have unsaved changes. Do you want to discard them?",
+    "discard": "Discard",
+    "continueEditing": "Continue editing",
+    "textRequired": "Transcription text is required",
+    "textTooLong": "Transcription text is too long"
   },
   "folders": {
     "title": "My Folders",
