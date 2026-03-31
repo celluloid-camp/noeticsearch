@@ -6,9 +6,23 @@ import {
   DownloadIcon,
   Loader2Icon,
   Maximize2,
+  PencilIcon,
   SparklesIcon,
+  XIcon,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -21,6 +35,7 @@ import {
 } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { relativeTime } from "@/lib/date";
 import { useTRPC } from "@/lib/trpc/client";
 
@@ -164,41 +179,215 @@ export function Transcription({ videoId, canEdit }: TranscriptionProps) {
                   <DownloadIcon />
                   {t("download")}
                 </Button>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button
-                      aria-label={t("openFullscreen")}
-                      size="sm"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <Maximize2 />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent
-                    className="h-[90vh] w-[80vw] max-w-[80vw] gap-0 p-0 sm:max-w-[80vw]"
-                    showCloseButton={true}
-                  >
-                    <div className="flex h-full w-full flex-col bg-background">
-                      <div className="flex items-center justify-between border-b px-4 py-3">
-                        <div className="font-medium text-sm">{t("title")}</div>
-                        <span className="text-muted-foreground text-xs">
-                          {relativeTime(transcription.updatedAt, locale)}
-                        </span>
-                      </div>
-                      <ScrollArea className="h-[calc(100vh-56px)] p-4">
-                        <p className="whitespace-pre-wrap text-muted-foreground text-sm leading-relaxed">
-                          {transcription.text ?? ""}
-                        </p>
-                      </ScrollArea>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                <FullscreenDialog
+                  canEdit={canEdit}
+                  locale={locale}
+                  t={t}
+                  transcription={transcription}
+                  videoId={videoId}
+                />
               </div>
             )}
           </CardFooter>
         )}
     </Card>
+  );
+}
+
+interface FullscreenDialogProps {
+  canEdit?: boolean;
+  locale: string;
+  t: ReturnType<typeof useTranslations>;
+  transcription: { text: string | null; updatedAt: Date };
+  videoId: string;
+}
+
+function FullscreenDialog({
+  canEdit,
+  locale,
+  t,
+  transcription,
+  videoId,
+}: FullscreenDialogProps) {
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+
+  const [open, setOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftText, setDraftText] = useState("");
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  const originalText = transcription.text ?? "";
+  const isDirty = isEditing && draftText !== originalText;
+
+  const updateTranscription = useMutation(
+    api.video.updateTranscription.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: [["video", "getTranscription"], { input: { videoId } }],
+        });
+        setIsEditing(false);
+        toast.success(t("saveSuccess"));
+      },
+      onError: () => {
+        toast.error(t("saveError"));
+      },
+    })
+  );
+
+  const handleEditStart = useCallback(() => {
+    setDraftText(originalText);
+    setIsEditing(true);
+  }, [originalText]);
+
+  const handleCancelEdit = useCallback(() => {
+    if (isDirty) {
+      setShowDiscardConfirm(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [isDirty]);
+
+  const handleDiscard = useCallback(() => {
+    setShowDiscardConfirm(false);
+    setIsEditing(false);
+    setDraftText("");
+  }, []);
+
+  const handleSave = useCallback(() => {
+    const trimmed = draftText.trim();
+    updateTranscription.mutate({ videoId, text: trimmed });
+  }, [draftText, videoId, updateTranscription]);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen && isDirty) {
+        setShowDiscardConfirm(true);
+        return;
+      }
+      if (!nextOpen) {
+        setIsEditing(false);
+        setDraftText("");
+      }
+      setOpen(nextOpen);
+    },
+    [isDirty]
+  );
+
+  const handleConfirmDiscardAndClose = useCallback(() => {
+    setShowDiscardConfirm(false);
+    setIsEditing(false);
+    setDraftText("");
+    setOpen(false);
+  }, []);
+
+  const isSaveDisabled =
+    updateTranscription.isPending ||
+    !isDirty ||
+    draftText.trim().length === 0;
+
+  return (
+    <>
+      <Dialog onOpenChange={handleOpenChange} open={open}>
+        <DialogTrigger asChild>
+          <Button
+            aria-label={t("openFullscreen")}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            <Maximize2 />
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          className="h-[90vh] w-[80vw] max-w-[80vw] gap-0 p-0 sm:max-w-[80vw]"
+          showCloseButton={true}
+        >
+          <div className="flex h-full w-full flex-col bg-background">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="font-medium text-sm">{t("title")}</div>
+              <div className="flex items-center gap-2">
+                {!isEditing && (
+                  <span className="text-muted-foreground text-xs">
+                    {relativeTime(transcription.updatedAt, locale)}
+                  </span>
+                )}
+                {canEdit && !isEditing && (
+                  <Button
+                    onClick={handleEditStart}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    <PencilIcon />
+                    {t("edit")}
+                  </Button>
+                )}
+                {isEditing && (
+                  <>
+                    <Button
+                      disabled={isSaveDisabled}
+                      onClick={handleSave}
+                      size="sm"
+                      variant="default"
+                    >
+                      {updateTranscription.isPending ? (
+                        <Loader2Icon className="animate-spin" />
+                      ) : null}
+                      {updateTranscription.isPending ? t("saving") : t("save")}
+                    </Button>
+                    <Button
+                      disabled={updateTranscription.isPending}
+                      onClick={handleCancelEdit}
+                      size="sm"
+                      variant="ghost"
+                    >
+                      <XIcon />
+                      {t("cancel")}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+            {isEditing ? (
+              <Textarea
+                className="h-[calc(100vh-56px)] flex-1 resize-none rounded-none border-0 p-4 font-mono text-sm leading-relaxed focus-visible:ring-0"
+                disabled={updateTranscription.isPending}
+                onChange={(e) => setDraftText(e.target.value)}
+                value={draftText}
+              />
+            ) : (
+              <ScrollArea className="h-[calc(100vh-56px)] p-4">
+                <p className="whitespace-pre-wrap text-muted-foreground text-sm leading-relaxed">
+                  {transcription.text ?? ""}
+                </p>
+              </ScrollArea>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        onOpenChange={setShowDiscardConfirm}
+        open={showDiscardConfirm}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("unsavedChangesTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("unsavedChangesDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDiscardConfirm(false)}>
+              {t("continueEditing")}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDiscardAndClose}>
+              {t("discard")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -240,3 +429,4 @@ function downloadAsTextFile(content: string, filename: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
