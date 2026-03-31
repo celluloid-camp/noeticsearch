@@ -99,7 +99,22 @@
     "autoScroll": "Auto-scroll",
     "findPlaceholder": "Find in transcription...",
     "noMatching": "No matching captions",
-    "noSubtitles": "No subtitles available"
+    "noSubtitles": "No subtitles available",
+    "editCaption": "Edit caption",
+    "deleteCaption": "Delete caption",
+    "shareCaption": "Copy link",
+    "editCaptionTitle": "Edit caption",
+    "captionText": "Caption text",
+    "captionTextRequired": "Caption text is required",
+    "editCaptionSuccess": "Caption updated",
+    "editCaptionError": "Failed to update caption",
+    "deleteCaptionTitle": "Delete caption",
+    "deleteCaptionDescription": "Are you sure you want to delete this caption? This action cannot be undone.",
+    "deleteCaptionSuccess": "Caption deleted",
+    "deleteCaptionError": "Failed to delete caption",
+    "shareCaptionSuccess": "Link copied to clipboard",
+    "shareCaptionError": "Failed to copy link",
+    "timeRange": "Time range"
   },
   "import": {
     "title": "Import PeerTube Video",

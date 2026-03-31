@@ -69,7 +69,7 @@ export default function VideoPage() {
         {/* Middle: Transcript Panel */}
         <div className="mx-4 my-6 flex min-h-0 w-1/3 min-w-0 flex-col">
           <Suspense fallback={<Loading />}>
-            <CaptionsPanel videoId={videoId} />
+            <CaptionsPanel canEdit={video.canEdit} videoId={videoId} />
           </Suspense>
         </div>
       </div>
