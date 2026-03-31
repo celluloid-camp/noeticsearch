@@ -75,6 +75,17 @@ export default function SearchPage() {
     enabled: filterType === "custom",
   });
   const videos = videosData?.videos ?? [];
+  const { data: foldersData } = useQuery({
+    ...api.folder.listMineWithVideos.queryOptions({ sortBy: "recent" }),
+    enabled: filterType === "custom",
+  });
+  const folderOptions = (foldersData?.folders ?? [])
+    .filter((folder) => folder.videos.length > 0)
+    .map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      videoIds: folder.videos.map((video) => video.id),
+    }));
 
   const { mutateAsync: createSearch, isPending: isLoading } = useMutation(
     api.search.create.mutationOptions()
@@ -301,6 +312,7 @@ export default function SearchPage() {
                           render={({ field: videosField }) => (
                             <>
                               <SelectVideosDialog
+                                folders={folderOptions}
                                 onOpenChange={setCustomVideoDialogOpen}
                                 onSelectionChange={videosField.onChange}
                                 open={customVideoDialogOpen}

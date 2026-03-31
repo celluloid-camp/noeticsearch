@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Film, RefreshCw, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -26,6 +26,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +43,7 @@ import DeleteVideoDialog from "./delete-video-dialog";
 const editVideoSchema = z.object({
   title: z.string().min(1, "Title is required"),
   isPublic: z.boolean(),
+  folderId: z.string(),
 });
 
 type EditVideoSchema = z.infer<typeof editVideoSchema>;
@@ -134,35 +142,33 @@ export function EditVideoDialog({
     defaultValues: {
       title: video.title,
       isPublic: video.isPublic,
+      folderId: "__none__",
     },
   });
 
-  const updateVideo = useMutation(
-    api.video.update.mutationOptions({
-      onSuccess: () => {
-        toast({
-          title: t("video.editVideo"),
-          description:
-            t("common.success") || "The video has been successfully updated.",
-        });
-        queryClient.invalidateQueries({
-          queryKey: [["video", "getById"], { input: { id: video.id } }],
-        });
-        queryClient.invalidateQueries({
-          queryKey: [["video", "getAll"]],
-        });
-        setOpen(false);
-        onSuccess?.();
-      },
-      onError: (error) => {
-        toast({
-          title: t("common.error") || "Error",
-          description: error.message || "Failed to update video",
-          variant: "destructive",
-        });
-      },
-    })
-  );
+  const { data: folders, isLoading: foldersLoading } = useQuery({
+    ...api.folder.listMine.queryOptions(),
+    enabled: open,
+  });
+
+  const { data: folderIds, isLoading: folderIdsLoading } = useQuery({
+    ...api.folder.getFolderIdsForVideo.queryOptions({ videoId: video.id }),
+    enabled: open,
+  });
+
+  const currentFolderId = folderIds?.[0] ?? "__none__";
+
+  React.useEffect(() => {
+    if (open) {
+      form.reset({
+        title: video.title,
+        isPublic: video.isPublic,
+        folderId: currentFolderId,
+      });
+    }
+  }, [form, open, video.title, video.isPublic, currentFolderId]);
+
+  const updateVideo = useMutation(api.video.update.mutationOptions());
 
   const syncThumbnail = useMutation(
     api.video.syncThumbnail.mutationOptions({
@@ -188,12 +194,61 @@ export function EditVideoDialog({
     })
   );
 
-  const onSubmit = (data: EditVideoSchema) => {
-    updateVideo.mutate({
-      id: video.id,
-      title: data.title,
-      isPublic: data.isPublic,
-    });
+  const addVideoToFolder = useMutation(api.folder.addVideo.mutationOptions());
+  const removeVideoFromFolder = useMutation(
+    api.folder.removeVideo.mutationOptions()
+  );
+
+  const onSubmit = async (data: EditVideoSchema) => {
+    try {
+      await updateVideo.mutateAsync({
+        id: video.id,
+        title: data.title,
+        isPublic: data.isPublic,
+      });
+
+      const selectedFolderId =
+        data.folderId === "__none__" ? null : data.folderId;
+      const existingFolderIds = folderIds ?? [];
+      const toRemove = existingFolderIds.filter(
+        (id) => id !== selectedFolderId
+      );
+
+      await Promise.all(
+        toRemove.map((folderId) =>
+          removeVideoFromFolder.mutateAsync({ folderId, videoId: video.id })
+        )
+      );
+
+      if (selectedFolderId && !existingFolderIds.includes(selectedFolderId)) {
+        await addVideoToFolder.mutateAsync({
+          folderId: selectedFolderId,
+          videoId: video.id,
+        });
+      }
+
+      toast({
+        title: t("video.editVideo"),
+        description:
+          t("common.success") || "The video has been successfully updated.",
+      });
+      queryClient.invalidateQueries({
+        queryKey: [["video", "getById"], { input: { id: video.id } }],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [["video", "getAll"]],
+      });
+      queryClient.invalidateQueries({ queryKey: [["folder"]] });
+      setOpen(false);
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: t("common.error") || "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to update video",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -237,21 +292,67 @@ export function EditVideoDialog({
                   control={form.control}
                   name="isPublic"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel>{t("video.publicField")}</FormLabel>
-                        <p className="text-muted-foreground text-xs">
-                          {t("video.publicDescription") ||
-                            "Make this video visible to everyone"}
-                        </p>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel>
+                            {t("video.publicField") || t("common.public")}
+                          </FormLabel>
+                          <p className="text-muted-foreground text-xs">
+                            {t("video.publicDescription") ||
+                              "Make this video visible to everyone"}
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                      <FormField
+                        control={form.control}
+                        name="folderId"
+                        render={({ field: folderField }) => (
+                          <FormItem>
+                            <div className="space-y-2">
+                              <FormLabel>{t("folders.selectFolder")}</FormLabel>
+                              {foldersLoading || folderIdsLoading ? (
+                                <p className="text-muted-foreground text-xs">
+                                  {t("common.loading")}
+                                </p>
+                              ) : (
+                                <Select
+                                  onValueChange={folderField.onChange}
+                                  value={folderField.value ?? ""}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="h-9 w-full text-sm">
+                                      <SelectValue
+                                        placeholder={t("folders.noFolder")}
+                                      />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent align="start">
+                                    <SelectItem value="__none__">
+                                      {t("folders.noFolder")}
+                                    </SelectItem>
+                                    {(folders ?? []).map((folder) => (
+                                      <SelectItem
+                                        key={folder.id}
+                                        value={folder.id}
+                                      >
+                                        {folder.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   )}
                 />
               </div>
@@ -272,8 +373,17 @@ export function EditVideoDialog({
                   >
                     {t("common.cancel")}
                   </Button>
-                  <Button disabled={updateVideo.isPending} type="submit">
-                    {updateVideo.isPending
+                  <Button
+                    disabled={
+                      updateVideo.isPending ||
+                      addVideoToFolder.isPending ||
+                      removeVideoFromFolder.isPending
+                    }
+                    type="submit"
+                  >
+                    {updateVideo.isPending ||
+                    addVideoToFolder.isPending ||
+                    removeVideoFromFolder.isPending
                       ? t("common.loading")
                       : t("common.save")}
                   </Button>

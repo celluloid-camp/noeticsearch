@@ -22,6 +22,13 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +39,18 @@ export interface SelectVideosDialogVideo {
   title: string;
 }
 
+export interface SelectVideosDialogFolder {
+  id: string;
+  name: string;
+  videoIds: string[];
+}
+
 type ScopeFilter = "all" | "public" | "mine";
 
 type TriggerVariant = "compact" | "default";
 
 interface SelectVideosDialogProps {
+  folders?: SelectVideosDialogFolder[];
   onOpenChange: (open: boolean) => void;
   onSelectionChange: (ids: string[]) => void;
   open: boolean;
@@ -119,11 +133,13 @@ export function SelectVideosDialog({
   open,
   selectedIds,
   triggerVariant = "default",
+  folders = [],
   videos,
 }: SelectVideosDialogProps) {
   const t = useTranslations();
   const [scope, setScope] = useState<ScopeFilter>("all");
   const [filter, setFilter] = useState("");
+  const [selectedFolderId, setSelectedFolderId] = useState("__none__");
 
   const filteredVideos = useMemo(() => {
     let base = videos;
@@ -155,6 +171,18 @@ export function SelectVideosDialog({
 
   const handleRemove = (id: string) => {
     onSelectionChange(selectedIds.filter((_id) => _id !== id));
+  };
+
+  const handleSelectFolder = (folderId: string) => {
+    setSelectedFolderId(folderId);
+    if (folderId === "__none__") {
+      return;
+    }
+    const folder = folders.find((item) => item.id === folderId);
+    if (!folder) {
+      return;
+    }
+    onSelectionChange(folder.videoIds);
   };
 
   const previewVideos = selectedVideos.slice(
@@ -273,6 +301,26 @@ export function SelectVideosDialog({
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Left: scope + filter + all videos */}
           <div className="flex min-h-0 min-w-0 flex-col gap-2">
+            {folders.length > 0 ? (
+              <Select
+                onValueChange={handleSelectFolder}
+                value={selectedFolderId}
+              >
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder={t("folders.selectFolder")} />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectItem value="__none__">
+                    {t("folders.noFolder")}
+                  </SelectItem>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
             <InputGroup>
               <InputGroupAddon align="inline-start">
                 <Search className="size-3.5 text-muted-foreground" />

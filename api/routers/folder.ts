@@ -40,6 +40,122 @@ export const folderRouter = router({
     return folders;
   }),
 
+  listMineWithVideos: protectedProcedure
+    .input(
+      z
+        .object({
+          sortBy: z.enum(["recent", "published", "title"]).default("recent"),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const sortBy = input?.sortBy ?? "recent";
+
+      const folders = await ctx.db
+        .select({
+          id: foldersTable.id,
+          name: foldersTable.name,
+          createdAt: foldersTable.createdAt,
+          updatedAt: foldersTable.updatedAt,
+          videoCount: count(videoFoldersTable.id),
+        })
+        .from(foldersTable)
+        .leftJoin(
+          videoFoldersTable,
+          eq(videoFoldersTable.folderId, foldersTable.id)
+        )
+        .where(eq(foldersTable.userId, userId))
+        .groupBy(foldersTable.id)
+        .orderBy(asc(foldersTable.name));
+
+      const rows = await ctx.db
+        .select({
+          folderId: foldersTable.id,
+          id: videoTable.id,
+          title: videoTable.title,
+          url: videoTable.url,
+          thumbnail: videoTable.thumbnail,
+          createdAt: videoTable.createdAt,
+          publishedAt: videoTable.publishedAt,
+          isPublic: videoTable.isPublic,
+          videoDetails: videoTable.videoDetails,
+          baseUrl: videoTable.baseUrl,
+        })
+        .from(videoTable)
+        .leftJoin(
+          videoFoldersTable,
+          eq(videoFoldersTable.videoId, videoTable.id)
+        )
+        .leftJoin(
+          foldersTable,
+          and(
+            eq(foldersTable.id, videoFoldersTable.folderId),
+            eq(foldersTable.userId, userId)
+          )
+        )
+        .where(eq(videoTable.userId, userId))
+        .orderBy(
+          sortBy === "title"
+            ? asc(videoTable.title)
+            : sortBy === "published"
+              ? desc(videoTable.publishedAt)
+              : desc(videoTable.createdAt)
+        );
+
+      const transformVideo = (row: (typeof rows)[number]) => {
+        const author =
+          row.videoDetails.account?.displayName ??
+          row.videoDetails.channel?.displayName ??
+          null;
+        const authorAvatar = resolveAuthorAvatarUrl(row.videoDetails);
+        const instanceHost =
+          (row.videoDetails as { account?: { host?: string } | null }).account
+            ?.host ??
+          (row.videoDetails as { channel?: { host?: string } | null }).channel
+            ?.host ??
+          row.baseUrl;
+
+        return {
+          id: row.id,
+          title: row.title,
+          url: row.url,
+          thumbnail: row.thumbnail || "/placeholder.svg",
+          addedDate: row.createdAt,
+          publishedAt: row.publishedAt,
+          isPublic: row.isPublic,
+          author,
+          authorAvatar,
+          instanceName: instanceHost,
+        };
+      };
+
+      const videosByFolder = new Map<
+        string,
+        ReturnType<typeof transformVideo>[]
+      >();
+      const uncategorized: ReturnType<typeof transformVideo>[] = [];
+
+      for (const row of rows) {
+        const transformed = transformVideo(row);
+        if (row.folderId) {
+          const existing = videosByFolder.get(row.folderId) ?? [];
+          existing.push(transformed);
+          videosByFolder.set(row.folderId, existing);
+          continue;
+        }
+        uncategorized.push(transformed);
+      }
+
+      return {
+        folders: folders.map((folder) => ({
+          ...folder,
+          videos: videosByFolder.get(folder.id) ?? [],
+        })),
+        uncategorized,
+      };
+    }),
+
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {

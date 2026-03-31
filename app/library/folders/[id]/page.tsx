@@ -1,16 +1,32 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ChevronDown, FolderOpen, Loader2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  ChevronDown,
+  FolderOpen,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { parseAsStringEnum, useQueryState } from "nuqs";
+import React from "react";
 import { AddToFolderButton } from "@/components/add-to-folder-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +40,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 export default function FolderDetailPage() {
@@ -33,6 +51,8 @@ export default function FolderDetailPage() {
   const locale = useLocale();
   const t = useTranslations();
   const api = useTRPC();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const folderId = params.id as string;
 
@@ -40,10 +60,53 @@ export default function FolderDetailPage() {
     "sort",
     parseAsStringEnum(["recent", "published", "title"]).withDefault("recent")
   );
+  const [renameOpen, setRenameOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [name, setName] = React.useState("");
 
   const { data, isLoading, error } = useQuery(
     api.folder.getVideos.queryOptions({ folderId, sortBy })
   );
+  const renameFolder = useMutation(
+    api.folder.rename.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [["folder"]] });
+        toast({ title: t("folders.renameSuccess") });
+        setRenameOpen(false);
+      },
+      onError: (err) => {
+        toast({
+          title: t("common.error"),
+          description: err.message,
+          variant: "destructive",
+        });
+      },
+    })
+  );
+  const deleteFolder = useMutation(
+    api.folder.delete.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [["folder"]] });
+        toast({ title: t("folders.deleteSuccess") });
+        setDeleteOpen(false);
+        router.push("/library/mine");
+      },
+      onError: (err) => {
+        toast({
+          title: t("common.error"),
+          description: err.message,
+          variant: "destructive",
+        });
+      },
+    })
+  );
+  const folderName = data?.folder?.name ?? "";
+
+  React.useEffect(() => {
+    if (renameOpen) {
+      setName(folderName);
+    }
+  }, [renameOpen, folderName]);
 
   if (isLoading) {
     return (
@@ -100,29 +163,51 @@ export default function FolderDetailPage() {
             {folder?.name ?? t("folders.folderDetail")}
           </h2>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="lg" variant="outline">
-              {sortBy === "recent"
-                ? t("video.sortRecent")
-                : sortBy === "published"
-                  ? t("video.sortPublished")
-                  : t("video.sortName")}
-              <ChevronDown className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setSortBy("recent")}>
-              {t("video.sortRecent")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setSortBy("published")}>
-              {t("video.sortPublished")}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setSortBy("title")}>
-              {t("video.sortName")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="lg" variant="outline">
+                {sortBy === "recent"
+                  ? t("video.sortRecent")
+                  : sortBy === "published"
+                    ? t("video.sortPublished")
+                    : t("video.sortName")}
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setSortBy("recent")}>
+                {t("video.sortRecent")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setSortBy("published")}>
+                {t("video.sortPublished")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setSortBy("title")}>
+                {t("video.sortName")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" type="button" variant="outline">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
+                <Pencil className="mr-2 size-4" />
+                {t("folders.rename")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setDeleteOpen(true)}
+                variant="destructive"
+              >
+                <Trash2 className="mr-2 size-4" />
+                {t("folders.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {videos.length === 0 ? (
@@ -205,6 +290,73 @@ export default function FolderDetailPage() {
           ))}
         </div>
       )}
+      <Dialog onOpenChange={setRenameOpen} open={renameOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("folders.renameFolder")}</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            maxLength={80}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && folder?.id && name.trim()) {
+                renameFolder.mutate({ id: folder.id, name: name.trim() });
+              }
+            }}
+            placeholder={t("folders.newFolderPlaceholder")}
+            value={name}
+          />
+          <DialogFooter>
+            <Button
+              onClick={() => setRenameOpen(false)}
+              type="button"
+              variant="outline"
+            >
+              {t("folders.cancel")}
+            </Button>
+            <Button
+              disabled={!name.trim() || renameFolder.isPending || !folder?.id}
+              onClick={() =>
+                folder?.id &&
+                renameFolder.mutate({ id: folder.id, name: name.trim() })
+              }
+              type="button"
+            >
+              {t("folders.rename")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog onOpenChange={setDeleteOpen} open={deleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("folders.deleteFolder")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            {t("folders.confirmDelete")}
+          </p>
+          <DialogFooter>
+            <Button
+              onClick={() => setDeleteOpen(false)}
+              type="button"
+              variant="outline"
+            >
+              {t("folders.cancel")}
+            </Button>
+            <Button
+              disabled={deleteFolder.isPending || !folder?.id}
+              onClick={() =>
+                folder?.id && deleteFolder.mutate({ id: folder.id })
+              }
+              type="button"
+              variant="destructive"
+            >
+              {t("folders.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

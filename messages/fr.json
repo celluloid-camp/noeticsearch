@@ -13,7 +13,8 @@
     "share": "Partager",
     "export": "Exporter",
     "retry": "Réessayer",
-    "copy": "Copier"
+    "copy": "Copier",
+    "public": "Public"
   },
   "nav": {
     "allVideos": "Toutes les vidéos",
@@ -322,6 +323,9 @@
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce dossier ? Cette action est irréversible.",
     "videosCount": "{count, plural, one {# vidéo} other {# vidéos}}",
     "quickCreateFolder": "Nouveau dossier",
-    "selectFolders": "Sélectionner les dossiers pour cette vidéo"
+    "selectFolders": "Sélectionner les dossiers pour cette vidéo",
+    "selectFolder": "Dossier",
+    "noFolder": "Aucun dossier",
+    "uncategorizedVideos": "Vidéos non classées"
   }
 }

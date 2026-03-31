@@ -101,6 +101,17 @@ export function SearchAssistant({
     enabled: search.filterType === "custom",
   });
   const videos = videosData?.videos ?? [];
+  const { data: foldersData } = useQuery({
+    ...api.folder.listMineWithVideos.queryOptions({ sortBy: "recent" }),
+    enabled: search.filterType === "custom",
+  });
+  const folderOptions = (foldersData?.folders ?? [])
+    .filter((folder) => folder.videos.length > 0)
+    .map((folder) => ({
+      id: folder.id,
+      name: folder.name,
+      videoIds: folder.videos.map((video) => video.id),
+    }));
 
   const { messages, sendMessage, status, regenerate } = useChat({
     id: chatId,
@@ -358,6 +369,7 @@ export function SearchAssistant({
             </DropdownMenu>
             {search.filterType === "custom" && (
               <SelectVideosDialog
+                folders={folderOptions}
                 onOpenChange={setCustomVideoDialogOpen}
                 onSelectionChange={(ids) => {
                   void updateSearch({ id: chatId, videoIds: ids });

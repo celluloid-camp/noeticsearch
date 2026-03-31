@@ -3,8 +3,10 @@ import { start } from "workflow/api";
 import { z } from "zod";
 import {
   captionsTable,
+  foldersTable,
   searchHistoryTable,
   transcriptionsTable,
+  videoFoldersTable,
   videoTable,
 } from "@/db/schema";
 import { chaptersTable } from "@/db/schema/chapters";
@@ -27,10 +29,11 @@ export const videoRouter = router({
         url: z.url(),
         isPublic: z.boolean().default(false),
         videoPassword: z.string().optional(),
+        folderId: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { url, isPublic, videoPassword } = input;
+      const { url, isPublic, videoPassword, folderId } = input;
       const userId = ctx.user.id;
 
       try {
@@ -68,6 +71,23 @@ export const videoRouter = router({
           .returning({
             id: videoTable.id,
           });
+
+        if (folderId) {
+          const [folder] = await ctx.db
+            .select({ id: foldersTable.id, userId: foldersTable.userId })
+            .from(foldersTable)
+            .where(eq(foldersTable.id, folderId))
+            .limit(1);
+
+          if (!folder || folder.userId !== userId) {
+            throw new Error("Folder not found or not accessible");
+          }
+
+          await ctx.db
+            .insert(videoFoldersTable)
+            .values({ folderId, videoId: video.id })
+            .onConflictDoNothing();
+        }
 
         const caption = videoInfo.captions[0].captionData;
 

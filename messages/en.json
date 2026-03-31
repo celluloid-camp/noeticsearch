@@ -13,7 +13,8 @@
     "share": "Share",
     "export": "Export",
     "retry": "Retry",
-    "copy": "Copy"
+    "copy": "Copy",
+    "public": "Public"
   },
   "nav": {
     "allVideos": "All Videos",
@@ -322,6 +323,9 @@
     "confirmDelete": "Are you sure you want to delete this folder? This action cannot be undone.",
     "videosCount": "{count, plural, one {# video} other {# videos}}",
     "quickCreateFolder": "New folder",
-    "selectFolders": "Select folders for this video"
+    "selectFolders": "Select folders for this video",
+    "selectFolder": "Folder",
+    "noFolder": "No folder",
+    "uncategorizedVideos": "Uncategorized videos"
   }
 }

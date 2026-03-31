@@ -17,6 +17,13 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,12 +34,14 @@ import { useTRPC } from "@/lib/trpc/client";
 
 const confirmFormSchema = z.object({
   isPublic: z.boolean(),
+  folderId: z.string(),
 });
 
 type ConfirmFormSchema = z.infer<typeof confirmFormSchema>;
 
 export interface ImportVideoConfirmFormInput {
   baseUrl: string;
+  folderId?: string;
   videoId: string;
   videoPassword?: string;
 }
@@ -52,6 +61,7 @@ export function ImportVideoConfirmForm({
 }: ImportVideoConfirmFormProps) {
   const api = useTRPC();
   const t = useTranslations("import");
+  const tGlobal = useTranslations();
   const { toast } = useToast();
   const watchUrl = buildPeerTubeWatchUrl(baseUrl, videoId);
 
@@ -68,8 +78,10 @@ export function ImportVideoConfirmForm({
 
   const form = useForm<ConfirmFormSchema>({
     resolver: zodResolver(confirmFormSchema),
-    defaultValues: { isPublic: false },
+    defaultValues: { isPublic: false, folderId: "__none__" },
   });
+
+  const { data: folders } = useQuery(api.folder.listMine.queryOptions());
 
   const importVideo = useMutation(
     api.video.import.mutationOptions({
@@ -105,6 +117,7 @@ export function ImportVideoConfirmForm({
       url: watchUrl,
       isPublic: data.isPublic,
       videoPassword,
+      folderId: data.folderId === "__none__" ? undefined : data.folderId,
     });
   };
 
@@ -153,6 +166,39 @@ export function ImportVideoConfirmForm({
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="folderId"
+                render={({ field }) => (
+                  <FormItem className="rounded-lg border p-4">
+                    <div className="space-y-2">
+                      <FormLabel>{tGlobal("folders.selectFolder")}</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value ?? "__none__"}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-9 w-full text-sm">
+                            <SelectValue
+                              placeholder={tGlobal("folders.noFolder")}
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent align="start">
+                          <SelectItem value="__none__">
+                            {tGlobal("folders.noFolder")}
+                          </SelectItem>
+                          {(folders ?? []).map((folder) => (
+                            <SelectItem key={folder.id} value={folder.id}>
+                              {folder.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </FormItem>
                 )}
               />
