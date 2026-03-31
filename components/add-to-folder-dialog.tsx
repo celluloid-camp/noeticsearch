@@ -2,8 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderPlus, Loader2, PlusIcon } from "lucide-react";
-import React from "react";
 import { useTranslations } from "next-intl";
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -113,7 +113,9 @@ export function AddToFolderDialog({
 
   const handleCreateFolder = () => {
     const name = newFolderName.trim();
-    if (!name) return;
+    if (!name) {
+      return;
+    }
     createFolder.mutate({ name });
   };
 
@@ -136,11 +138,10 @@ export function AddToFolderDialog({
             <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto">
               {folders.map((folder) => {
                 const checked = selectedFolderIds.has(folder.id);
-                const pending =
-                  addVideo.isPending || removeVideo.isPending;
+                const pending = addVideo.isPending || removeVideo.isPending;
                 return (
                   <li key={folder.id}>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted">
+                    <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-muted">
                       <Checkbox
                         checked={checked}
                         disabled={pending}
@@ -158,7 +159,7 @@ export function AddToFolderDialog({
                       <span className="text-muted-foreground text-xs">
                         {t("folders.videosCount", { count: folder.videoCount })}
                       </span>
-                    </label>
+                    </div>
                   </li>
                 );
               })}
@@ -177,7 +178,9 @@ export function AddToFolderDialog({
                 maxLength={80}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateFolder();
+                  if (e.key === "Enter") {
+                    handleCreateFolder();
+                  }
                   if (e.key === "Escape") {
                     setIsCreating(false);
                     setNewFolderName("");
@@ -238,7 +241,12 @@ export function AddToFolderButton({ videoId }: { videoId: string }) {
   const t = useTranslations();
   return (
     <AddToFolderDialog videoId={videoId}>
-      <Button size="sm" type="button" variant="outline">
+      <Button
+        onClick={(e) => e.stopPropagation()}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
         <FolderPlus className="size-4" />
         <span>{t("folders.addToFolder")}</span>
       </Button>

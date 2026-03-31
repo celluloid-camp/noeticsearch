@@ -1,17 +1,16 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderOpen, MoreHorizontal, Pencil, PlusIcon, Trash2 } from "lucide-react";
+import {
+  FolderOpen,
+  MoreHorizontal,
+  Pencil,
+  PlusIcon,
+  Trash2,
+} from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import React from "react";
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +25,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -47,7 +53,9 @@ function RenameFolderDialog({
   const queryClient = useQueryClient();
 
   React.useEffect(() => {
-    if (open) setName(folder.name);
+    if (open) {
+      setName(folder.name);
+    }
   }, [open, folder.name]);
 
   const rename = useMutation(
@@ -209,7 +217,9 @@ export default function FoldersPage() {
 
   const handleCreate = () => {
     const name = newFolderName.trim();
-    if (!name) return;
+    if (!name) {
+      return;
+    }
     createFolder.mutate({ name });
   };
 
@@ -222,7 +232,6 @@ export default function FoldersPage() {
         </div>
         <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton list
             <Skeleton className="h-24 w-full rounded-lg" key={i} />
           ))}
         </div>
@@ -233,12 +242,10 @@ export default function FoldersPage() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 border-border border-b px-4 pt-4 pb-4">
-        <h2 className="font-mono font-semibold text-lg">{t("folders.title")}</h2>
-        <Button
-          onClick={() => setIsCreating(true)}
-          size="lg"
-          type="button"
-        >
+        <h2 className="font-mono font-semibold text-lg">
+          {t("folders.title")}
+        </h2>
+        <Button onClick={() => setIsCreating(true)} size="lg" type="button">
           <PlusIcon className="size-4" />
           {t("folders.createFolder")}
         </Button>
@@ -252,7 +259,9 @@ export default function FoldersPage() {
             maxLength={80}
             onChange={(e) => setNewFolderName(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleCreate();
+              if (e.key === "Enter") {
+                handleCreate();
+              }
               if (e.key === "Escape") {
                 setIsCreating(false);
                 setNewFolderName("");
@@ -318,17 +327,16 @@ export default function FoldersPage() {
                 <div className="flex items-start justify-between gap-2">
                   <FolderOpen className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-sm">{folder.name}</p>
+                    <p className="truncate font-medium text-sm">
+                      {folder.name}
+                    </p>
                     <p className="text-muted-foreground text-xs">
                       {t("folders.videosCount", { count: folder.videoCount })}
                     </p>
                   </div>
                 </div>
               </Link>
-              <div
-                className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -370,7 +378,9 @@ export default function FoldersPage() {
         <RenameFolderDialog
           folder={renameFolder}
           onOpenChange={(open) => {
-            if (!open) setRenameFolder(null);
+            if (!open) {
+              setRenameFolder(null);
+            }
           }}
           open
         />
@@ -379,7 +389,9 @@ export default function FoldersPage() {
         <DeleteFolderDialog
           folder={deleteFolder}
           onOpenChange={(open) => {
-            if (!open) setDeleteFolder(null);
+            if (!open) {
+              setDeleteFolder(null);
+            }
           }}
           open
         />

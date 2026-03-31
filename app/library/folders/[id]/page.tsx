@@ -4,9 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, FolderOpen, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
-import { parseAsStringEnum, useQueryState } from "nuqs";
+import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { parseAsStringEnum, useQueryState } from "nuqs";
 import { AddToFolderButton } from "@/components/add-to-folder-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,6 @@ export default function FolderDetailPage() {
         </div>
         <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton list
             <Card className="overflow-hidden p-0" key={i}>
               <Skeleton className="aspect-video w-full" />
               <CardContent className="px-4 pt-0 pb-4">
@@ -92,12 +91,7 @@ export default function FolderDetailPage() {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 border-border border-b px-4 pt-4 pb-4">
         <div className="flex items-center gap-3">
-          <Button
-            asChild
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
+          <Button asChild size="icon" type="button" variant="ghost">
             <Link href="/library/folders">
               <ArrowLeft className="size-4" />
             </Link>
@@ -167,10 +161,7 @@ export default function FolderDetailPage() {
                     <Loader2 className="h-8 w-8 animate-spin" />
                   </div>
                 )}
-                <div
-                  className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
                   <AddToFolderButton videoId={video.id} />
                 </div>
               </div>

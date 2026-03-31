@@ -163,13 +163,11 @@ export default function VideoCatalog({
                 </div>
               )}
               {isLoggedIn && (
-                <div
-                  className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
                   <AddToFolderDialog videoId={video.id}>
                     <Button
                       className="h-7 px-2"
+                      onClick={(e) => e.stopPropagation()}
                       size="sm"
                       type="button"
                       variant="secondary"

@@ -112,9 +112,7 @@ export const folderRouter = router({
         });
       }
 
-      await ctx.db
-        .delete(foldersTable)
-        .where(eq(foldersTable.id, input.id));
+      await ctx.db.delete(foldersTable).where(eq(foldersTable.id, input.id));
 
       return { success: true };
     }),
