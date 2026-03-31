@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Loader2, PlusIcon } from "lucide-react";
+import { ChevronDown, FolderPlus, Loader2, PlusIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import { useLocale, useTranslations } from "use-intl/react";
+import { AddToFolderDialog } from "@/components/add-to-folder-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,6 +24,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSession } from "@/lib/auth-client";
 import { useTRPC } from "@/lib/trpc/client";
 import { Button } from "./ui/button";
 
@@ -39,6 +41,8 @@ export default function VideoCatalog({
   const locale = useLocale();
   const t = useTranslations();
   const api = useTRPC();
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
   const [sortBy, setSortBy] = useQueryState(
     "sort",
     parseAsStringEnum(["recent", "published", "title"]).withDefault("recent")
@@ -140,7 +144,7 @@ export default function VideoCatalog({
       <div className="grid grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {videos.map((video) => (
           <Card
-            className="cursor-pointer overflow-hidden p-0 transition-shadow hover:shadow-lg"
+            className="group cursor-pointer overflow-hidden p-0 transition-shadow hover:shadow-lg"
             key={video.id}
             onClick={() => handleVideoClick(video)}
           >
@@ -156,6 +160,23 @@ export default function VideoCatalog({
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              )}
+              {isLoggedIn && (
+                <div
+                  className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <AddToFolderDialog videoId={video.id}>
+                    <Button
+                      className="h-7 px-2"
+                      size="sm"
+                      type="button"
+                      variant="secondary"
+                    >
+                      <FolderPlus className="size-3.5" />
+                    </Button>
+                  </AddToFolderDialog>
                 </div>
               )}
             </div>

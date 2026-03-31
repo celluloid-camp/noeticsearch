@@ -1,6 +1,6 @@
 "use client";
 
-import { IconVideo, IconWorld } from "@tabler/icons-react";
+import { IconFolder, IconVideo, IconWorld } from "@tabler/icons-react";
 import { LogOut, PlusIcon, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -46,12 +46,15 @@ export function MainSidebar() {
   const isLoggedIn = !!session?.user;
   const isExpanded = state === "expanded";
 
-  const getActiveTab = (): "all" | "public" | "mine" => {
+  const getActiveTab = (): "all" | "public" | "mine" | "folders" => {
     if (pathname === "/library/public") {
       return "public";
     }
     if (pathname === "/library/mine") {
       return "mine";
+    }
+    if (pathname.startsWith("/library/folders")) {
+      return "folders";
     }
     return "all";
   };
@@ -132,6 +135,20 @@ export function MainSidebar() {
                   <Link href="/library/mine">
                     <User className="size-4" />
                     <span>{t("nav.myVideos")}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : null}
+            {isLoggedIn ? (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={activeTab === "folders"}
+                  tooltip={t("nav.myFolders")}
+                >
+                  <Link href="/library/folders">
+                    <IconFolder className="size-4" />
+                    <span>{t("nav.myFolders")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
