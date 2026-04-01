@@ -431,12 +431,12 @@ export async function searchPeerTubeVideos(
     // nsfw = true,
   } = params;
 
-  const client = createClient({ baseUrl: baseUrl.replace(/\/$/, "") });
-
-  const extraHeaders: Record<string, string> = {};
-  if (accessToken) {
-    extraHeaders["Authorization"] = `Bearer ${accessToken}`;
-  }
+  const client = createClient({
+    baseUrl: baseUrl.replace(/\/$/, ""),
+    ...(accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : {}),
+  });
 
   const { data, error } = await searchVideos({
     client,
@@ -447,7 +447,6 @@ export async function searchPeerTubeVideos(
       sort: sort as Parameters<typeof searchVideos>[0]["query"]["sort"],
       // nsfw: nsfw ? "true" : "false",
     },
-    ...(Object.keys(extraHeaders).length > 0 ? { headers: extraHeaders } : {}),
   });
 
   if (error) {

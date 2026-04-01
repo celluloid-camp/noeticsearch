@@ -1,41 +1,20 @@
 /**
- * PeerTube OAuth authentication helpers.
+ * PeerTube OAuth authentication helpers using @celluloid/peertube-api.
  *
  * PeerTube uses the Resource Owner Password Credentials grant (ROPC):
- * 1. Fetch OAuth client credentials from /api/v1/oauth-clients/local
- * 2. Exchange email+password for access/refresh tokens via /api/v1/users/token
- * 3. Refresh expired tokens via the same endpoint with grant_type=refresh_token
+ * 1. Fetch OAuth client credentials via getOAuthClient
+ * 2. Exchange email/password for tokens via getOAuthToken (password grant)
+ * 3. Refresh expired tokens via getOAuthToken (refresh_token grant)
  */
 
-export interface PeerTubeOAuthClient {
-  client_id: string;
-  client_secret: string;
-}
+import { getOAuthClient, getOAuthToken } from "@celluloid/peertube-api";
+import { createClient } from "@celluloid/peertube-api/client";
 
 export interface PeerTubeTokenResponse {
   access_token: string;
   expires_in: number;
   refresh_token: string;
   token_type: string;
-}
-
-/**
- * Fetch the local OAuth client credentials for a PeerTube instance.
- * These are public credentials that identify this application to the instance.
- */
-export async function fetchOAuthClient(
-  baseUrl: string
-): Promise<PeerTubeOAuthClient> {
-  const url = `${baseUrl.replace(/\/$/, "")}/api/v1/oauth-clients/local`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch OAuth client: HTTP ${res.status}`);
-  }
-  const data = (await res.json()) as PeerTubeOAuthClient;
-  if (!data.client_id || !data.client_secret) {
-    throw new Error("Invalid OAuth client response from PeerTube instance");
-  }
-  return data;
 }
 
 /**
@@ -47,36 +26,45 @@ export async function authenticatePeerTube(
   usernameOrEmail: string,
   password: string
 ): Promise<PeerTubeTokenResponse> {
-  const oauthClient = await fetchOAuthClient(baseUrl);
-  const url = `${baseUrl.replace(/\/$/, "")}/api/v1/users/token`;
+  const client = createClient({ baseUrl: baseUrl.replace(/\/$/, "") });
 
-  const body = new URLSearchParams({
-    client_id: oauthClient.client_id,
-    client_secret: oauthClient.client_secret,
-    grant_type: "password",
-    response_type: "code",
-    username: usernameOrEmail,
-    password,
+  const { data: oauthClient, error: clientError } = await getOAuthClient({
+    client,
   });
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
+  if (clientError || !oauthClient?.client_id || !oauthClient?.client_secret) {
+    throw new Error("connection_failed");
+  }
+
+  const { data, error, response } = await getOAuthToken({
+    client,
+    body: {
+      grant_type: "password",
+      client_id: oauthClient.client_id,
+      client_secret: oauthClient.client_secret,
+      username: usernameOrEmail,
+      password,
+    },
   });
 
-  if (!res.ok) {
-    if (res.status === 400 || res.status === 401) {
+  if (error) {
+    const status = response?.status;
+    if (status === 400 || status === 401) {
       throw new Error("invalid_credentials");
     }
-    throw new Error(`PeerTube authentication failed: HTTP ${res.status}`);
+    throw new Error("connection_failed");
   }
 
-  const data = (await res.json()) as PeerTubeTokenResponse;
-  if (!data.access_token) {
+  if (!data?.access_token || !data?.refresh_token) {
     throw new Error("No access token in PeerTube response");
   }
-  return data;
+
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in: data.expires_in ?? 86400,
+    token_type: data.token_type ?? "Bearer",
+  };
 }
 
 /**
@@ -86,29 +74,43 @@ export async function refreshPeerTubeToken(
   baseUrl: string,
   refreshToken: string
 ): Promise<PeerTubeTokenResponse> {
-  const oauthClient = await fetchOAuthClient(baseUrl);
-  const url = `${baseUrl.replace(/\/$/, "")}/api/v1/users/token`;
+  const client = createClient({ baseUrl: baseUrl.replace(/\/$/, "") });
 
-  const body = new URLSearchParams({
-    client_id: oauthClient.client_id,
-    client_secret: oauthClient.client_secret,
-    grant_type: "refresh_token",
-    refresh_token: refreshToken,
+  const { data: oauthClient, error: clientError } = await getOAuthClient({
+    client,
   });
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  if (!res.ok) {
-    throw new Error(`Token refresh failed: HTTP ${res.status}`);
+  if (clientError || !oauthClient?.client_id || !oauthClient?.client_secret) {
+    throw new Error("connection_failed");
   }
 
-  const data = (await res.json()) as PeerTubeTokenResponse;
-  if (!data.access_token) {
+  const { data, error, response } = await getOAuthToken({
+    client,
+    body: {
+      grant_type: "refresh_token",
+      client_id: oauthClient.client_id,
+      client_secret: oauthClient.client_secret,
+      refresh_token: refreshToken,
+    },
+  });
+
+  if (error) {
+    const status = response?.status;
+    if (status === 400 || status === 401) {
+      throw new Error("token_expired");
+    }
+    throw new Error("connection_failed");
+  }
+
+  if (!data?.access_token || !data?.refresh_token) {
     throw new Error("No access token in PeerTube refresh response");
   }
-  return data;
+
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_in: data.expires_in ?? 86400,
+    token_type: data.token_type ?? "Bearer",
+  };
 }
+
