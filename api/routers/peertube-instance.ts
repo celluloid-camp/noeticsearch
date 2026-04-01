@@ -1,9 +1,6 @@
 import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
-import {
-  peertubeInstanceAuthTable,
-  peertubeInstanceTable,
-} from "@/db/schema";
+import { peertubeInstanceAuthTable, peertubeInstanceTable } from "@/db/schema";
 import { authenticatePeerTube } from "@/lib/peertube-auth";
 import { protectedProcedure, router } from "../trpc";
 
@@ -134,7 +131,12 @@ export const peertubeInstanceRouter = router({
         .limit(1);
 
       if (!record) {
-        return { status: null, connectedAt: null, expiresAt: null, lastError: null };
+        return {
+          status: null,
+          connectedAt: null,
+          expiresAt: null,
+          lastError: null,
+        };
       }
 
       return {
@@ -161,6 +163,16 @@ export const peertubeInstanceRouter = router({
       const userId = ctx.user.id;
       const host = normalizeHost(input.host);
 
+      const [instance] = await ctx.db
+        .select({ isIndex: peertubeInstanceTable.isIndex })
+        .from(peertubeInstanceTable)
+        .where(eq(peertubeInstanceTable.host, host))
+        .limit(1);
+
+      if (instance?.isIndex) {
+        throw new Error("instance_auth_not_allowed");
+      }
+
       let tokenResponse: Awaited<ReturnType<typeof authenticatePeerTube>>;
       try {
         tokenResponse = await authenticatePeerTube(
@@ -169,6 +181,7 @@ export const peertubeInstanceRouter = router({
           input.password
         );
       } catch (err) {
+        console.error("Failed to authenticate PeerTube:", err);
         const message =
           err instanceof Error ? err.message : "Authentication failed";
         const isInvalidCredentials = message === "invalid_credentials";
@@ -205,7 +218,9 @@ export const peertubeInstanceRouter = router({
       }
 
       const now = new Date();
-      const expiresAt = new Date(now.getTime() + tokenResponse.expires_in * 1000);
+      const expiresAt = new Date(
+        now.getTime() + tokenResponse.expires_in * 1000
+      );
 
       await ctx.db
         .insert(peertubeInstanceAuthTable)

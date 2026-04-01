@@ -2,7 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, PlugIcon, PlugZapIcon } from "lucide-react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
+import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,17 +21,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
 
 interface ConnectInstanceDialogProps {
   host: string;
+  instanceThumbnail?: string | null;
   instanceTitle?: string;
   onStatusChange?: () => void;
+  triggerClassName?: string;
+  triggerVariant?: ComponentProps<typeof Button>["variant"];
 }
 
 export function ConnectInstanceDialog({
   host,
+  instanceThumbnail,
   instanceTitle,
   onStatusChange,
+  triggerClassName,
+  triggerVariant = "outline",
 }: ConnectInstanceDialogProps) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -86,7 +95,9 @@ export function ConnectInstanceDialog({
   );
 
   const handleConnect = () => {
-    if (!email.trim() || !password) return;
+    if (!(email.trim() && password)) {
+      return;
+    }
     connectMutation.mutate({ host, email: email.trim(), password });
   };
 
@@ -109,7 +120,12 @@ export function ConnectInstanceDialog({
       open={open}
     >
       <DialogTrigger asChild>
-        <Button size="sm" type="button" variant="outline">
+        <Button
+          className={cn(triggerClassName)}
+          size="sm"
+          type="button"
+          variant={triggerVariant}
+        >
           {isConnected ? (
             <PlugZapIcon className="size-3.5" />
           ) : (
@@ -132,15 +148,27 @@ export function ConnectInstanceDialog({
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
-          {/* Current status badge */}
-          {authStatus?.status && (
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">
-                {t("currentStatus")}:
-              </span>
-              <ConnectionStatusBadge status={authStatus.status} />
-            </div>
-          )}
+          <div className="flex items-center gap-3 rounded-md border p-3">
+            {instanceThumbnail ? (
+              <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
+                <Image
+                  alt={instanceTitle ?? host}
+                  className="object-cover"
+                  fill
+                  src={instanceThumbnail}
+                  unoptimized
+                />
+              </div>
+            ) : null}
+            <a
+              className="truncate text-primary text-sm underline-offset-2 hover:underline"
+              href={host}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {host}
+            </a>
+          </div>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="pt-email">{t("emailLabel")}</Label>
@@ -149,7 +177,9 @@ export function ConnectInstanceDialog({
               id="pt-email"
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleConnect();
+                if (e.key === "Enter") {
+                  handleConnect();
+                }
               }}
               placeholder={t("emailPlaceholder")}
               type="email"
@@ -164,7 +194,9 @@ export function ConnectInstanceDialog({
               id="pt-password"
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleConnect();
+                if (e.key === "Enter") {
+                  handleConnect();
+                }
               }}
               placeholder={t("passwordPlaceholder")}
               type="password"
@@ -173,7 +205,7 @@ export function ConnectInstanceDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+        <DialogFooter className="mt-2 flex-col gap-2 border-t pt-3 sm:flex-row sm:justify-between">
           {isConnected && (
             <Button
               disabled={disconnectMutation.isPending}
@@ -188,7 +220,7 @@ export function ConnectInstanceDialog({
               {t("disconnect")}
             </Button>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:ml-auto">
             <Button
               onClick={() => setOpen(false)}
               size="sm"
@@ -199,7 +231,7 @@ export function ConnectInstanceDialog({
             </Button>
             <Button
               disabled={
-                !email.trim() || !password || connectMutation.isPending
+                !(email.trim() && password) || connectMutation.isPending
               }
               onClick={handleConnect}
               size="sm"
@@ -224,11 +256,16 @@ interface ConnectionStatusBadgeProps {
 export function ConnectionStatusBadge({ status }: ConnectionStatusBadgeProps) {
   const t = useTranslations("peertubeAuth");
 
-  if (!status) return null;
+  if (!status) {
+    return null;
+  }
 
   if (status === "connected") {
     return (
-      <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" variant="outline">
+      <Badge
+        className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+        variant="outline"
+      >
         {t("statusConnected")}
       </Badge>
     );
@@ -236,14 +273,20 @@ export function ConnectionStatusBadge({ status }: ConnectionStatusBadgeProps) {
 
   if (status === "expired") {
     return (
-      <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" variant="outline">
+      <Badge
+        className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+        variant="outline"
+      >
         {t("statusExpired")}
       </Badge>
     );
   }
 
   return (
-    <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+    <Badge
+      className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+      variant="outline"
+    >
       {t("statusFailed")}
     </Badge>
   );

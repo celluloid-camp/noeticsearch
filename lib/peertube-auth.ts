@@ -55,14 +55,14 @@ export async function authenticatePeerTube(
     throw new Error("connection_failed");
   }
 
-  if (!data?.access_token || !data?.refresh_token) {
+  if (!(data?.access_token && data?.refresh_token)) {
     throw new Error("No access token in PeerTube response");
   }
 
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
-    expires_in: data.expires_in ?? 86400,
+    expires_in: data.expires_in ?? 86_400,
     token_type: data.token_type ?? "Bearer",
   };
 }
@@ -102,15 +102,14 @@ export async function refreshPeerTubeToken(
     throw new Error("connection_failed");
   }
 
-  if (!data?.access_token || !data?.refresh_token) {
+  if (!(data?.access_token && data?.refresh_token)) {
     throw new Error("No access token in PeerTube refresh response");
   }
 
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
-    expires_in: data.expires_in ?? 86400,
+    expires_in: data.expires_in ?? 86_400,
     token_type: data.token_type ?? "Bearer",
   };
 }
-
