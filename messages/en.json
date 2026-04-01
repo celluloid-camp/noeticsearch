@@ -217,6 +217,28 @@
   "app": {
     "name": "NoeticSearch"
   },
+  "peertubeAuth": {
+    "connect": "Connect",
+    "reconnect": "Reconnect",
+    "disconnect": "Disconnect",
+    "connectTitle": "Connect to instance",
+    "reconnectTitle": "Reconnect to instance",
+    "connectDescription": "Enter your PeerTube account credentials to access private videos.",
+    "connectDescriptionWithTitle": "Enter your credentials for {title} to access private videos.",
+    "emailLabel": "Email or username",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Your PeerTube password",
+    "currentStatus": "Status",
+    "statusConnected": "Connected",
+    "statusExpired": "Expired",
+    "statusFailed": "Not connected",
+    "connectSuccess": "Connected successfully",
+    "disconnectSuccess": "Disconnected",
+    "errorInvalidCredentials": "Invalid email or password",
+    "errorConnectionFailed": "Connection failed. Please try again.",
+    "errorExpiredToken": "Session expired. Please reconnect."
+  },
   "hero": {
     "brand": "noeticsearch",
     "title": "Search inside",

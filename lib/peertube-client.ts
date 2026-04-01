@@ -416,10 +416,12 @@ const DEFAULT_SORT = "-match";
 /**
  * Search videos on a PeerTube instance using the official API client.
  * Call from server to avoid CORS.
+ * Optionally pass an access token for authenticated searches.
  */
 export async function searchPeerTubeVideos(
   baseUrl: string,
-  params: PeerTubeSearchVideosParams
+  params: PeerTubeSearchVideosParams,
+  accessToken?: string
 ) {
   const {
     search,
@@ -431,6 +433,11 @@ export async function searchPeerTubeVideos(
 
   const client = createClient({ baseUrl: baseUrl.replace(/\/$/, "") });
 
+  const extraHeaders: Record<string, string> = {};
+  if (accessToken) {
+    extraHeaders["Authorization"] = `Bearer ${accessToken}`;
+  }
+
   const { data, error } = await searchVideos({
     client,
     query: {
@@ -440,6 +447,7 @@ export async function searchPeerTubeVideos(
       sort: sort as Parameters<typeof searchVideos>[0]["query"]["sort"],
       // nsfw: nsfw ? "true" : "false",
     },
+    ...(Object.keys(extraHeaders).length > 0 ? { headers: extraHeaders } : {}),
   });
 
   if (error) {

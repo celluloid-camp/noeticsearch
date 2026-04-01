@@ -8,6 +8,10 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
 import { PeerTubeSearchResults } from "@/components/import-link/peertube-search-results";
+import {
+  ConnectInstanceDialog,
+  ConnectionStatusBadge,
+} from "@/components/import-link/connect-instance-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,7 +32,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 
-export type PeerTubeInstance = RouterOutput["peertubeInstance"]["list"][number];
+export type PeerTubeInstance =
+  RouterOutput["peertubeInstance"]["listWithAuth"][number];
 
 export default function ImportSearchPage() {
   const router = useRouter();
@@ -36,8 +41,8 @@ export default function ImportSearchPage() {
   const { toast } = useToast();
   const t = useTranslations("import");
   const tCommon = useTranslations("common");
-  const { data: instances } = useQuery(
-    api.peertubeInstance.list.queryOptions({
+  const { data: instances, refetch: refetchInstances } = useQuery(
+    api.peertubeInstance.listWithAuth.queryOptions({
       limit: 10,
     })
   );
@@ -165,17 +170,36 @@ export default function ImportSearchPage() {
                                 />
                               </div>
                             ) : null}
-                            <div className="flex flex-col text-left">
+                            <div className="flex flex-1 flex-col text-left">
                               <span>{instance.title}</span>
                               <span className="text-muted-foreground text-xs">
                                 {instance.host}
                               </span>
                             </div>
+                            <ConnectionStatusBadge
+                              status={instance.authStatus}
+                            />
                           </div>
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+
+                  {/* Connection status + connect button for active instance */}
+                  {activeInstance && (
+                    <div className="flex items-center justify-between gap-2">
+                      <ConnectionStatusBadge
+                        status={activeInstance.authStatus}
+                      />
+                      <ConnectInstanceDialog
+                        host={activeInstance.host}
+                        instanceTitle={activeInstance.title}
+                        onStatusChange={() => {
+                          refetchInstances();
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
                   <Label htmlFor="search">{t("searchVideosLabel")}</Label>
