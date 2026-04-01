@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { peertubeInstanceAuthTable } from "@/db/schema";
-import { decrypt, encrypt } from "@/lib/encryption";
 import { refreshPeerTubeToken } from "@/lib/peertube-auth";
 import { searchPeerTubeVideos } from "@/lib/peertube-client";
 import type { Context } from "../trpc";
@@ -37,7 +36,7 @@ async function resolveAccessToken(
     )
     .limit(1);
 
-  if (!record?.accessTokenEncrypted) {
+  if (!record?.accessToken) {
     return null;
   }
 
@@ -46,11 +45,11 @@ async function resolveAccessToken(
     record.accessTokenExpiresAt != null && record.accessTokenExpiresAt <= now;
 
   if (!isExpired) {
-    return decrypt(record.accessTokenEncrypted);
+    return record.accessToken;
   }
 
   // Try refresh
-  if (!record.refreshTokenEncrypted) {
+  if (!record.refreshToken) {
     await db
       .update(peertubeInstanceAuthTable)
       .set({ status: "expired", updatedAt: now })
@@ -59,8 +58,7 @@ async function resolveAccessToken(
   }
 
   try {
-    const refreshToken = decrypt(record.refreshTokenEncrypted);
-    const tokenResponse = await refreshPeerTubeToken(host, refreshToken);
+    const tokenResponse = await refreshPeerTubeToken(host, record.refreshToken);
     const expiresAt = new Date(
       now.getTime() + tokenResponse.expires_in * 1000
     );
@@ -68,8 +66,8 @@ async function resolveAccessToken(
     await db
       .update(peertubeInstanceAuthTable)
       .set({
-        accessTokenEncrypted: encrypt(tokenResponse.access_token),
-        refreshTokenEncrypted: encrypt(tokenResponse.refresh_token),
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
         accessTokenExpiresAt: expiresAt,
         status: "connected",
         lastError: null,

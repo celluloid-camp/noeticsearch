@@ -4,7 +4,6 @@ import {
   peertubeInstanceAuthTable,
   peertubeInstanceTable,
 } from "@/db/schema";
-import { encrypt } from "@/lib/encryption";
 import { authenticatePeerTube } from "@/lib/peertube-auth";
 import { protectedProcedure, router } from "../trpc";
 
@@ -214,8 +213,8 @@ export const peertubeInstanceRouter = router({
           userId,
           instanceHost: host,
           usernameOrEmail: input.email,
-          accessTokenEncrypted: encrypt(tokenResponse.access_token),
-          refreshTokenEncrypted: encrypt(tokenResponse.refresh_token),
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
           accessTokenExpiresAt: expiresAt,
           status: "connected",
           lastError: null,
@@ -229,8 +228,8 @@ export const peertubeInstanceRouter = router({
           ],
           set: {
             usernameOrEmail: input.email,
-            accessTokenEncrypted: encrypt(tokenResponse.access_token),
-            refreshTokenEncrypted: encrypt(tokenResponse.refresh_token),
+            accessToken: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token,
             accessTokenExpiresAt: expiresAt,
             status: "connected",
             lastError: null,

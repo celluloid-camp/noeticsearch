@@ -14,8 +14,8 @@ export const peertubeInstanceAuthTable = pgTable(
       .references(() => userTable.id, { onDelete: "cascade" }),
     instanceHost: text("instance_host").notNull(),
     usernameOrEmail: text("username_or_email").notNull(),
-    accessTokenEncrypted: text("access_token_encrypted"),
-    refreshTokenEncrypted: text("refresh_token_encrypted"),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
     accessTokenExpiresAt: timestamp("access_token_expires_at"),
     scopes: text("scopes"),
     status: text("status", { enum: ["connected", "expired", "failed"] })

@@ -11,7 +11,6 @@ export const env = createEnv({
     REDIS_URL: z.string().min(1).optional(),
     ADMIN_EMAIL: z.email(),
     ADMIN_PASSWORD: z.string().min(1),
-    TOKEN_ENCRYPTION_KEY: z.string().length(64),
   },
   experimental__runtimeEnv: process.env,
   emptyStringAsUndefined: true,
