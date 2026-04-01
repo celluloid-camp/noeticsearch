@@ -3,6 +3,7 @@ export * from "./schema/captions";
 export * from "./schema/chapters";
 export * from "./schema/folders";
 export * from "./schema/peertube-instance";
+export * from "./schema/peertube-instance-auth";
 export * from "./schema/search";
 export * from "./schema/search-result";
 export * from "./schema/transcriptions";

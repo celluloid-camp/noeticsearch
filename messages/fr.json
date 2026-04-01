@@ -220,6 +220,28 @@
   "app": {
     "name": "NoeticSearch"
   },
+  "peertubeAuth": {
+    "connect": "Connecter",
+    "reconnect": "Reconnecter",
+    "disconnect": "Déconnecter",
+    "connectTitle": "Connexion à l'instance",
+    "reconnectTitle": "Reconnexion à l'instance",
+    "connectDescription": "Entrez vos identifiants PeerTube pour accéder aux vidéos privées.",
+    "connectDescriptionWithTitle": "Entrez vos identifiants pour {title} pour accéder aux vidéos privées.",
+    "emailLabel": "E-mail ou nom d'utilisateur",
+    "emailPlaceholder": "vous@exemple.com",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Votre mot de passe PeerTube",
+    "currentStatus": "Statut",
+    "statusConnected": "Connecté",
+    "statusExpired": "Expiré",
+    "statusFailed": "Non connecté",
+    "connectSuccess": "Connexion réussie",
+    "disconnectSuccess": "Déconnecté",
+    "errorInvalidCredentials": "E-mail ou mot de passe incorrect",
+    "errorConnectionFailed": "Échec de la connexion. Veuillez réessayer.",
+    "errorExpiredToken": "Session expirée. Veuillez vous reconnecter."
+  },
   "hero": {
     "brand": "noeticsearch",
     "title": "La recherche de citations",

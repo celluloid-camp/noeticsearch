@@ -6,6 +6,10 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import {
+  ConnectInstanceDialog,
+  ConnectionStatusBadge,
+} from "@/components/import-link/connect-instance-dialog";
 import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
 import { PeerTubeSearchResults } from "@/components/import-link/peertube-search-results";
 import { Button } from "@/components/ui/button";
@@ -28,7 +32,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 
-export type PeerTubeInstance = RouterOutput["peertubeInstance"]["list"][number];
+export type PeerTubeInstance =
+  RouterOutput["peertubeInstance"]["listWithAuth"][number];
 
 export default function ImportSearchPage() {
   const router = useRouter();
@@ -36,8 +41,8 @@ export default function ImportSearchPage() {
   const { toast } = useToast();
   const t = useTranslations("import");
   const tCommon = useTranslations("common");
-  const { data: instances } = useQuery(
-    api.peertubeInstance.list.queryOptions({
+  const { data: instances, refetch: refetchInstances } = useQuery(
+    api.peertubeInstance.listWithAuth.queryOptions({
       limit: 10,
     })
   );
@@ -46,6 +51,7 @@ export default function ImportSearchPage() {
     useState<PeerTubeInstance | null>(null);
 
   const activeInstance = selectedInstance ?? instances?.[0] ?? null;
+  const isLoginDisabled = activeInstance?.isIndex ?? false;
   const [query, setQuery] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState<string | null>(null);
 
@@ -109,73 +115,97 @@ export default function ImportSearchPage() {
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-1 flex-col gap-2">
                   <Label>{t("instance")}</Label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        className="flex h-14 w-full items-center justify-between"
-                        type="button"
-                        variant="outline"
-                      >
-                        {activeInstance ? (
-                          <div className="flex items-center gap-3">
-                            {activeInstance.thumbnail ? (
-                              <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-white">
-                                <Image
-                                  alt={activeInstance.title}
-                                  className="object-cover"
-                                  fill
-                                  src={activeInstance.thumbnail}
-                                  unoptimized
-                                />
+                  <div className="relative">
+                    <div className="min-w-0 flex-1">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            className="flex h-14 w-full items-center justify-between pr-28"
+                            type="button"
+                            variant="outline"
+                          >
+                            {activeInstance ? (
+                              <div className="flex items-center gap-3">
+                                {activeInstance.thumbnail ? (
+                                  <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-white">
+                                    <Image
+                                      alt={activeInstance.title}
+                                      className="object-cover"
+                                      fill
+                                      src={activeInstance.thumbnail}
+                                      unoptimized
+                                    />
+                                  </div>
+                                ) : null}
+                                <div className="flex flex-col text-left">
+                                  <span>{activeInstance.title}</span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {activeInstance.host}
+                                  </span>
+                                </div>
                               </div>
-                            ) : null}
-                            <div className="flex flex-col text-left">
-                              <span>{activeInstance.title}</span>
-                              <span className="text-muted-foreground text-xs">
-                                {activeInstance.host}
+                            ) : (
+                              <span className="text-muted-foreground text-sm">
+                                {t("noPublicInstances")}
                               </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            {t("noPublicInstances")}
-                          </span>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="start"
-                      className=""
-                      style={{ width: "var(--radix-popper-anchor-width)" }}
-                    >
-                      {(instances ?? []).map((instance) => (
-                        <DropdownMenuItem
-                          key={instance.host}
-                          onSelect={() => setSelectedInstance(instance)}
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="start"
+                          className=""
+                          style={{ width: "var(--radix-popper-anchor-width)" }}
                         >
-                          <div className="flex items-center gap-3">
-                            {instance.thumbnail ? (
-                              <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
-                                <Image
-                                  alt={instance.title}
-                                  className="object-cover"
-                                  fill
-                                  src={instance.thumbnail}
-                                  unoptimized
-                                />
+                          {(instances ?? []).map((instance) => (
+                            <DropdownMenuItem
+                              className="w-full"
+                              key={instance.host}
+                              onSelect={() => setSelectedInstance(instance)}
+                            >
+                              <div className="flex w-full items-center gap-3">
+                                {instance.thumbnail ? (
+                                  <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
+                                    <Image
+                                      alt={instance.title}
+                                      className="object-cover"
+                                      fill
+                                      src={instance.thumbnail}
+                                      unoptimized
+                                    />
+                                  </div>
+                                ) : null}
+                                <div className="flex flex-1 flex-col text-left">
+                                  <span>{instance.title}</span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {instance.host}
+                                  </span>
+                                </div>
+                                <span className="ml-auto">
+                                  <ConnectionStatusBadge
+                                    status={instance.authStatus}
+                                  />
+                                </span>
                               </div>
-                            ) : null}
-                            <div className="flex flex-col text-left">
-                              <span>{instance.title}</span>
-                              <span className="text-muted-foreground text-xs">
-                                {instance.host}
-                              </span>
-                            </div>
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    {activeInstance && !isLoginDisabled ? (
+                      <div className="absolute top-1/2 right-2 -translate-y-1/2">
+                        <ConnectInstanceDialog
+                          host={activeInstance.host}
+                          instanceThumbnail={activeInstance.thumbnail}
+                          instanceTitle={activeInstance.title}
+                          onStatusChange={() => {
+                            refetchInstances();
+                          }}
+                          triggerClassName="h-8 border-border px-2.5"
+                          triggerVariant="outline"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex flex-1 flex-col gap-2">
                   <Label htmlFor="search">{t("searchVideosLabel")}</Label>
