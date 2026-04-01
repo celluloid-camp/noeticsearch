@@ -41,7 +41,7 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
       {/* Content */}
       <div className="no-scrollbar min-h-0 flex-1 overflow-hidden">
         <div className="no-scrollbar flex h-full w-full flex-col overflow-hidden">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4">
             {/* Video Area */}
             <div className="no-scrollbar flex min-w-0 flex-col gap-4">
               {/* Embedded Player */}

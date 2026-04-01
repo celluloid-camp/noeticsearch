@@ -301,26 +301,21 @@ export function SelectVideosDialog({
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Left: scope + filter + all videos */}
           <div className="flex min-h-0 min-w-0 flex-col gap-2">
-            {folders.length > 0 ? (
-              <Select
-                onValueChange={handleSelectFolder}
-                value={selectedFolderId}
-              >
-                <SelectTrigger className="h-8 w-full text-xs">
-                  <SelectValue placeholder={t("folders.selectFolder")} />
-                </SelectTrigger>
-                <SelectContent align="start">
-                  <SelectItem value="__none__">
-                    {t("folders.noFolder")}
+            <Select onValueChange={handleSelectFolder} value={selectedFolderId}>
+              <SelectTrigger className="h-8 w-full text-xs">
+                <SelectValue placeholder={t("folders.selectFolder")} />
+              </SelectTrigger>
+              <SelectContent align="start">
+                <SelectItem value="__none__">
+                  {t("folders.noFolder")}
+                </SelectItem>
+                {folders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {folder.name}
                   </SelectItem>
-                  {folders.map((folder) => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
+                ))}
+              </SelectContent>
+            </Select>
             <InputGroup>
               <InputGroupAddon align="inline-start">
                 <Search className="size-3.5 text-muted-foreground" />

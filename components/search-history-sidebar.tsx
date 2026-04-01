@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, Trash2 } from "lucide-react";
+import { PlusIcon, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -108,6 +108,7 @@ export function MySearchSidebar() {
                     tooltip={search.title ?? ""}
                   >
                     <Link href={`/search/${search.id}`}>
+                      <Search className="size-4 shrink-0" />
                       {search.title ? (
                         <span className="truncate">{search.title}</span>
                       ) : (

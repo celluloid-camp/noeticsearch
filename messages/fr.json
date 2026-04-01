@@ -114,7 +114,10 @@
     "deleteCaptionError": "Échec de la suppression du sous-titre",
     "shareCaptionSuccess": "Lien copié dans le presse-papiers",
     "shareCaptionError": "Échec de la copie du lien",
-    "timeRange": "Plage horaire"
+    "timeRange": "Plage horaire",
+    "shareCaptionDescription": "Partagez ce sous-titre précis avec une image d'aperçu et un lien direct.",
+    "shareCaptionThumbnailAlt": "Miniature d'aperçu du sous-titre",
+    "copyCaptionLink": "Copier le lien"
   },
   "import": {
     "title": "Importer une vidéo PeerTube",
@@ -241,9 +244,16 @@
   },
   "hero": {
     "brand": "noeticsearch",
-    "title": "Rechercher dans",
-    "subtitle": "n'importe quelle vidéo.",
+    "title": "La recherche de citations",
+    "subtitle": "dans vos corpus video",
     "description": "Trouvez des citations exactes, des termes et des références dans les transcriptions de vidéos avec précision.",
+    "whatIsTitle": "Qu'est-ce que NoeticSearch ?",
+    "whatIsDescription": "Une application pour effectuer des recherches par mots-clé dans un ou plusieurs documents audiovisuels numériques. L'application permet de générer les transcriptions textuelles des vidéos, de chercher des termes et des références dans ces transcriptions avec précision et d'en extraire des citations.",
+    "howToTitle": "Comment utiliser NoeticSearch ?",
+    "howToStep1": "Rendez-vous sur une instance PeerTube, choisissez une vidéo et copiez le lien.",
+    "howToStep2": "Cliquez sur « importer une vidéo » et copiez le lien de la vidéo.",
+    "howToStep3": "Vous pourrez ensuite vous rendre dans « générer la transcription textuelle de la vidéo », chercher des mots-clés dans la vidéo et extraire des citations exactes de la vidéo.",
+    "howToStep4": "Il est aussi possible d'effectuer vos recherches sur plusieurs vidéos, à partir de toutes les vidéos que vous avez importées.",
     "newSearch": "Nouvelle recherche",
     "myLibrary": "Ma bibliothèque",
     "addCorpus": "Ajouter un corpus de vidéos",
@@ -254,6 +264,10 @@
     "tutorialTitle": "Comment rechercher dans vos vidéos",
     "tutorialDescription": "Regardez un court tutoriel pour rechercher dans vos vidéos importées.",
     "tutorialCta": "Cliquer pour lancer le tutoriel",
+    "tutorialSectionTitle": "Vous voulez en savoir plus ou vous rencontrez des difficultés ?",
+    "tutorialSectionSubtitle": "Le tutoriel est ici :",
+    "publicSearchesTitle": "Recherches publiques",
+    "usedByTitle": "Utilisé par",
     "corpusTutorialTitle": "Comment ajouter de nouvelles vidéos au corpus",
     "corpusTutorialDescription": "Découvrez comment importer de nouvelles vidéos PeerTube dans votre corpus pour les rendre consultables dans NoeticSearch.",
     "corpusTutorialCta": "Cliquer pour apprendre à ajouter des vidéos"

@@ -114,7 +114,10 @@
     "deleteCaptionError": "Failed to delete caption",
     "shareCaptionSuccess": "Link copied to clipboard",
     "shareCaptionError": "Failed to copy link",
-    "timeRange": "Time range"
+    "timeRange": "Time range",
+    "shareCaptionDescription": "Share this precise caption with a preview image and direct link.",
+    "shareCaptionThumbnailAlt": "Caption preview thumbnail",
+    "copyCaptionLink": "Copy link"
   },
   "import": {
     "title": "Import PeerTube Video",
@@ -244,6 +247,13 @@
     "title": "Search inside",
     "subtitle": "any video.",
     "description": "Find exact quotes, terms, and references across video transcripts with precision.",
+    "whatIsTitle": "What is NoeticSearch?",
+    "whatIsDescription": "An application to perform keyword searches across one or more digital audiovisual documents. The application can generate video transcripts, search terms and references in those transcripts with precision, and extract citations from them.",
+    "howToTitle": "How to use NoeticSearch?",
+    "howToStep1": "Go to a PeerTube instance, choose a video, and copy its link.",
+    "howToStep2": "Click \"Import a video\" and paste the video link.",
+    "howToStep3": "Then go to \"Generate the video transcript\", search for keywords in the video, and extract exact citations from the video.",
+    "howToStep4": "You can also run searches across multiple videos, using all the videos you have imported.",
     "newSearch": "New search",
     "myLibrary": "My library",
     "addCorpus": "Add a video corpus",
@@ -254,6 +264,10 @@
     "tutorialTitle": "How to search inside videos",
     "tutorialDescription": "Watch a quick walkthrough of how to search inside your imported videos.",
     "tutorialCta": "Click to play the tutorial",
+    "tutorialSectionTitle": "Want to learn more or running into difficulties?",
+    "tutorialSectionSubtitle": "The tutorial is here:",
+    "publicSearchesTitle": "Public searches",
+    "usedByTitle": "Used by",
     "corpusTutorialTitle": "How to add new corpus videos",
     "corpusTutorialDescription": "Learn how to import new PeerTube videos into your corpus so they become searchable inside NoeticSearch.",
     "corpusTutorialCta": "Click to learn how to add videos"

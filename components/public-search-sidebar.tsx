@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -47,6 +48,7 @@ export function PublicSearchSidebar() {
                     tooltip={search.title ?? ""}
                   >
                     <Link href={`/search/${search.id}`}>
+                      <Search className="size-4 shrink-0" />
                       <span className="truncate">{search.title}</span>
                     </Link>
                   </SidebarMenuButton>

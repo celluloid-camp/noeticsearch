@@ -76,7 +76,11 @@ export default function SearchVideoPage() {
 
           {/* Transcript Panel */}
           <Suspense fallback={<Loading />}>
-            <CaptionsPanel canEdit={video.canEdit} searchId={searchId} videoId={videoId} />
+            <CaptionsPanel
+              canEdit={video.canEdit}
+              searchId={searchId}
+              videoId={videoId}
+            />
           </Suspense>
         </div>
       </div>
