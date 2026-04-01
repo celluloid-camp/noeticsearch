@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -123,8 +124,37 @@ export function ImportVideoConfirmForm({
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center border-l p-8">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      <div className="h-full border-l p-6">
+        <Card className="flex h-full flex-col justify-between border-none bg-transparent shadow-none ring-0">
+          <CardContent className="flex flex-col gap-4">
+            <div className="space-y-3">
+              <Skeleton className="aspect-video w-full rounded-md" />
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+            </div>
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-52" />
+                </div>
+                <Skeleton className="h-6 w-10 rounded-full" />
+              </div>
+            </div>
+            <div className="rounded-lg border p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-full rounded-md" />
+              </div>
+            </div>
+          </CardContent>
+          <CardContent className="pt-0">
+            <div className="flex justify-end">
+              <Skeleton className="h-10 w-40 rounded-md" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -149,32 +179,32 @@ export function ImportVideoConfirmForm({
           <Card className="flex flex-col justify-between border-none bg-transparent shadow-none ring-0">
             <CardContent className="flex flex-col gap-4">
               <VideoPreviewCard preview={preview} />
-              <FormField
-                control={form.control}
-                name="isPublic"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel>{t("publicVideo")}</FormLabel>
-                      <FormDescription className="text-xs">
-                        {t("makeVideoVisibleDescription")}
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="folderId"
-                render={({ field }) => (
-                  <FormItem className="rounded-lg border p-4">
-                    <div className="space-y-2">
+              <div className="space-y-4 rounded-lg border p-4">
+                <FormField
+                  control={form.control}
+                  name="isPublic"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between">
+                      <div className="space-y-0.5">
+                        <FormLabel>{t("publicVideo")}</FormLabel>
+                        <FormDescription className="text-xs">
+                          {t("makeVideoVisibleDescription")}
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="folderId"
+                  render={({ field }) => (
+                    <FormItem className="space-y-2 border-t pt-4">
                       <FormLabel>{tGlobal("folders.selectFolder")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
@@ -198,10 +228,10 @@ export function ImportVideoConfirmForm({
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                  </FormItem>
-                )}
-              />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
             <CardContent className="pt-0">
               <div className="flex justify-end">

@@ -231,14 +231,20 @@ export async function parsePeerTubeVideoCaptions(
  */
 export async function fetchPeerTubeCaptionList(
   baseUrl: string,
-  videoId: string
+  videoId: string,
+  options?: { password?: string }
 ) {
   const client = createClient({ baseUrl });
 
   try {
+    const headers =
+      options?.password != null
+        ? { "x-peertube-video-password": options.password }
+        : undefined;
     const { data: captionsResponse } = await getVideoCaptions({
       client,
       path: { id: videoId },
+      ...(headers ? { headers } : {}),
     });
 
     // Handle different response structures: { data: [...] } or { total: 1, data: [...] }
@@ -286,7 +292,8 @@ export async function fetchPeerTubeVideo(
   const videoInfo = await fetchPeerTubeVideoDetails(url, options);
   const captions = await fetchPeerTubeCaptionList(
     videoInfo.baseUrl,
-    videoInfo.videoId
+    videoInfo.videoId,
+    options
   );
   const storyboard = await fetchStoryboard(
     videoInfo.baseUrl,

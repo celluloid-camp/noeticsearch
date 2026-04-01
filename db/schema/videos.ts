@@ -37,6 +37,10 @@ export const videoTable = pgTable(
     videoDetails: jsonb("video_details").$type<VideoDetails>().notNull(),
     captionList: jsonb("caption_list").$type<VideoCaption[]>(),
     storyboard: jsonb("storyboard").$type<Storyboard>(),
+    importStatus: text("import_status")
+      .$type<"processing" | "completed" | "failed">()
+      .notNull()
+      .default("completed"),
     isPasswordProtected: boolean("is_password_protected")
       .notNull()
       .default(false),

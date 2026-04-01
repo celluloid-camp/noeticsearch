@@ -1,3 +1,5 @@
+import type { VideoDetails } from "@celluloid/peertube-api/types";
+import { createId } from "@paralleldrive/cuid2";
 import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 import { start } from "workflow/api";
 import { z } from "zod";
@@ -13,12 +15,11 @@ import { chaptersTable } from "@/db/schema/chapters";
 import { searchResultTable } from "@/db/schema/search-result";
 import { getDbErrorMessage } from "@/lib/db";
 import {
-  computeSpriteUrl,
-  fetchPeerTubeVideo,
   fetchPeerTubeVideoDetails,
-  parsePeerTubeVideoCaptions,
+  parsePeerTubeUrl,
   resolveAuthorAvatarUrl,
 } from "@/lib/peertube-client";
+import { importVideo } from "@/workflows/import-video";
 import { naturalizeCaptions } from "@/workflows/naturalize-captions";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 
@@ -37,34 +38,29 @@ export const videoRouter = router({
       const userId = ctx.user.id;
 
       try {
-        // Fetch video info from PeerTube using the provided videoId and baseUrl
-        const videoInfo = await fetchPeerTubeVideo(url, {
-          password: videoPassword,
-        });
+        const parsed = parsePeerTubeUrl(url);
+        if (!parsed) {
+          throw new Error("Invalid PeerTube URL format");
+        }
 
-        // Use the provided videoId as externalId (no need to parse URL)
-        const externalId =
-          videoInfo.videoDetails.shortUUID ||
-          videoInfo.videoDetails.uuid ||
-          videoInfo.videoId;
-
-        // we only keep one caption for now
-        // Create video
+        const videoId = createId();
         const [video] = await ctx.db
           .insert(videoTable)
           .values({
+            id: videoId,
             userId,
-            externalId,
-            baseUrl: videoInfo.baseUrl,
-            title: videoInfo.title,
-            description: videoInfo.description,
+            externalId: parsed.videoId,
+            baseUrl: parsed.baseUrl,
+            title: "Importing video...",
+            description: null,
             url,
-            thumbnail: videoInfo.thumbnail || null,
-            videoDetails: videoInfo.videoDetails,
-            captionList: videoInfo.captions,
-            storyboard: videoInfo.storyboard,
+            thumbnail: null,
+            videoDetails: {} as VideoDetails,
+            captionList: null,
+            storyboard: null,
+            importStatus: "processing",
             isPublic,
-            publishedAt: videoInfo.videoDetails.publishedAt ?? new Date(),
+            publishedAt: new Date(),
             isPasswordProtected: Boolean(videoPassword),
             videoPassword: videoPassword ?? null,
           })
@@ -89,54 +85,54 @@ export const videoRouter = router({
             .onConflictDoNothing();
         }
 
-        const caption = videoInfo.captions[0].captionData;
-
-        const parsedCaptions = await parsePeerTubeVideoCaptions(url, caption);
-
-        await ctx.db.insert(captionsTable).values(
-          parsedCaptions.map((caption) => ({
+        start(importVideo, [
+          {
+            password: videoPassword,
+            url,
             videoId: video.id,
-            language: caption.language,
-            text: caption.text,
-            startTime: caption.startTime,
-            endTime: caption.endTime,
-            raw: JSON.stringify(caption.cue),
-            thumbnail: videoInfo.storyboard
-              ? computeSpriteUrl(videoInfo.storyboard, caption.startTime)
-              : videoInfo.thumbnail,
-          }))
-        );
-
-        const chapters = videoInfo.chapters;
-        if (chapters.length > 0) {
-          await ctx.db.insert(chaptersTable).values(
-            chapters.map((chapter) => ({
-              videoId: video.id,
-              language: "fr", // TODO: get language from video details
-              title: chapter.title,
-              timecode: chapter.timecode,
-            }))
-          );
-        }
-
-        const captionLanguage = parsedCaptions[0]?.language ?? "fr";
-        await ctx.db.insert(transcriptionsTable).values({
-          videoId: video.id,
-          language: captionLanguage,
-          status: "pending",
+          },
+        ]).catch(async (err) => {
+          console.error("Failed to start import workflow:", err);
+          await ctx.db
+            .update(videoTable)
+            .set({ importStatus: "failed" })
+            .where(eq(videoTable.id, video.id));
         });
-
-        start(naturalizeCaptions, [video.id]).catch((err) =>
-          console.error("Failed to start naturalize workflow:", err)
-        );
 
         return {
           id: video.id,
+          status: "processing" as const,
         };
       } catch (error) {
         console.error(error);
         throw new Error("Failed to import video");
       }
+    }),
+
+  getImportStatus: protectedProcedure
+    .input(z.object({ videoId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const [video] = await ctx.db
+        .select({
+          id: videoTable.id,
+          importStatus: videoTable.importStatus,
+          userId: videoTable.userId,
+        })
+        .from(videoTable)
+        .where(eq(videoTable.id, input.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to view import status");
+      }
+
+      return {
+        status: video.importStatus,
+      };
     }),
 
   generateTranscription: protectedProcedure
