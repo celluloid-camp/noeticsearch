@@ -59,9 +59,7 @@ async function resolveAccessToken(
 
   try {
     const tokenResponse = await refreshPeerTubeToken(host, record.refreshToken);
-    const expiresAt = new Date(
-      now.getTime() + tokenResponse.expires_in * 1000
-    );
+    const expiresAt = new Date(now.getTime() + tokenResponse.expires_in * 1000);
 
     await db
       .update(peertubeInstanceAuthTable)
@@ -104,11 +102,7 @@ export const peertubeSearchRouter = router({
       const host = normalizeHost(input.baseUrl);
 
       // Attempt to get a valid auth token for this user + instance
-      const accessToken = await resolveAccessToken(
-        ctx.db,
-        ctx.user.id,
-        host
-      );
+      const accessToken = await resolveAccessToken(ctx.db, ctx.user.id, host);
 
       const result = await searchPeerTubeVideos(
         input.baseUrl,
@@ -150,4 +144,3 @@ export const peertubeSearchRouter = router({
       };
     }),
 });
-
