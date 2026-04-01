@@ -311,6 +311,7 @@ export const videoRouter = router({
             .select({
               id: captionsTable.id,
               text: captionsTable.text,
+              thumbnail: captionsTable.thumbnail,
               startTime: captionsTable.startTime,
               endTime: captionsTable.endTime,
               headline: sql<string>`ts_headline(
@@ -330,6 +331,7 @@ export const videoRouter = router({
             id: sub.id,
             text: sub.text,
             headline: sub.headline,
+            thumbnail: sub.thumbnail,
             timestamp: formatTimestamp(sub.startTime),
             startTime: sub.startTime,
             endTime: sub.endTime,
@@ -357,6 +359,7 @@ export const videoRouter = router({
         id: sub.id,
         text: sub.text,
         headline: null as string | null,
+        thumbnail: sub.thumbnail,
         timestamp: formatTimestamp(sub.startTime),
         startTime: sub.startTime,
         endTime: sub.endTime,
@@ -403,6 +406,7 @@ export const videoRouter = router({
           .select({
             id: captionsTable.id,
             text: captionsTable.text,
+            thumbnail: captionsTable.thumbnail,
             startTime: captionsTable.startTime,
             endTime: captionsTable.endTime,
           })
@@ -421,6 +425,7 @@ export const videoRouter = router({
           id: sub.id,
           text: sub.text,
           headline: null as string | null,
+          thumbnail: sub.thumbnail,
           timestamp: formatTimestamp(sub.startTime),
           startTime: sub.startTime,
           endTime: sub.endTime,
@@ -440,6 +445,7 @@ export const videoRouter = router({
           .select({
             id: captionsTable.id,
             text: captionsTable.text,
+            thumbnail: captionsTable.thumbnail,
             startTime: captionsTable.startTime,
             endTime: captionsTable.endTime,
             headline: sql<string>`ts_headline(
@@ -459,6 +465,7 @@ export const videoRouter = router({
           id: sub.id,
           text: sub.text,
           headline: sub.headline,
+          thumbnail: sub.thumbnail,
           timestamp: formatTimestamp(sub.startTime),
           startTime: sub.startTime,
           endTime: sub.endTime,
@@ -469,6 +476,7 @@ export const videoRouter = router({
         .select({
           id: captionsTable.id,
           text: captionsTable.text,
+          thumbnail: captionsTable.thumbnail,
           startTime: captionsTable.startTime,
           endTime: captionsTable.endTime,
           headline: sql<string>`ts_headline(
@@ -493,6 +501,7 @@ export const videoRouter = router({
         id: sub.id,
         text: sub.text,
         headline: sub.headline,
+        thumbnail: sub.thumbnail,
         timestamp: formatTimestamp(sub.startTime),
         startTime: sub.startTime,
         endTime: sub.endTime,

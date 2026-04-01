@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Clock, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -160,6 +161,7 @@ function SearchCardSkeleton() {
 
 export function PublicSearchesGrid() {
   const api = useTRPC();
+  const t = useTranslations("hero");
   const { data: searches, isLoading } = useQuery(
     api.search.publicExpanded.queryOptions()
   );
@@ -170,7 +172,7 @@ export function PublicSearchesGrid() {
     <div className="mt-10 px-10">
       <div className="mb-4 flex items-center gap-2">
         <h2 className="font-semibold text-sm tracking-tight">
-          Public searches
+          {t("publicSearchesTitle")}
         </h2>
         {!isLoading && searches && searches.length > 0 && (
           <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs">

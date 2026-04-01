@@ -105,13 +105,11 @@ export function SearchAssistant({
     ...api.folder.listMineWithVideos.queryOptions({ sortBy: "recent" }),
     enabled: search.filterType === "custom",
   });
-  const folderOptions = (foldersData?.folders ?? [])
-    .filter((folder) => folder.videos.length > 0)
-    .map((folder) => ({
-      id: folder.id,
-      name: folder.name,
-      videoIds: folder.videos.map((video) => video.id),
-    }));
+  const folderOptions = (foldersData?.folders ?? []).map((folder) => ({
+    id: folder.id,
+    name: folder.name,
+    videoIds: folder.videos.map((video) => video.id),
+  }));
 
   const { messages, sendMessage, status, regenerate } = useChat({
     id: chatId,

@@ -4,12 +4,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDebouncedCallback } from "@tanstack/react-pacer";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { LinkIcon, PencilIcon, SearchIcon, Trash2Icon, XIcon } from "lucide-react";
+import {
+  LinkIcon,
+  PencilIcon,
+  SearchIcon,
+  Trash2Icon,
+  XIcon,
+} from "lucide-react";
 import {
   MediaActionTypes,
   useMediaDispatch,
   useMediaSelector,
 } from "media-chrome/react/media-store";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useQueryState } from "nuqs";
 import type React from "react";
@@ -18,6 +25,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
+import { StoryboardImage } from "./storyboard-image";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -186,7 +194,9 @@ function EditCaptionDialog({
   );
 
   const onSubmit = (data: EditCaptionSchema) => {
-    if (!caption) return;
+    if (!caption) {
+      return;
+    }
     updateCaption.mutate({ captionId: caption.id, text: data.text });
   };
 
@@ -200,8 +210,8 @@ function EditCaptionDialog({
           <DialogTitle>{t("captions.editCaptionTitle")}</DialogTitle>
           {caption && (
             <DialogDescription>
-              {t("captions.timeRange")}:{" "}
-              {formatTime(caption.startTime)} – {formatTime(caption.endTime)}
+              {t("captions.timeRange")}: {formatTime(caption.startTime)} –{" "}
+              {formatTime(caption.endTime)}
             </DialogDescription>
           )}
         </DialogHeader>
@@ -214,10 +224,7 @@ function EditCaptionDialog({
                 <FormItem>
                   <FormLabel>{t("captions.captionText")}</FormLabel>
                   <FormControl>
-                    <Textarea
-                      className="min-h-[100px] resize-y"
-                      {...field}
-                    />
+                    <Textarea className="min-h-[100px] resize-y" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -286,7 +293,9 @@ function DeleteCaptionDialog({
   );
 
   const handleDelete = () => {
-    if (!caption) return;
+    if (!caption) {
+      return;
+    }
     deleteCaption.mutate({ captionId: caption.id });
   };
 
@@ -294,7 +303,9 @@ function DeleteCaptionDialog({
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t("captions.deleteCaptionTitle")}</AlertDialogTitle>
+          <AlertDialogTitle>
+            {t("captions.deleteCaptionTitle")}
+          </AlertDialogTitle>
           <AlertDialogDescription>
             {t("captions.deleteCaptionDescription")}
           </AlertDialogDescription>
@@ -316,7 +327,11 @@ function DeleteCaptionDialog({
   );
 }
 
-export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPanelProps) {
+export function CaptionsPanel({
+  videoId,
+  searchId,
+  canEdit = false,
+}: CaptionsPanelProps) {
   const api = useTRPC();
   const t = useTranslations();
   const { toast } = useToast();
@@ -332,6 +347,7 @@ export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPa
 
   const [editCaption, setEditCaption] = useState<Caption | null>(null);
   const [deleteCaption, setDeleteCaption] = useState<Caption | null>(null);
+  const [shareCaption, setShareCaption] = useState<Caption | null>(null);
 
   const debouncedSetSearch = useDebouncedCallback(
     (value: string) => setDebouncedSearch(value.trim()),
@@ -514,10 +530,25 @@ export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPa
   const handleShareCaption = (caption: Caption, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setShareCaption(caption);
+  };
+
+  const getShareUrl = () => {
+    if (!shareCaption) {
+      return "";
+    }
     const url = new URL(window.location.href);
-    url.searchParams.set("c", caption.id);
+    url.searchParams.set("c", shareCaption.id);
+    return url.toString();
+  };
+
+  const handleCopyShareLink = () => {
+    const shareUrl = getShareUrl();
+    if (!shareUrl) {
+      return;
+    }
     navigator.clipboard
-      .writeText(url.toString())
+      .writeText(shareUrl)
       .then(() => {
         toast({ title: t("captions.shareCaptionSuccess") });
       })
@@ -542,11 +573,21 @@ export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPa
   };
 
   const handleEditDialogChange = (open: boolean) => {
-    if (!open) setEditCaption(null);
+    if (!open) {
+      setEditCaption(null);
+    }
   };
 
   const handleDeleteDialogChange = (open: boolean) => {
-    if (!open) setDeleteCaption(null);
+    if (!open) {
+      setDeleteCaption(null);
+    }
+  };
+
+  const handleShareDialogChange = (open: boolean) => {
+    if (!open) {
+      setShareCaption(null);
+    }
   };
 
   return (
@@ -679,7 +720,7 @@ export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPa
                           __html: caption.headline ?? caption.text,
                         }}
                       />
-                      <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                      <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
                         {canEdit && (
                           <>
                             <button
@@ -716,7 +757,9 @@ export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPa
             </div>
           ) : (
             <div className="py-8 text-center text-muted-foreground text-sm">
-              {isSearching ? t("captions.noMatching") : t("captions.noSubtitles")}
+              {isSearching
+                ? t("captions.noMatching")
+                : t("captions.noSubtitles")}
             </div>
           )}
         </div>
@@ -747,6 +790,55 @@ export function CaptionsPanel({ videoId, searchId, canEdit = false }: CaptionsPa
         open={deleteCaption !== null}
         videoId={videoId}
       />
+      <Dialog
+        onOpenChange={handleShareDialogChange}
+        open={shareCaption !== null}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("captions.shareCaption")}</DialogTitle>
+            <DialogDescription>
+              {t("captions.shareCaptionDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          {shareCaption ? (
+            <div className="space-y-3">
+              <div className="relative overflow-hidden rounded-md border bg-muted">
+                <div className="absolute inset-x-0 bottom-2 z-10 flex justify-center px-3">
+                  <span className="line-clamp-2 max-w-[92%] rounded bg-black/85 px-2 py-1 text-center text-white text-xs">
+                    {shareCaption.text}
+                  </span>
+                </div>
+                {shareCaption.thumbnail?.includes("#sprite=") ? (
+                  <StoryboardImage
+                    alt={t("captions.shareCaptionThumbnailAlt")}
+                    className="aspect-video w-full"
+                    src={shareCaption.thumbnail}
+                  />
+                ) : (
+                  <Image
+                    alt={t("captions.shareCaptionThumbnailAlt")}
+                    className="aspect-video w-full object-cover"
+                    height={180}
+                    src={shareCaption.thumbnail ?? "/placeholder.svg"}
+                    unoptimized
+                    width={320}
+                  />
+                )}
+              </div>
+              <Input readOnly value={getShareUrl()} />
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button onClick={() => setShareCaption(null)} variant="outline">
+              {t("common.close")}
+            </Button>
+            <Button onClick={handleCopyShareLink}>
+              {t("captions.copyCaptionLink")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

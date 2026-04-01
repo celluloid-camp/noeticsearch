@@ -248,12 +248,6 @@ function FullscreenDialog({
     }
   }, [isDirty]);
 
-  const handleDiscard = useCallback(() => {
-    setShowDiscardConfirm(false);
-    setIsEditing(false);
-    setDraftText("");
-  }, []);
-
   const handleSave = useCallback(() => {
     const trimmed = draftText.trim();
     updateTranscription.mutate({ videoId, text: trimmed });
@@ -282,9 +276,7 @@ function FullscreenDialog({
   }, []);
 
   const isSaveDisabled =
-    updateTranscription.isPending ||
-    !isDirty ||
-    draftText.trim().length === 0;
+    updateTranscription.isPending || !isDirty || draftText.trim().length === 0;
 
   return (
     <>
@@ -313,11 +305,7 @@ function FullscreenDialog({
                   </span>
                 )}
                 {canEdit && !isEditing && (
-                  <Button
-                    onClick={handleEditStart}
-                    size="sm"
-                    variant="ghost"
-                  >
+                  <Button onClick={handleEditStart} size="sm" variant="ghost">
                     <PencilIcon />
                     {t("edit")}
                   </Button>
@@ -429,4 +417,3 @@ function downloadAsTextFile(content: string, filename: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
-
