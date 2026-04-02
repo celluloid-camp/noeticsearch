@@ -1,7 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, FolderPlus, Loader2, PlusIcon } from "lucide-react";
+import {
+  ChevronDown,
+  Clock3,
+  FolderPlus,
+  Loader2,
+  PlusIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,6 +32,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
+import { toggleImportProcessDrawer } from "@/lib/import-process-events";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 import { Button } from "./ui/button";
 
@@ -205,11 +212,20 @@ export default function VideoCatalog({
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between gap-3 border-border border-b px-4 pt-4 pb-4">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-border border-b bg-background/95 px-4 pt-4 pb-4 backdrop-blur supports-backdrop-filter:bg-background/80">
           <h2 className="font-mono font-semibold text-lg">
             {t("nav.myVideos")}
           </h2>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={toggleImportProcessDrawer}
+              size="lg"
+              type="button"
+              variant="outline"
+            >
+              <Clock3 className="size-4" />
+              <span>{t("import.importProcessButton")}</span>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="lg" variant="outline">

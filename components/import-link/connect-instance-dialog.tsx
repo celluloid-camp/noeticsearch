@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, PlugIcon, PlugZapIcon } from "lucide-react";
+import { Loader2, PlugIcon } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { ComponentProps } from "react";
@@ -24,6 +24,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 
 interface ConnectInstanceDialogProps {
+  allowReconnectWhenConnected?: boolean;
   host: string;
   instanceThumbnail?: string | null;
   instanceTitle?: string;
@@ -33,6 +34,7 @@ interface ConnectInstanceDialogProps {
 }
 
 export function ConnectInstanceDialog({
+  allowReconnectWhenConnected = false,
   host,
   instanceThumbnail,
   instanceTitle,
@@ -77,23 +79,6 @@ export function ConnectInstanceDialog({
     })
   );
 
-  const disconnectMutation = useMutation(
-    api.peertubeInstance.disconnect.mutationOptions({
-      onSuccess: () => {
-        toast({ title: t("disconnectSuccess") });
-        queryClient.invalidateQueries({ queryKey: [["peertubeInstance"]] });
-        onStatusChange?.();
-      },
-      onError: () => {
-        toast({
-          title: tCommon("error"),
-          description: t("errorConnectionFailed"),
-          variant: "destructive",
-        });
-      },
-    })
-  );
-
   const handleConnect = () => {
     if (!(email.trim() && password)) {
       return;
@@ -101,12 +86,22 @@ export function ConnectInstanceDialog({
     connectMutation.mutate({ host, email: email.trim(), password });
   };
 
-  const handleDisconnect = () => {
-    disconnectMutation.mutate({ host });
-  };
-
   const isConnected = authStatus?.status === "connected";
-  const isExpired = authStatus?.status === "expired";
+  const isReconnectMode = allowReconnectWhenConnected && isConnected;
+
+  if (isConnected && !allowReconnectWhenConnected) {
+    return (
+      <Badge
+        className={cn(
+          "h-6 bg-green-100 px-2 text-green-800 text-xs dark:bg-green-900 dark:text-green-200",
+          triggerClassName
+        )}
+        variant="outline"
+      >
+        {t("statusConnected")}
+      </Badge>
+    );
+  }
 
   return (
     <Dialog
@@ -126,19 +121,15 @@ export function ConnectInstanceDialog({
           type="button"
           variant={triggerVariant}
         >
-          {isConnected ? (
-            <PlugZapIcon className="size-3.5" />
-          ) : (
-            <PlugIcon className="size-3.5" />
-          )}
-          {isConnected ? t("reconnect") : t("connect")}
+          <PlugIcon className="size-3.5" />
+          {isReconnectMode ? t("reconnect") : t("connect")}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {isConnected || isExpired ? t("reconnectTitle") : t("connectTitle")}
+            {isReconnectMode ? t("reconnectTitle") : t("connectTitle")}
           </DialogTitle>
           <DialogDescription>
             {instanceTitle
@@ -161,7 +152,7 @@ export function ConnectInstanceDialog({
               </div>
             ) : null}
             <a
-              className="truncate text-primary text-sm underline-offset-2 hover:underline"
+              className="line-clamp-2 min-w-0 flex-1 break-all text-primary text-sm underline-offset-2 hover:underline"
               href={host}
               rel="noreferrer"
               target="_blank"
@@ -206,20 +197,6 @@ export function ConnectInstanceDialog({
         </div>
 
         <DialogFooter className="mt-2 flex-col gap-2 border-t pt-3 sm:flex-row sm:justify-between">
-          {isConnected && (
-            <Button
-              disabled={disconnectMutation.isPending}
-              onClick={handleDisconnect}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              {disconnectMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : null}
-              {t("disconnect")}
-            </Button>
-          )}
           <div className="flex gap-2 sm:ml-auto">
             <Button
               onClick={() => setOpen(false)}
@@ -240,7 +217,7 @@ export function ConnectInstanceDialog({
               {connectMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
-              {isConnected || isExpired ? t("reconnect") : t("connect")}
+              {isReconnectMode ? t("reconnect") : t("connect")}
             </Button>
           </div>
         </DialogFooter>

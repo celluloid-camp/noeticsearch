@@ -3,6 +3,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { ImportProcessDrawer } from "./import-process-drawer";
 import { MainSidebar } from "./layout/sidebar";
 import { Toaster } from "./ui/sonner";
 
@@ -21,6 +22,7 @@ export default function AppLayoutClient({ children }: AppLayoutClientProps) {
           </header>
           <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
         </SidebarInset>
+        <ImportProcessDrawer />
         <Toaster />
       </div>
     </SidebarProvider>

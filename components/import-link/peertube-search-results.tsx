@@ -2,6 +2,7 @@
 
 import { IconRefresh } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { CheckSquare, Square } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -10,6 +11,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -24,37 +26,59 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+export interface SelectedVideo {
+  id: number;
+  name: string;
+  thumbnailUrl?: string | null;
+  url: string;
+}
+
 interface PeerTubeSearchResultsProps {
   baseUrl: string;
+  onImportSelected: (videos: SelectedVideo[]) => void;
   onReset: () => void;
-  onVideoSelect: (videoId: number) => void;
   search: string;
-  selectedVideoId?: number | null;
 }
 
 export function PeerTubeSearchResults({
   baseUrl,
   search,
-  onVideoSelect,
+  onImportSelected,
   onReset,
-  selectedVideoId,
 }: PeerTubeSearchResultsProps) {
   const api = useTRPC();
   const t = useTranslations("import");
-  const [localSelected, setLocalSelected] = useState<number | null>(null);
-
-  const activeSelected = selectedVideoId ?? localSelected;
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const { data, isLoading, isError, error } = useQuery(
     api.peertubeSearch.searchVideos.queryOptions({ baseUrl, search })
   );
 
-  const handleSelect = (videoId: number) => {
-    const next = activeSelected === videoId ? null : videoId;
-    setLocalSelected(next);
-    if (next) {
-      onVideoSelect(next);
+  const handleToggle = (videoId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(videoId)) {
+        next.delete(videoId);
+      } else {
+        next.add(videoId);
+      }
+      return next;
+    });
+  };
+
+  const handleImportSelected = () => {
+    if (!data) {
+      return;
     }
+    const selected = data.data
+      .filter((v) => selectedIds.has(v.id))
+      .map((v) => ({
+        id: v.id,
+        name: v.name ?? "",
+        thumbnailUrl: v.thumbnailUrl ?? null,
+        url: `${baseUrl.replace(/\/$/, "")}/w/${v.uuid}`,
+      }));
+    onImportSelected(selected);
   };
 
   let description: string;
@@ -71,10 +95,10 @@ export function PeerTubeSearchResults({
   return (
     <Card className="flex h-full flex-col border-none bg-transparent shadow-none ring-0">
       <CardHeader className="flex items-center justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <CardTitle>{t("results")}</CardTitle>
           <CardDescription>{description}</CardDescription>
-          {baseUrl}
+          <p className="truncate text-muted-foreground text-xs">{baseUrl}</p>
         </div>
         <Button
           disabled={isLoading && !isError}
@@ -120,7 +144,7 @@ export function PeerTubeSearchResults({
                   v.account?.displayName ??
                   v.account?.name ??
                   null;
-                const isSelected = activeSelected === v.id;
+                const isSelected = selectedIds.has(v.id);
 
                 return (
                   <button
@@ -129,10 +153,17 @@ export function PeerTubeSearchResults({
                       isSelected && "border-ring bg-muted"
                     )}
                     key={v.id}
-                    onClick={() => handleSelect(v.id)}
+                    onClick={() => handleToggle(v.id)}
                     type="button"
                   >
-                    <div className="relative aspect-video w-48 shrink-0 overflow-hidden rounded-md bg-muted">
+                    <div className="flex shrink-0 items-start pt-1">
+                      {isSelected ? (
+                        <CheckSquare className="size-4 text-primary" />
+                      ) : (
+                        <Square className="size-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="relative aspect-video w-40 shrink-0 overflow-hidden rounded-md bg-muted">
                       {v.thumbnailUrl ? (
                         <Image
                           alt={v.name ?? ""}
@@ -165,6 +196,22 @@ export function PeerTubeSearchResults({
           )}
         </ScrollArea>
       </CardContent>
+      {!(isLoading || isError) && data && data.data.length > 0 && (
+        <CardFooter className="flex items-center justify-between gap-2 border-t pt-4">
+          <span className="text-muted-foreground text-sm">
+            {selectedIds.size > 0
+              ? t("selectedCount", { count: selectedIds.size })
+              : t("selectVideosHint")}
+          </span>
+          <Button
+            disabled={selectedIds.size === 0}
+            onClick={handleImportSelected}
+            size="sm"
+          >
+            {t("importSelected", { count: selectedIds.size })}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

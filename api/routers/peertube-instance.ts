@@ -1,3 +1,5 @@
+import { getConfig } from "@celluloid/peertube-api";
+import { createClient } from "@celluloid/peertube-api/client";
 import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { peertubeInstanceAuthTable, peertubeInstanceTable } from "@/db/schema";
@@ -13,7 +15,197 @@ function normalizeHost(host: string): string {
   }
 }
 
+async function fetchInstanceMetadata(host: string) {
+  try {
+    const client = createClient({ baseUrl: host.replace(/\/$/, "") });
+    const { data, error } = await getConfig({ client });
+    if (error || !data) {
+      return { thumbnail: null, title: null };
+    }
+
+    const instanceWithLogo = data.instance as
+      | (NonNullable<typeof data.instance> & {
+          logo?: Array<{ fileUrl?: string; path?: string }>;
+        })
+      | undefined;
+    const rawTitle = data.instance?.name?.trim() ?? "";
+    const rawImage =
+      instanceWithLogo?.logo?.[0]?.fileUrl ??
+      instanceWithLogo?.logo?.[0]?.path ??
+      data.instance?.avatars?.[0]?.fileUrl ??
+      data.instance?.avatars?.[0]?.path ??
+      "";
+
+    const title = rawTitle.length > 0 ? rawTitle : null;
+    const thumbnail = rawImage ? new URL(rawImage, host).toString() : null;
+
+    return { thumbnail, title };
+  } catch {
+    return { thumbnail: null, title: null };
+  }
+}
+
 export const peertubeInstanceRouter = router({
+  listOwnWithAuth: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(50).optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const limit = input?.limit ?? 50;
+
+      const instances = await ctx.db
+        .select({
+          description: peertubeInstanceTable.description,
+          host: peertubeInstanceTable.host,
+          id: peertubeInstanceTable.id,
+          isIndex: peertubeInstanceTable.isIndex,
+          thumbnail: peertubeInstanceTable.thumbnail,
+          title: peertubeInstanceTable.title,
+        })
+        .from(peertubeInstanceTable)
+        .where(
+          and(
+            eq(peertubeInstanceTable.userId, userId),
+            eq(peertubeInstanceTable.isIndex, false),
+            eq(peertubeInstanceTable.isPublic, false)
+          )
+        )
+        .limit(limit);
+
+      const authRows = await ctx.db
+        .select({
+          instanceHost: peertubeInstanceAuthTable.instanceHost,
+          status: peertubeInstanceAuthTable.status,
+        })
+        .from(peertubeInstanceAuthTable)
+        .where(eq(peertubeInstanceAuthTable.userId, userId));
+
+      const authByHost = new Map(authRows.map((r) => [r.instanceHost, r]));
+
+      return instances.map((inst) => {
+        const authRecord = authByHost.get(normalizeHost(inst.host));
+        return {
+          ...inst,
+          authStatus: authRecord?.status ?? null,
+          isConnected: authRecord?.status === "connected",
+        };
+      });
+    }),
+
+  addOwn: protectedProcedure
+    .input(
+      z.object({
+        description: z.string().trim().max(500).optional(),
+        host: z.string().url(),
+        thumbnail: z.string().url().optional(),
+        title: z.string().trim().min(1).max(120).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      const host = normalizeHost(input.host);
+      const hostUrl = new URL(host);
+      const instanceMetadata = await fetchInstanceMetadata(host);
+
+      const [existing] = await ctx.db
+        .select({ id: peertubeInstanceTable.id })
+        .from(peertubeInstanceTable)
+        .where(
+          and(
+            eq(peertubeInstanceTable.userId, userId),
+            eq(peertubeInstanceTable.host, host)
+          )
+        )
+        .limit(1);
+
+      if (existing) {
+        throw new Error("instance_already_exists");
+      }
+
+      const [instance] = await ctx.db
+        .insert(peertubeInstanceTable)
+        .values({
+          description: input.description,
+          host,
+          isIndex: false,
+          isPublic: false,
+          thumbnail:
+            input.thumbnail ??
+            instanceMetadata.thumbnail ??
+            `${host}/favicon.ico`,
+          title: input.title ?? instanceMetadata.title ?? hostUrl.hostname,
+          userId,
+        })
+        .returning({
+          description: peertubeInstanceTable.description,
+          host: peertubeInstanceTable.host,
+          id: peertubeInstanceTable.id,
+          isIndex: peertubeInstanceTable.isIndex,
+          thumbnail: peertubeInstanceTable.thumbnail,
+          title: peertubeInstanceTable.title,
+        });
+
+      return instance;
+    }),
+
+  removeOwn: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+
+      const [instance] = await ctx.db
+        .select({
+          host: peertubeInstanceTable.host,
+          id: peertubeInstanceTable.id,
+        })
+        .from(peertubeInstanceTable)
+        .where(
+          and(
+            eq(peertubeInstanceTable.id, input.id),
+            eq(peertubeInstanceTable.userId, userId),
+            eq(peertubeInstanceTable.isIndex, false),
+            eq(peertubeInstanceTable.isPublic, false)
+          )
+        )
+        .limit(1);
+
+      if (!instance) {
+        throw new Error("instance_not_found");
+      }
+
+      await ctx.db
+        .delete(peertubeInstanceAuthTable)
+        .where(
+          and(
+            eq(peertubeInstanceAuthTable.userId, userId),
+            eq(
+              peertubeInstanceAuthTable.instanceHost,
+              normalizeHost(instance.host)
+            )
+          )
+        );
+
+      await ctx.db
+        .delete(peertubeInstanceTable)
+        .where(
+          and(
+            eq(peertubeInstanceTable.id, instance.id),
+            eq(peertubeInstanceTable.userId, userId)
+          )
+        );
+
+      return { success: true };
+    }),
+
   list: protectedProcedure
     .input(
       z

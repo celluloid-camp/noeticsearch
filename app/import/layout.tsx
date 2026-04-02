@@ -1,7 +1,7 @@
 "use client";
 
 import { IconLink, IconSearch, IconUpload } from "@tabler/icons-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -31,8 +31,12 @@ const importOptions = [
 
 export default function ImportLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const t = useTranslations("import");
+  const hasSearchResults =
+    pathname.startsWith("/import/search") &&
+    (searchParams.get("q")?.trim().length ?? 0) > 0;
 
   const currentTab =
     importOptions.find(({ href, disabled }) => {
@@ -55,32 +59,45 @@ export default function ImportLayout({ children }: { children: ReactNode }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex h-full flex-col gap-6 border-t p-0 md:flex-row md:items-stretch">
-            <aside className="w-full md:w-64 md:self-stretch md:border-border md:border-r">
-              <Tabs
-                className="w-full"
-                onValueChange={(value) => {
-                  const opt = importOptions.find(
-                    (o) => o.href === value && !o.disabled
-                  );
-                  if (!opt) {
-                    return;
-                  }
-                  router.push(opt.href);
-                }}
-                orientation="vertical"
-                value={currentTab}
-              >
-                <TabsList
-                  className="flex w-full flex-col items-stretch gap-1 pt-1"
-                  variant="line"
+            {hasSearchResults ? null : (
+              <aside className="w-full md:w-64 md:self-stretch md:border-border md:border-r">
+                <Tabs
+                  className="w-full"
+                  onValueChange={(value) => {
+                    const opt = importOptions.find(
+                      (o) => o.href === value && !o.disabled
+                    );
+                    if (!opt) {
+                      return;
+                    }
+                    router.push(opt.href);
+                  }}
+                  orientation="vertical"
+                  value={currentTab}
                 >
-                  {importOptions.map(
-                    ({ href, icon: Icon, label, disabled }) => {
-                      if (disabled) {
+                  <TabsList
+                    className="flex w-full flex-col items-stretch gap-1 pt-1"
+                    variant="line"
+                  >
+                    {importOptions.map(
+                      ({ href, icon: Icon, label, disabled }) => {
+                        if (disabled) {
+                          return (
+                            <TabsTrigger
+                              className="mt-2 justify-start border-border border-t border-dashed pt-2 text-sm opacity-60"
+                              disabled
+                              key={href}
+                              value={href}
+                            >
+                              <Icon className="size-4 shrink-0" />
+                              <span>{t(label)}</span>
+                            </TabsTrigger>
+                          );
+                        }
+
                         return (
                           <TabsTrigger
-                            className="mt-2 justify-start border-border border-t border-dashed pt-2 text-sm opacity-60"
-                            disabled
+                            className="justify-start gap-2 text-sm"
                             key={href}
                             value={href}
                           >
@@ -89,22 +106,11 @@ export default function ImportLayout({ children }: { children: ReactNode }) {
                           </TabsTrigger>
                         );
                       }
-
-                      return (
-                        <TabsTrigger
-                          className="justify-start gap-2 text-sm"
-                          key={href}
-                          value={href}
-                        >
-                          <Icon className="size-4 shrink-0" />
-                          <span>{t(label)}</span>
-                        </TabsTrigger>
-                      );
-                    }
-                  )}
-                </TabsList>
-              </Tabs>
-            </aside>
+                    )}
+                  </TabsList>
+                </Tabs>
+              </aside>
+            )}
             <main className="flex-1">{children}</main>
           </CardContent>
         </Card>
