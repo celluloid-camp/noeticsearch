@@ -159,9 +159,11 @@ export default function ImportSearchPage() {
                                   />
                                 </div>
                               ) : null}
-                              <div className="flex flex-col text-left">
-                                <span>{activeInstance.title}</span>
-                                <span className="text-muted-foreground text-xs">
+                              <div className="flex min-w-0 flex-col text-left">
+                                <span className="truncate">
+                                  {activeInstance.title}
+                                </span>
+                                <span className="truncate text-muted-foreground text-xs">
                                   {activeInstance.host}
                                 </span>
                               </div>
@@ -196,9 +198,11 @@ export default function ImportSearchPage() {
                                   />
                                 </div>
                               ) : null}
-                              <div className="flex flex-1 flex-col text-left">
-                                <span>{instance.title}</span>
-                                <span className="text-muted-foreground text-xs">
+                              <div className="flex min-w-0 flex-1 flex-col text-left">
+                                <span className="truncate">
+                                  {instance.title}
+                                </span>
+                                <span className="truncate text-muted-foreground text-xs">
                                   {instance.host}
                                 </span>
                               </div>

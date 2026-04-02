@@ -1,7 +1,15 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Loader2, Palette, Save, Server, User } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  KeyRound,
+  Loader2,
+  Palette,
+  Save,
+  Server,
+  Trash2,
+  User,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -12,8 +20,28 @@ import {
   ConnectInstanceDialog,
   ConnectionStatusBadge,
 } from "@/components/import-link/connect-instance-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +71,8 @@ export default function SettingsPage() {
   const [resetEmail, setResetEmail] = useState("");
   const [isResetting, setIsResetting] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [ownDialogOpen, setOwnDialogOpen] = useState(false);
+  const [ownHost, setOwnHost] = useState("");
 
   const { theme, setTheme } = useTheme();
   const locale = useLocale() as Locale;
@@ -53,9 +83,56 @@ export default function SettingsPage() {
     isLoading: isLoadingPeertubeInstances,
     refetch: refetchPeertubeInstances,
   } = useQuery(api.peertubeInstance.listWithAuth.queryOptions({ limit: 50 }));
+  const {
+    data: ownPeertubeInstances,
+    isLoading: isLoadingOwnPeertubeInstances,
+  } = useQuery(
+    api.peertubeInstance.listOwnWithAuth.queryOptions({ limit: 50 })
+  );
 
+  const addOwnPeertubeInstance = useMutation(
+    api.peertubeInstance.addOwn.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("ownInstanceAdded"));
+        setOwnDialogOpen(false);
+        setOwnHost("");
+        queryClient.invalidateQueries({ queryKey: [["peertubeInstance"]] });
+        refetchPeertubeInstances();
+      },
+      onError: (error) => {
+        if (error.message.includes("instance_already_exists")) {
+          toast.error(t("ownInstanceExists"));
+          return;
+        }
+        toast.error(t("ownInstanceAddFailed"));
+      },
+    })
+  );
+  const removeOwnPeertubeInstance = useMutation(
+    api.peertubeInstance.removeOwn.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("ownInstanceRemoved"));
+        queryClient.invalidateQueries({ queryKey: [["peertubeInstance"]] });
+        refetchPeertubeInstances();
+      },
+      onError: () => {
+        toast.error(t("ownInstanceRemoveFailed"));
+      },
+    })
+  );
+
+  const manageableOwnPeertubeInstances = ownPeertubeInstances ?? [];
+  const ownInstanceIds = new Set(
+    manageableOwnPeertubeInstances.map((instance) => instance.id)
+  );
   const manageablePeertubeInstances = (peertubeInstances ?? []).filter(
-    (instance) => !instance.isIndex
+    (instance) => {
+      if (instance.isIndex) {
+        return false;
+      }
+
+      return !ownInstanceIds.has(instance.id);
+    }
   );
 
   const handleLocaleChange = async (newLocale: Locale) => {
@@ -108,6 +185,13 @@ export default function SettingsPage() {
     }
 
     setIsResetting(false);
+  };
+
+  const handleAddOwnInstance = (e: React.FormEvent) => {
+    e.preventDefault();
+    addOwnPeertubeInstance.mutate({
+      host: ownHost.trim(),
+    });
   };
 
   if (isPending || !user) {
@@ -403,6 +487,189 @@ export default function SettingsPage() {
                 })}
               </div>
             )}
+
+            <div className="mt-8 border-t pt-6">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-base">
+                    {t("ownInstancesTitle")}
+                  </h3>
+                  <p className="text-muted-foreground text-sm">
+                    {t("ownInstancesDescription")}
+                  </p>
+                </div>
+
+                <Dialog onOpenChange={setOwnDialogOpen} open={ownDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" type="button" variant="outline">
+                      {t("addOwnInstance")}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{t("addOwnInstanceTitle")}</DialogTitle>
+                      <DialogDescription>
+                        {t("addOwnInstanceDescription")}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <form className="space-y-3" onSubmit={handleAddOwnInstance}>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="own-host">
+                          {t("ownInstanceHostLabel")}
+                        </Label>
+                        <Input
+                          id="own-host"
+                          onChange={(e) => setOwnHost(e.target.value)}
+                          placeholder={t("ownInstanceHostPlaceholder")}
+                          required
+                          type="url"
+                          value={ownHost}
+                        />
+                      </div>
+
+                      <DialogFooter className="pt-2">
+                        <Button
+                          onClick={() => setOwnDialogOpen(false)}
+                          type="button"
+                          variant="outline"
+                        >
+                          {t("cancel")}
+                        </Button>
+                        <Button
+                          disabled={addOwnPeertubeInstance.isPending}
+                          type="submit"
+                        >
+                          {addOwnPeertubeInstance.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : null}
+                          {t("addOwnInstance")}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {isLoadingOwnPeertubeInstances ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="size-4 animate-spin" />
+                  {t("loadingInstances")}
+                </div>
+              ) : manageableOwnPeertubeInstances.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  {t("noOwnPeertubeInstances")}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {manageableOwnPeertubeInstances.map((instance) => {
+                    const isConnected = instance.authStatus === "connected";
+
+                    return (
+                      <div
+                        className="flex items-center justify-between gap-3 rounded-md border p-3"
+                        key={instance.id}
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          {instance.thumbnail ? (
+                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm bg-muted">
+                              <Image
+                                alt={instance.title}
+                                className="object-cover"
+                                fill
+                                src={instance.thumbnail}
+                                unoptimized
+                              />
+                            </div>
+                          ) : null}
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-sm">
+                              {instance.title}
+                            </p>
+                            <a
+                              className="truncate text-muted-foreground text-xs underline-offset-2 hover:underline"
+                              href={instance.host}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              {instance.host}
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                          {isConnected ? (
+                            <ConnectionStatusBadge
+                              status={instance.authStatus}
+                            />
+                          ) : null}
+                          <ConnectInstanceDialog
+                            allowReconnectWhenConnected
+                            host={instance.host}
+                            instanceThumbnail={instance.thumbnail}
+                            instanceTitle={instance.title}
+                            onStatusChange={() => {
+                              queryClient.invalidateQueries({
+                                queryKey: [["peertubeInstance"]],
+                              });
+                              refetchPeertubeInstances();
+                            }}
+                            triggerClassName="h-8"
+                            triggerVariant="outline"
+                          />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                className="h-8"
+                                size="sm"
+                                type="button"
+                                variant="destructive"
+                              >
+                                <Trash2 className="size-3.5" />
+                                {t("removeOwnInstance")}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="sm:max-w-md">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  {t("removeOwnInstanceTitle")}
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t("removeOwnInstanceDescription", {
+                                    title: instance.title,
+                                  })}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel
+                                  disabled={removeOwnPeertubeInstance.isPending}
+                                >
+                                  {t("cancel")}
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  disabled={removeOwnPeertubeInstance.isPending}
+                                  onClick={() => {
+                                    removeOwnPeertubeInstance.mutate({
+                                      id: instance.id,
+                                    });
+                                  }}
+                                >
+                                  {removeOwnPeertubeInstance.isPending ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    t("removeOwnInstanceConfirm")
+                                  )}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>

@@ -95,10 +95,10 @@ export function PeerTubeSearchResults({
   return (
     <Card className="flex h-full flex-col border-none bg-transparent shadow-none ring-0">
       <CardHeader className="flex items-center justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <CardTitle>{t("results")}</CardTitle>
           <CardDescription>{description}</CardDescription>
-          {baseUrl}
+          <p className="truncate text-muted-foreground text-xs">{baseUrl}</p>
         </div>
         <Button
           disabled={isLoading && !isError}

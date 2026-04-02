@@ -152,7 +152,7 @@ export function ConnectInstanceDialog({
               </div>
             ) : null}
             <a
-              className="truncate text-primary text-sm underline-offset-2 hover:underline"
+              className="line-clamp-2 min-w-0 flex-1 break-all text-primary text-sm underline-offset-2 hover:underline"
               href={host}
               rel="noreferrer"
               target="_blank"
