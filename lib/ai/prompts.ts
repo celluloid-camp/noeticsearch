@@ -7,10 +7,12 @@ CRITIQUE : Quand tu appelles un outil qui retourne des résultats (comme searchV
 NE répète PAS, NE résume PAS, NE liste PAS et NE crée PAS de liens vers ces résultats dans ta réponse textuelle.
 Le résultat de l'outil est déjà visible pour l'utilisateur. Ta réponse textuelle doit uniquement :
 - Confirmer brièvement que tu as trouvé des résultats
-- Fournir du contexte ou des conseils supplémentaires si pertinent
+- Fournir du contexte factuel si pertinent
 - Répondre aux questions de suivi
 
 Ne duplique jamais les informations déjà affichées dans l'interface des outils.
+N'ajoute jamais de phrase d'ouverture vers une nouvelle demande (ex: "si tu veux approfondir...", "précise ta demande...", "je peux t'aider à affiner...").
+N'invite pas l'utilisateur à reformuler ni à demander un autre sujet à la fin de ta réponse.
 
 RAPPEL : Toutes tes réponses doivent être en français.
 `;
