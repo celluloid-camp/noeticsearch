@@ -1,6 +1,6 @@
 import type { VideoDetails } from "@celluloid/peertube-api/types";
 import { createId } from "@paralleldrive/cuid2";
-import { and, asc, desc, eq, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { start } from "workflow/api";
 import { z } from "zod";
 import {
@@ -133,6 +133,153 @@ export const videoRouter = router({
       return {
         status: video.importStatus,
       };
+    }),
+
+  getImportStatuses: protectedProcedure
+    .input(z.object({ videoIds: z.array(z.string()).min(1).max(20) }))
+    .query(async ({ input, ctx }) => {
+      const videos = await ctx.db
+        .select({
+          id: videoTable.id,
+          importStatus: videoTable.importStatus,
+          userId: videoTable.userId,
+          title: videoTable.title,
+          url: videoTable.url,
+        })
+        .from(videoTable)
+        .where(
+          and(
+            inArray(videoTable.id, input.videoIds),
+            eq(videoTable.userId, ctx.user.id)
+          )
+        );
+
+      return videos.map((v) => ({
+        videoId: v.id,
+        importStatus: v.importStatus,
+        title: v.title,
+        url: v.url,
+      }));
+    }),
+
+  importBatch: protectedProcedure
+    .input(
+      z.object({
+        items: z
+          .array(
+            z.object({
+              url: z.url(),
+              videoPassword: z.string().optional(),
+            })
+          )
+          .min(1)
+          .max(20),
+        isPublic: z.boolean().default(false),
+        folderId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { items, isPublic, folderId } = input;
+      const userId = ctx.user.id;
+
+      // Validate folder ownership once upfront
+      let validatedFolderId: string | undefined;
+      if (folderId) {
+        const [folder] = await ctx.db
+          .select({ id: foldersTable.id, userId: foldersTable.userId })
+          .from(foldersTable)
+          .where(eq(foldersTable.id, folderId))
+          .limit(1);
+
+        if (!folder || folder.userId !== userId) {
+          throw new Error("Folder not found or not accessible");
+        }
+        validatedFolderId = folder.id;
+      }
+
+      const accepted: { id: string; url: string; status: "processing" }[] = [];
+      const rejected: { url: string; reason: string }[] = [];
+
+      for (const item of items) {
+        const { url, videoPassword } = item;
+
+        try {
+          const parsed = parsePeerTubeUrl(url);
+          if (!parsed) {
+            rejected.push({ url, reason: "Invalid PeerTube URL format" });
+            continue;
+          }
+
+          // Check for duplicate (same externalId + baseUrl + user)
+          const [existing] = await ctx.db
+            .select({ id: videoTable.id })
+            .from(videoTable)
+            .where(
+              and(
+                eq(videoTable.userId, userId),
+                eq(videoTable.externalId, parsed.videoId),
+                eq(videoTable.baseUrl, parsed.baseUrl)
+              )
+            )
+            .limit(1);
+
+          if (existing) {
+            rejected.push({ url, reason: "alreadyImported" });
+            continue;
+          }
+
+          const videoId = createId();
+          const [video] = await ctx.db
+            .insert(videoTable)
+            .values({
+              id: videoId,
+              userId,
+              externalId: parsed.videoId,
+              baseUrl: parsed.baseUrl,
+              title: "Importing video...",
+              description: null,
+              url,
+              thumbnail: null,
+              videoDetails: {} as VideoDetails,
+              captionList: null,
+              storyboard: null,
+              importStatus: "processing",
+              isPublic,
+              publishedAt: new Date(),
+              isPasswordProtected: Boolean(videoPassword),
+              videoPassword: videoPassword ?? null,
+            })
+            .returning({ id: videoTable.id });
+
+          if (validatedFolderId) {
+            await ctx.db
+              .insert(videoFoldersTable)
+              .values({ folderId: validatedFolderId, videoId: video.id })
+              .onConflictDoNothing();
+          }
+
+          start(importVideo, [
+            {
+              password: videoPassword,
+              url,
+              videoId: video.id,
+            },
+          ]).catch(async (err) => {
+            console.error("Failed to start import workflow:", err);
+            await ctx.db
+              .update(videoTable)
+              .set({ importStatus: "failed" })
+              .where(eq(videoTable.id, video.id));
+          });
+
+          accepted.push({ id: video.id, url, status: "processing" });
+        } catch (error) {
+          console.error("Failed to import video in batch:", error);
+          rejected.push({ url, reason: "Failed to import video" });
+        }
+      }
+
+      return { accepted, rejected };
     }),
 
   generateTranscription: protectedProcedure

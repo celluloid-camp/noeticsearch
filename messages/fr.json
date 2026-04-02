@@ -178,7 +178,18 @@
     "importFailedDescription": "Échec de l'import de la vidéo.",
     "failedToLoadVideoInfo": "Échec du chargement des informations de la vidéo",
     "makeVideoVisibleDescription": "Rendez cette vidéo visible aux autres utilisateurs. Si désactivé, vous seul pouvez la voir.",
-    "importing": "Importation..."
+    "importing": "Importation...",
+    "selectedCount": "{count, plural, one {# vidéo sélectionnée} other {# vidéos sélectionnées}}",
+    "selectVideosHint": "Cliquez sur des vidéos pour les sélectionner.",
+    "importSelected": "{count, plural, one {Importer # vidéo} other {Importer # vidéos}}",
+    "batchProgressTitle": "Progression de l'import",
+    "batchSummary": "{total, plural, one {# vidéo} other {# vidéos}} · {completed} terminées · {failed} échouées · {processing} en cours",
+    "batchCompleted": "Terminé",
+    "batchFailed": "Échoué",
+    "batchProcessing": "En cours",
+    "retryFailed": "Réessayer les échecs",
+    "alreadyImported": "Déjà importée",
+    "batchPartialFailure": "{count, plural, one {# vidéo n'a pas pu être importée} other {# vidéos n'ont pas pu être importées}}"
   },
   "settings": {
     "title": "Paramètres",

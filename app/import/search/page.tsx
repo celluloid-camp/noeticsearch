@@ -3,15 +3,22 @@
 import { IconSearch } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { BatchImportOptionsForm } from "@/components/import-link/batch-import-options-form";
+import {
+  type BatchImportItem,
+  BatchImportStatus,
+  type BatchRejectedItem,
+} from "@/components/import-link/batch-import-status";
 import {
   ConnectInstanceDialog,
   ConnectionStatusBadge,
 } from "@/components/import-link/connect-instance-dialog";
-import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
-import { PeerTubeSearchResults } from "@/components/import-link/peertube-search-results";
+import {
+  PeerTubeSearchResults,
+  type SelectedVideo,
+} from "@/components/import-link/peertube-search-results";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,8 +42,18 @@ import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 export type PeerTubeInstance =
   RouterOutput["peertubeInstance"]["listWithAuth"][number];
 
+type ImportStage =
+  | { kind: "idle" }
+  | { kind: "options"; videos: SelectedVideo[] }
+  | {
+      kind: "progress";
+      accepted: BatchImportItem[];
+      rejected: BatchRejectedItem[];
+      isPublic: boolean;
+      folderId?: string;
+    };
+
 export default function ImportSearchPage() {
-  const router = useRouter();
   const api = useTRPC();
   const { toast } = useToast();
   const t = useTranslations("import");
@@ -55,21 +72,7 @@ export default function ImportSearchPage() {
   const [query, setQuery] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState<string | null>(null);
 
-  const [selectedVideoId, setSelectedVideoId] = useState<number | null>(null);
-  const [pendingImport, setPendingImport] = useState<{
-    videoId: string;
-    baseUrl: string;
-  } | null>(null);
-
-  const handleImportSuccess = (video: { id: string }) => {
-    toast({
-      title: tCommon("success"),
-      description: t("importSuccessDescription"),
-    });
-    setPendingImport(null);
-    setSelectedVideoId(null);
-    router.replace(`/video/${video.id}`);
-  };
+  const [importStage, setImportStage] = useState<ImportStage>({ kind: "idle" });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,33 +81,53 @@ export default function ImportSearchPage() {
       return;
     }
     setSubmittedSearch(q);
-    setSelectedVideoId(null);
+    setImportStage({ kind: "idle" });
   };
 
   const handleResetSearch = () => {
     setQuery("");
     setSubmittedSearch(null);
-    setSelectedVideoId(null);
-    setPendingImport(null);
+    setImportStage({ kind: "idle" });
     setSelectedInstance(null);
   };
 
-  const handleSelectVideo = (videoId: number) => {
-    if (selectedVideoId === videoId) {
-      setSelectedVideoId(null);
-      setPendingImport(null);
+  const handleImportSelected = (videos: SelectedVideo[]) => {
+    setImportStage({ kind: "options", videos });
+  };
+
+  const handleBatchSubmit = (result: {
+    accepted: BatchImportItem[];
+    rejected: BatchRejectedItem[];
+    isPublic: boolean;
+    folderId?: string;
+  }) => {
+    setImportStage({
+      kind: "progress",
+      accepted: result.accepted,
+      rejected: result.rejected,
+      isPublic: result.isPublic,
+      folderId: result.folderId,
+    });
+  };
+
+  const handleBatchDone = () => {
+    const stage = importStage;
+    if (stage.kind !== "progress") {
       return;
     }
-
-    setPendingImport({
-      videoId: String(videoId),
-      baseUrl: activeInstance?.host ?? "",
+    toast({
+      title: tCommon("success"),
+      description: t("importSuccessDescription"),
     });
+  };
+
+  const handleCancelOptions = () => {
+    setImportStage({ kind: "idle" });
   };
 
   return (
     <div className="flex h-full w-full flex-col md:flex-row md:items-start">
-      {!pendingImport && (
+      {importStage.kind !== "progress" && (
         <div className="h-full w-full border-r md:w-2/5">
           <Card className="border-none bg-transparent shadow-none ring-0">
             <CardHeader>
@@ -230,29 +253,40 @@ export default function ImportSearchPage() {
         </div>
       )}
 
-      {submittedSearch && (
+      {submittedSearch && importStage.kind !== "progress" && (
         <div className="w-full border-r md:h-[calc(100vh-5rem)] md:w-1/2">
           <PeerTubeSearchResults
             baseUrl={activeInstance?.host ?? ""}
+            onImportSelected={handleImportSelected}
             onReset={handleResetSearch}
-            onVideoSelect={handleSelectVideo}
             search={submittedSearch}
-            selectedVideoId={selectedVideoId}
           />
         </div>
       )}
 
-      {pendingImport && (
+      {importStage.kind === "options" && (
         <div className="w-full md:w-1/2">
-          <ImportVideoConfirmForm
-            baseUrl={pendingImport.baseUrl}
-            onSuccess={handleImportSuccess}
-            videoId={pendingImport.videoId}
+          <BatchImportOptionsForm
+            onCancel={handleCancelOptions}
+            onSuccess={handleBatchSubmit}
+            selectedVideos={importStage.videos}
           />
         </div>
       )}
 
-      {pendingImport || submittedSearch ? null : (
+      {importStage.kind === "progress" && (
+        <div className="w-full">
+          <BatchImportStatus
+            accepted={importStage.accepted}
+            folderId={importStage.folderId}
+            isPublic={importStage.isPublic}
+            onDone={handleBatchDone}
+            rejected={importStage.rejected}
+          />
+        </div>
+      )}
+
+      {importStage.kind === "idle" && !submittedSearch ? (
         <div className="hidden w-full md:block md:w-1/2">
           <Card className="border-none shadow-none ring-0">
             <CardHeader>
@@ -268,7 +302,7 @@ export default function ImportSearchPage() {
             </CardContent>
           </Card>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

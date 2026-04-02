@@ -178,7 +178,18 @@
     "importFailedDescription": "Failed to import video.",
     "failedToLoadVideoInfo": "Failed to load video info",
     "makeVideoVisibleDescription": "Make this video visible to other users. If disabled, only you can see it.",
-    "importing": "Importing..."
+    "importing": "Importing...",
+    "selectedCount": "{count, plural, one {# video selected} other {# videos selected}}",
+    "selectVideosHint": "Click videos to select them.",
+    "importSelected": "{count, plural, one {Import # video} other {Import # videos}}",
+    "batchProgressTitle": "Import progress",
+    "batchSummary": "{total, plural, one {# video} other {# videos}} · {completed} completed · {failed} failed · {processing} processing",
+    "batchCompleted": "Completed",
+    "batchFailed": "Failed",
+    "batchProcessing": "Processing",
+    "retryFailed": "Retry failed",
+    "alreadyImported": "Already imported",
+    "batchPartialFailure": "{count, plural, one {# video could not be imported} other {# videos could not be imported}}"
   },
   "settings": {
     "title": "Settings",
