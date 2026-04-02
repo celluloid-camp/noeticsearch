@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -180,7 +181,12 @@ export function BatchImportStatus({
                 key={item.id}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-sm">{item.title}</p>
+                  <Link
+                    className="block truncate font-medium text-sm underline-offset-2 hover:underline"
+                    href={`/video/${item.id}`}
+                  >
+                    {item.title}
+                  </Link>
                   <p className="truncate text-muted-foreground text-xs">
                     {item.url}
                   </p>

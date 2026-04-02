@@ -29,6 +29,7 @@ function formatDuration(seconds: number): string {
 export interface SelectedVideo {
   id: number;
   name: string;
+  thumbnailUrl?: string | null;
   url: string;
 }
 
@@ -74,6 +75,7 @@ export function PeerTubeSearchResults({
       .map((v) => ({
         id: v.id,
         name: v.name ?? "",
+        thumbnailUrl: v.thumbnailUrl ?? null,
         url: `${baseUrl.replace(/\/$/, "")}/w/${v.uuid}`,
       }));
     onImportSelected(selected);

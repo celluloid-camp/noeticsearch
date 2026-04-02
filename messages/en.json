@@ -187,6 +187,11 @@
     "batchCompleted": "Completed",
     "batchFailed": "Failed",
     "batchProcessing": "Processing",
+    "importProcessButton": "Import process",
+    "importProcessTitle": "Import process list",
+    "importProcessDescription": "Track ongoing and recent imports across the app.",
+    "importProcessEmptyTitle": "No imports yet",
+    "importProcessEmptyDescription": "Start importing videos to see progress here.",
     "retryFailed": "Retry failed",
     "alreadyImported": "Already imported",
     "batchPartialFailure": "{count, plural, one {# video could not be imported} other {# videos could not be imported}}"
@@ -205,6 +210,7 @@
     "profileTab": "Profile",
     "securityTab": "Security",
     "appearanceTab": "Appearance",
+    "peertubeTab": "PeerTube",
     "updateProfile": "Update your profile information",
     "emailCannotChange": "Your email cannot be changed",
     "enterName": "Enter your name",
@@ -224,7 +230,12 @@
     "profileUpdated": "Profile updated successfully",
     "failedUpdateProfile": "Failed to update profile",
     "failedSendReset": "Failed to send reset email",
-    "resetSentIfExists": "If an account exists, a reset email has been sent"
+    "resetSentIfExists": "If an account exists, a reset email has been sent",
+    "peertubeTitle": "PeerTube instances",
+    "peertubeDescription": "Manage instance authentication to access private videos.",
+    "loadingInstances": "Loading instances...",
+    "noPeertubeInstances": "No PeerTube instances available.",
+    "indexAuthDisabled": "Authentication disabled"
   },
   "sidebar": {
     "mySearches": "My searches",

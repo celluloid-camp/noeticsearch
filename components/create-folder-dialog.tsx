@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,25 +19,42 @@ import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 interface CreateFolderDialogProps {
-  onCreated?: () => void;
+  hideTrigger?: boolean;
+  onCreated?: (folder: { id: string; name: string }) => void;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
+  trigger?: ReactNode;
 }
 
-export function CreateFolderDialog({ onCreated }: CreateFolderDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateFolderDialog({
+  onCreated,
+  open,
+  onOpenChange,
+  hideTrigger = false,
+  trigger,
+}: CreateFolderDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [name, setName] = useState("");
   const t = useTranslations();
   const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
+  const dialogOpen = open ?? internalOpen;
+  const setDialogOpen = (nextOpen: boolean) => {
+    if (open === undefined) {
+      setInternalOpen(nextOpen);
+    }
+    onOpenChange?.(nextOpen);
+  };
 
   const createFolder = useMutation(
     api.folder.create.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (folder) => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
         toast({ title: t("folders.createSuccess") });
         setName("");
-        setOpen(false);
-        onCreated?.();
+        setDialogOpen(false);
+        onCreated?.({ id: folder.id, name: folder.name });
       },
       onError: (err) => {
         toast({
@@ -59,19 +77,23 @@ export function CreateFolderDialog({ onCreated }: CreateFolderDialogProps) {
   return (
     <Dialog
       onOpenChange={(nextOpen) => {
-        setOpen(nextOpen);
+        setDialogOpen(nextOpen);
         if (!nextOpen) {
           setName("");
         }
       }}
-      open={open}
+      open={dialogOpen}
     >
-      <DialogTrigger asChild>
-        <Button size="lg" type="button" variant="outline">
-          <PlusIcon className="size-4" />
-          <span>{t("folders.createFolder")}</span>
-        </Button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="lg" type="button" variant="outline">
+              <PlusIcon className="size-4" />
+              <span>{t("folders.createFolder")}</span>
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{t("folders.createFolder")}</DialogTitle>

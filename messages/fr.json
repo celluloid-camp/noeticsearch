@@ -187,6 +187,11 @@
     "batchCompleted": "Terminé",
     "batchFailed": "Échoué",
     "batchProcessing": "En cours",
+    "importProcessButton": "Processus d'import",
+    "importProcessTitle": "Liste des imports",
+    "importProcessDescription": "Suivez les imports en cours et récents dans toute l'application.",
+    "importProcessEmptyTitle": "Aucun import pour le moment",
+    "importProcessEmptyDescription": "Importez des vidéos pour voir la progression ici.",
     "retryFailed": "Réessayer les échecs",
     "alreadyImported": "Déjà importée",
     "batchPartialFailure": "{count, plural, one {# vidéo n'a pas pu être importée} other {# vidéos n'ont pas pu être importées}}"
@@ -205,6 +210,7 @@
     "profileTab": "Profil",
     "securityTab": "Sécurité",
     "appearanceTab": "Apparence",
+    "peertubeTab": "PeerTube",
     "updateProfile": "Mettre à jour les informations du profil",
     "emailCannotChange": "Votre e-mail ne peut pas être modifié",
     "enterName": "Entrez votre nom",
@@ -224,7 +230,12 @@
     "profileUpdated": "Profil mis à jour avec succès",
     "failedUpdateProfile": "Échec de la mise à jour du profil",
     "failedSendReset": "Échec de l'envoi de l'e-mail de réinitialisation",
-    "resetSentIfExists": "Si un compte existe, un e-mail de réinitialisation a été envoyé"
+    "resetSentIfExists": "Si un compte existe, un e-mail de réinitialisation a été envoyé",
+    "peertubeTitle": "Instances PeerTube",
+    "peertubeDescription": "Gérez l'authentification des instances pour accéder aux vidéos privées.",
+    "loadingInstances": "Chargement des instances...",
+    "noPeertubeInstances": "Aucune instance PeerTube disponible.",
+    "indexAuthDisabled": "Authentification désactivée"
   },
   "sidebar": {
     "mySearches": "Mes recherches récentes",

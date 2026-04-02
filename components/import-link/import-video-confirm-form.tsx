@@ -27,6 +27,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { openImportProcessDrawer } from "@/lib/import-process-events";
 import {
   buildPeerTubeWatchUrl,
   fetchPeerTubeVideo,
@@ -114,6 +115,7 @@ export function ImportVideoConfirmForm({
   const isDisabled = importVideo.isPending || !preview || !hasCaptions;
 
   const onSubmit = (data: ConfirmFormSchema) => {
+    openImportProcessDrawer();
     importVideo.mutate({
       url: watchUrl,
       isPublic: data.isPublic,

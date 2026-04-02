@@ -1,6 +1,6 @@
 import type { VideoDetails } from "@celluloid/peertube-api/types";
 import { createId } from "@paralleldrive/cuid2";
-import { and, asc, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { start } from "workflow/api";
 import { z } from "zod";
 import {
@@ -159,6 +159,49 @@ export const videoRouter = router({
         importStatus: v.importStatus,
         title: v.title,
         url: v.url,
+      }));
+    }),
+
+  listImportProcesses: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(30),
+        })
+        .optional()
+    )
+    .query(async ({ input, ctx }) => {
+      const limit = input?.limit ?? 30;
+
+      const rows = await ctx.db
+        .select({
+          createdAt: videoTable.createdAt,
+          id: videoTable.id,
+          importStatus: videoTable.importStatus,
+          thumbnail: videoTable.thumbnail,
+          title: videoTable.title,
+          url: videoTable.url,
+        })
+        .from(videoTable)
+        .where(
+          and(
+            eq(videoTable.userId, ctx.user.id),
+            ne(videoTable.importStatus, "completed")
+          )
+        )
+        .orderBy(
+          sql`case when ${videoTable.importStatus} = 'processing' then 0 else 1 end`,
+          desc(videoTable.createdAt)
+        )
+        .limit(limit);
+
+      return rows.map((row) => ({
+        createdAt: row.createdAt,
+        importStatus: row.importStatus,
+        thumbnail: row.thumbnail,
+        title: row.title,
+        url: row.url,
+        videoId: row.id,
       }));
     }),
 

@@ -1,11 +1,17 @@
 "use client";
 
-import { KeyRound, Loader2, Palette, Save, User } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { KeyRound, Loader2, Palette, Save, Server, User } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  ConnectInstanceDialog,
+  ConnectionStatusBadge,
+} from "@/components/import-link/connect-instance-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,11 +28,14 @@ import { i18nConfig } from "@/i18n/config";
 import { setLocaleCookie } from "@/lib/actions/locale";
 import { authClient } from "@/lib/auth-client";
 import { useSession, useUpdateUser } from "@/lib/auth-hooks";
+import { useTRPC } from "@/lib/trpc/client";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const { user, isPending } = useSession();
   const { mutate: updateUser, isPending: isUpdating } = useUpdateUser();
+  const api = useTRPC();
+  const queryClient = useQueryClient();
 
   const [name, setName] = useState(user?.name ?? "");
   const [isNameChanged, setIsNameChanged] = useState(false);
@@ -38,6 +47,16 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const locale = useLocale() as Locale;
   const router = useRouter();
+
+  const {
+    data: peertubeInstances,
+    isLoading: isLoadingPeertubeInstances,
+    refetch: refetchPeertubeInstances,
+  } = useQuery(api.peertubeInstance.listWithAuth.queryOptions({ limit: 50 }));
+
+  const manageablePeertubeInstances = (peertubeInstances ?? []).filter(
+    (instance) => !instance.isIndex
+  );
 
   const handleLocaleChange = async (newLocale: Locale) => {
     await setLocaleCookie(newLocale);
@@ -127,9 +146,16 @@ export default function SettingsPage() {
             <Palette className="size-4" />
             {t("appearanceTab")}
           </TabsTrigger>
+          <TabsTrigger value="peertube">
+            <Server className="size-4" />
+            {t("peertubeTab")}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent className="overflow-y-auto border-l" value="profile">
+        <TabsContent
+          className="max-w-2xl overflow-y-auto border-l"
+          value="profile"
+        >
           <div className="p-6">
             <div className="mb-6">
               <h2 className="font-semibold text-lg">{t("profile")}</h2>
@@ -180,7 +206,10 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent className="overflow-y-auto border-l" value="security">
+        <TabsContent
+          className="max-w-2xl overflow-y-auto border-l"
+          value="security"
+        >
           <div className="p-6">
             <div className="mb-6">
               <h2 className="font-semibold text-lg">{t("password")}</h2>
@@ -218,7 +247,10 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent className="overflow-y-auto border-l" value="appearance">
+        <TabsContent
+          className="max-w-2xl overflow-y-auto border-l"
+          value="appearance"
+        >
           <div className="p-6">
             <div className="mb-6">
               <h2 className="font-semibold text-lg">{t("appearance")}</h2>
@@ -286,6 +318,91 @@ export default function SettingsPage() {
                 </DropdownMenu>
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent
+          className="max-w-2xl overflow-y-auto border-l"
+          value="peertube"
+        >
+          <div className="p-6">
+            <div className="mb-6">
+              <h2 className="font-semibold text-lg">{t("peertubeTitle")}</h2>
+              <p className="text-muted-foreground text-sm">
+                {t("peertubeDescription")}
+              </p>
+            </div>
+
+            {isLoadingPeertubeInstances ? (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="size-4 animate-spin" />
+                {t("loadingInstances")}
+              </div>
+            ) : manageablePeertubeInstances.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                {t("noPeertubeInstances")}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {manageablePeertubeInstances.map((instance) => {
+                  const isConnected = instance.authStatus === "connected";
+
+                  return (
+                    <div
+                      className="flex items-center justify-between gap-3 rounded-md border p-3"
+                      key={instance.id}
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        {instance.thumbnail ? (
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm bg-muted">
+                            <Image
+                              alt={instance.title}
+                              className="object-cover"
+                              fill
+                              src={instance.thumbnail}
+                              unoptimized
+                            />
+                          </div>
+                        ) : null}
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-sm">
+                            {instance.title}
+                          </p>
+                          <a
+                            className="truncate text-muted-foreground text-xs underline-offset-2 hover:underline"
+                            href={instance.host}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {instance.host}
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        {isConnected ? (
+                          <ConnectionStatusBadge status={instance.authStatus} />
+                        ) : null}
+                        <ConnectInstanceDialog
+                          allowReconnectWhenConnected
+                          host={instance.host}
+                          instanceThumbnail={instance.thumbnail}
+                          instanceTitle={instance.title}
+                          onStatusChange={() => {
+                            queryClient.invalidateQueries({
+                              queryKey: [["peertubeInstance"]],
+                            });
+                            refetchPeertubeInstances();
+                          }}
+                          triggerClassName="h-8"
+                          triggerVariant="outline"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

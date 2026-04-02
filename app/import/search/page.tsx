@@ -2,15 +2,12 @@
 
 import { IconSearch } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { BatchImportOptionsForm } from "@/components/import-link/batch-import-options-form";
-import {
-  type BatchImportItem,
-  BatchImportStatus,
-  type BatchRejectedItem,
-} from "@/components/import-link/batch-import-status";
 import {
   ConnectInstanceDialog,
   ConnectionStatusBadge,
@@ -44,20 +41,14 @@ export type PeerTubeInstance =
 
 type ImportStage =
   | { kind: "idle" }
-  | { kind: "options"; videos: SelectedVideo[] }
-  | {
-      kind: "progress";
-      accepted: BatchImportItem[];
-      rejected: BatchRejectedItem[];
-      isPublic: boolean;
-      folderId?: string;
-    };
+  | { kind: "options"; videos: SelectedVideo[] };
 
 export default function ImportSearchPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const api = useTRPC();
   const { toast } = useToast();
   const t = useTranslations("import");
-  const tCommon = useTranslations("common");
   const { data: instances, refetch: refetchInstances } = useQuery(
     api.peertubeInstance.listWithAuth.queryOptions({
       limit: 10,
@@ -69,10 +60,21 @@ export default function ImportSearchPage() {
 
   const activeInstance = selectedInstance ?? instances?.[0] ?? null;
   const isLoginDisabled = activeInstance?.isIndex ?? false;
-  const [query, setQuery] = useState("");
-  const [submittedSearch, setSubmittedSearch] = useState<string | null>(null);
+  const initialQ = searchParams.get("q")?.trim() ?? "";
+  const [query, setQuery] = useState(initialQ);
+  const [submittedSearch, setSubmittedSearch] = useState<string | null>(
+    initialQ.length > 0 ? initialQ : null
+  );
 
   const [importStage, setImportStage] = useState<ImportStage>({ kind: "idle" });
+
+  const handleInstanceSelect = (instance: PeerTubeInstance) => {
+    setSelectedInstance(instance);
+    setQuery("");
+    setSubmittedSearch(null);
+    setImportStage({ kind: "idle" });
+    router.replace("/import/search");
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,12 +83,14 @@ export default function ImportSearchPage() {
       return;
     }
     setSubmittedSearch(q);
+    router.replace(`/import/search?q=${encodeURIComponent(q)}`);
     setImportStage({ kind: "idle" });
   };
 
   const handleResetSearch = () => {
     setQuery("");
     setSubmittedSearch(null);
+    router.replace("/import/search");
     setImportStage({ kind: "idle" });
     setSelectedInstance(null);
   };
@@ -96,28 +100,24 @@ export default function ImportSearchPage() {
   };
 
   const handleBatchSubmit = (result: {
-    accepted: BatchImportItem[];
-    rejected: BatchRejectedItem[];
+    accepted: { id: string; url: string; title: string }[];
+    rejected: { url: string; reason: string }[];
     isPublic: boolean;
     folderId?: string;
   }) => {
-    setImportStage({
-      kind: "progress",
-      accepted: result.accepted,
-      rejected: result.rejected,
-      isPublic: result.isPublic,
-      folderId: result.folderId,
-    });
-  };
-
-  const handleBatchDone = () => {
-    const stage = importStage;
-    if (stage.kind !== "progress") {
+    if (result.accepted.length > 0) {
+      router.push(
+        result.folderId
+          ? `/library/folders/${result.folderId}`
+          : "/library/mine"
+      );
       return;
     }
+
     toast({
-      title: tCommon("success"),
-      description: t("importSuccessDescription"),
+      title: t("importFailedTitle"),
+      description: t("importFailedDescription"),
+      variant: "destructive",
     });
   };
 
@@ -127,133 +127,132 @@ export default function ImportSearchPage() {
 
   return (
     <div className="flex h-full w-full flex-col md:flex-row md:items-start">
-      {importStage.kind !== "progress" && (
-        <div className="h-full w-full border-r md:w-2/5">
-          <Card className="border-none bg-transparent shadow-none ring-0">
-            <CardHeader>
-              <CardTitle>{t("peerTubeInstancesTitle")}</CardTitle>
-              <CardDescription>{t("searchImportDescription")}</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="flex flex-col gap-4">
-                <div className="flex flex-1 flex-col gap-2">
-                  <Label>{t("instance")}</Label>
-                  <div className="relative">
-                    <div className="min-w-0 flex-1">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            className="flex h-14 w-full items-center justify-between pr-28"
-                            type="button"
-                            variant="outline"
-                          >
-                            {activeInstance ? (
-                              <div className="flex items-center gap-3">
-                                {activeInstance.thumbnail ? (
-                                  <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-white">
-                                    <Image
-                                      alt={activeInstance.title}
-                                      className="object-cover"
-                                      fill
-                                      src={activeInstance.thumbnail}
-                                      unoptimized
-                                    />
-                                  </div>
-                                ) : null}
-                                <div className="flex flex-col text-left">
-                                  <span>{activeInstance.title}</span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {activeInstance.host}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">
-                                {t("noPublicInstances")}
-                              </span>
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="start"
-                          className=""
-                          style={{ width: "var(--radix-popper-anchor-width)" }}
+      <div className="h-full w-full border-r md:w-2/5">
+        <Card className="border-none bg-transparent shadow-none ring-0">
+          <CardHeader>
+            <CardTitle>{t("peerTubeInstancesTitle")}</CardTitle>
+            <CardDescription>{t("searchImportDescription")}</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-1 flex-col gap-2">
+                <Label>{t("instance")}</Label>
+                <div className="relative">
+                  <div className="min-w-0 flex-1">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          className="flex h-14 w-full items-center justify-start pr-28"
+                          type="button"
+                          variant="outline"
                         >
-                          {(instances ?? []).map((instance) => (
-                            <DropdownMenuItem
-                              className="w-full"
-                              key={instance.host}
-                              onSelect={() => setSelectedInstance(instance)}
-                            >
-                              <div className="flex w-full items-center gap-3">
-                                {instance.thumbnail ? (
-                                  <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
-                                    <Image
-                                      alt={instance.title}
-                                      className="object-cover"
-                                      fill
-                                      src={instance.thumbnail}
-                                      unoptimized
-                                    />
-                                  </div>
-                                ) : null}
-                                <div className="flex flex-1 flex-col text-left">
-                                  <span>{instance.title}</span>
-                                  <span className="text-muted-foreground text-xs">
-                                    {instance.host}
-                                  </span>
-                                </div>
-                                <span className="ml-auto">
-                                  <ConnectionStatusBadge
-                                    status={instance.authStatus}
+                          {activeInstance ? (
+                            <div className="flex min-w-0 items-center gap-3">
+                              {activeInstance.thumbnail ? (
+                                <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-white">
+                                  <Image
+                                    alt={activeInstance.title}
+                                    className="object-cover"
+                                    fill
+                                    src={activeInstance.thumbnail}
+                                    unoptimized
                                   />
+                                </div>
+                              ) : null}
+                              <div className="flex flex-col text-left">
+                                <span>{activeInstance.title}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  {activeInstance.host}
                                 </span>
                               </div>
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              {t("noPublicInstances")}
+                            </span>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="start"
+                        className=""
+                        style={{ width: "var(--radix-popper-anchor-width)" }}
+                      >
+                        {(instances ?? []).map((instance) => (
+                          <DropdownMenuItem
+                            className="w-full"
+                            key={instance.host}
+                            onSelect={() => handleInstanceSelect(instance)}
+                          >
+                            <div className="flex w-full items-center gap-3">
+                              {instance.thumbnail ? (
+                                <div className="relative h-8 w-8 overflow-hidden rounded-sm bg-muted">
+                                  <Image
+                                    alt={instance.title}
+                                    className="object-cover"
+                                    fill
+                                    src={instance.thumbnail}
+                                    unoptimized
+                                  />
+                                </div>
+                              ) : null}
+                              <div className="flex flex-1 flex-col text-left">
+                                <span>{instance.title}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  {instance.host}
+                                </span>
+                              </div>
+                              <span className="ml-auto">
+                                <ConnectionStatusBadge
+                                  status={instance.authStatus}
+                                />
+                              </span>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1">
                     {activeInstance && !isLoginDisabled ? (
-                      <div className="absolute top-1/2 right-2 -translate-y-1/2">
-                        <ConnectInstanceDialog
-                          host={activeInstance.host}
-                          instanceThumbnail={activeInstance.thumbnail}
-                          instanceTitle={activeInstance.title}
-                          onStatusChange={() => {
-                            refetchInstances();
-                          }}
-                          triggerClassName="h-8 border-border px-2.5"
-                          triggerVariant="outline"
-                        />
-                      </div>
+                      <ConnectInstanceDialog
+                        host={activeInstance.host}
+                        instanceThumbnail={activeInstance.thumbnail}
+                        instanceTitle={activeInstance.title}
+                        onStatusChange={() => {
+                          refetchInstances();
+                        }}
+                        triggerClassName="h-8 border-border px-2.5"
+                        triggerVariant="outline"
+                      />
                     ) : null}
+                    <ChevronDown className="size-4 text-muted-foreground" />
                   </div>
                 </div>
-                <div className="flex flex-1 flex-col gap-2">
-                  <Label htmlFor="search">{t("searchVideosLabel")}</Label>
-                  <Input
-                    className="h-12 text-md"
-                    id="search"
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder={t("searchVideosPlaceholder")}
-                    type="search"
-                    value={query}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter className="mt-4 flex justify-end">
-                <Button disabled={!query.trim()} size="lg" type="submit">
-                  <IconSearch className="size-4 shrink-0" />
-                  {t("searchVideosSubmit")}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </div>
-      )}
+              </div>
+              <div className="flex flex-1 flex-col gap-2">
+                <Label htmlFor="search">{t("searchVideosLabel")}</Label>
+                <Input
+                  className="h-12 text-md"
+                  id="search"
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("searchVideosPlaceholder")}
+                  type="search"
+                  value={query}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="mt-4 flex justify-end">
+              <Button disabled={!query.trim()} size="lg" type="submit">
+                <IconSearch className="size-4 shrink-0" />
+                {t("searchVideosSubmit")}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
 
-      {submittedSearch && importStage.kind !== "progress" && (
+      {submittedSearch && (
         <div className="w-full border-r md:h-[calc(100vh-5rem)] md:w-1/2">
           <PeerTubeSearchResults
             baseUrl={activeInstance?.host ?? ""}
@@ -270,18 +269,6 @@ export default function ImportSearchPage() {
             onCancel={handleCancelOptions}
             onSuccess={handleBatchSubmit}
             selectedVideos={importStage.videos}
-          />
-        </div>
-      )}
-
-      {importStage.kind === "progress" && (
-        <div className="w-full">
-          <BatchImportStatus
-            accepted={importStage.accepted}
-            folderId={importStage.folderId}
-            isPublic={importStage.isPublic}
-            onDone={handleBatchDone}
-            rejected={importStage.rejected}
           />
         </div>
       )}
