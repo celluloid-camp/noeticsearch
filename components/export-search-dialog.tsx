@@ -20,6 +20,7 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
+import { useTranslations } from "next-intl";
 
 type ExportFormat = "csv" | "ods";
 
@@ -65,23 +66,41 @@ function escapeCsv(value: string): string {
   return value;
 }
 
-const EXPORT_HEADERS = ["Video Title", "Start", "End", "Text"] as const;
+const EXPORT_HEADERS = [
+  "Video Title",
+  "Video URL",
+  "Start",
+  "End",
+  "Text",
+  "Language",
+  "Accuracy",
+] as const;
 
 type ExportRow = Record<(typeof EXPORT_HEADERS)[number], string>;
 
 function buildExportRows(captionResults: CaptionResult[]): ExportRow[] {
   const rows: ExportRow[] = [];
 
-  for (const video of captionResults) {
-    for (const caption of video.captions ?? []) {
+  const sorted = [...captionResults].sort((a, b) =>
+    (a.videoTitle || "Untitled").localeCompare(b.videoTitle || "Untitled")
+  );
+
+  for (const video of sorted) {
+    const sortedCaptions = [...(video.captions ?? [])].sort(
+      (a, b) => a.startTime - b.startTime
+    );
+    for (const caption of sortedCaptions) {
       const text =
         typeof caption.headline === "string" ? caption.headline : caption.text;
       const plainText = text.replace(/<[^>]*>/g, "");
       rows.push({
         "Video Title": video.videoTitle || "Untitled",
+        "Video URL": video.videoUrl ?? "",
         Start: formatTimestamp(caption.startTime),
         End: formatTimestamp(caption.endTime),
         Text: plainText,
+        Language: caption.language ?? "",
+        Accuracy: String(caption.accuracy ?? ""),
       });
     }
   }
@@ -95,8 +114,10 @@ export function ExportSearchDialog({
   searchId,
   searchTitle,
 }: ExportSearchDialogProps) {
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<ExportFormat>("csv");
+  const [isPending, setIsPending] = useState(false);
 
   const baseName = `search-${(searchTitle ?? searchId).replace(/[^a-zA-Z0-9-_]/g, "-")}-${new Date().toISOString().slice(0, 10)}`;
   const hasResults = captionResults.length > 0;
@@ -104,29 +125,37 @@ export function ExportSearchDialog({
   const handleExport = () => {
     const rows = buildExportRows(captionResults);
     if (rows.length === 0) {
-      toast.error("No data to export");
+      toast.error(t("search.exportNoData"));
       return;
     }
 
-    if (format === "csv") {
-      const headerLine = EXPORT_HEADERS.map(escapeCsv).join(",");
-      const dataLines = rows.map((row) =>
-        EXPORT_HEADERS.map((k) => escapeCsv(row[k] ?? "")).join(",")
-      );
-      const csv = [headerLine, ...dataLines].join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      downloadBlob(blob, `${baseName}.csv`);
-    } else {
-      const ws = XLSX.utils.json_to_sheet(rows, {
-        header: [...EXPORT_HEADERS],
-      });
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Search Results");
-      XLSX.writeFile(wb, `${baseName}.ods`, { bookType: "ods" });
-    }
+    setIsPending(true);
+    try {
+      if (format === "csv") {
+        const BOM = "\uFEFF";
+        const headerLine = EXPORT_HEADERS.map(escapeCsv).join(",");
+        const dataLines = rows.map((row) =>
+          EXPORT_HEADERS.map((k) => escapeCsv(row[k] ?? "")).join(",")
+        );
+        const csv = BOM + [headerLine, ...dataLines].join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        downloadBlob(blob, `${baseName}.csv`);
+      } else {
+        const ws = XLSX.utils.json_to_sheet(rows, {
+          header: [...EXPORT_HEADERS],
+        });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Search Results");
+        XLSX.writeFile(wb, `${baseName}.ods`, { bookType: "ods" });
+      }
 
-    toast.success("Search exported");
-    setOpen(false);
+      toast.success(t("search.exportSuccess"));
+      setOpen(false);
+    } catch {
+      toast.error(t("search.exportFailed"));
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -136,16 +165,13 @@ export function ExportSearchDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconDownload className="size-4" />
-            Export search
+            {t("search.exportTitle")}
           </DialogTitle>
-          <DialogDescription>
-            Export search results as a spreadsheet. Choose your preferred
-            format.
-          </DialogDescription>
+          <DialogDescription>{t("search.exportDescription")}</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-center gap-2">
           <Label className="shrink-0" htmlFor="export-format">
-            Format
+            {t("search.exportFormatLabel")}
           </Label>
           <NativeSelect
             id="export-format"
@@ -159,11 +185,19 @@ export function ExportSearchDialog({
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline">
-              Close
+              {t("search.exportClose")}
             </Button>
           </DialogClose>
-          <Button disabled={!hasResults} onClick={handleExport} type="button">
-            Export
+          <Button
+            aria-busy={isPending}
+            disabled={!hasResults || isPending}
+            onClick={handleExport}
+            type="button"
+          >
+            {isPending ? (
+              <IconDownload aria-hidden className="size-4 animate-pulse" />
+            ) : null}
+            {isPending ? t("common.loading") : t("search.exportAction")}
           </Button>
         </DialogFooter>
       </DialogContent>
