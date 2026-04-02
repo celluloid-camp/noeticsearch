@@ -60,7 +60,15 @@
     "selectVideo": "Please select at least one video",
     "openVideo": "Open {title}",
     "changeScope": "Change search scope",
-    "resultsFound": "{count, plural, one {# result found} other {# results found}}"
+    "resultsFound": "{count, plural, one {# result found} other {# results found}}",
+    "exportTitle": "Export search results",
+    "exportDescription": "Export search results as a spreadsheet. Choose your preferred format.",
+    "exportFormatLabel": "Format",
+    "exportAction": "Export",
+    "exportClose": "Close",
+    "exportSuccess": "Search exported successfully",
+    "exportNoData": "No data to export",
+    "exportFailed": "Export failed"
   },
   "video": {
     "peerTube": "PeerTube Video",

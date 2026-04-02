@@ -60,7 +60,15 @@
     "selectVideo": "Veuillez sélectionner au moins une vidéo",
     "openVideo": "Ouvrir {title}",
     "changeScope": "Modifier le périmètre de recherche",
-    "resultsFound": "{count, plural, one {# résultat trouvé} other {# résultats trouvés}}"
+    "resultsFound": "{count, plural, one {# résultat trouvé} other {# résultats trouvés}}",
+    "exportTitle": "Exporter les résultats",
+    "exportDescription": "Exportez les résultats de recherche sous forme de tableur. Choisissez votre format préféré.",
+    "exportFormatLabel": "Format",
+    "exportAction": "Exporter",
+    "exportClose": "Fermer",
+    "exportSuccess": "Recherche exportée avec succès",
+    "exportNoData": "Aucune donnée à exporter",
+    "exportFailed": "Échec de l'export"
   },
   "video": {
     "peerTube": "Vidéo PeerTube",
