@@ -347,6 +347,46 @@ export const searchRouter = router({
     return searchHistories;
   }),
 
+  mineExpanded: protectedProcedure.query(async ({ ctx }) => {
+    const searchHistories = await ctx.db.query.searchHistoryTable.findMany({
+      where: eq(searchHistoryTable.userId, ctx.user.id),
+      columns: {
+        id: true,
+        title: true,
+        createdAt: true,
+        keywords: true,
+      },
+      with: {
+        user: {
+          columns: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        },
+        results: {
+          limit: 10,
+          columns: {
+            id: true,
+            videoId: true,
+            captionId: true,
+          },
+          with: {
+            video: {
+              columns: {
+                id: true,
+                title: true,
+                thumbnail: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [desc(searchHistoryTable.createdAt)],
+    });
+    return searchHistories;
+  }),
+
   update: protectedProcedure
     .input(
       z.object({

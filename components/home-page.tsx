@@ -1,13 +1,10 @@
 "use client";
 
-import { Globe, PlayCircle, Plus, Search } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import ReactPlayer from "react-player";
-import OurIcon from "@/components/icons/ouricon";
 import { PublicSearchesGrid } from "@/components/public-searches-grid";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -24,12 +21,13 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { useSession } from "@/lib/auth-client";
+import { HomeHero } from "./home-hero";
 import { GridPattern } from "./ui/grid-pattern";
 
-export function HeroCard() {
+export function HomePage() {
+  const t = useTranslations("hero");
   const { data: session } = useSession();
   const isSignedIn = !!session?.user;
-  const t = useTranslations("hero");
   const tutorialUrl = "https://peertube.example.com/w/tutorial-search";
   const corpusTutorialUrl = "https://peertube.example.com/w/tutorial-corpus";
 
@@ -44,71 +42,8 @@ export function HeroCard() {
         y={-1}
       />
       <div className="relative z-10 mx-auto min-h-full w-full max-w-4xl border-x bg-background py-8">
-        {/* Header block */}
-        <div className="mb-10 border-border border-b pb-8">
-          <div className="px-10">
-            <div className="mb-4 flex items-center gap-2">
-              <OurIcon />
-              <span className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
-                {t("brand")}
-              </span>
-            </div>
+        <HomeHero />
 
-            <h1 className="font-bold text-3xl tracking-tight sm:text-4xl md:text-5xl">
-              {t("title")}
-              <br />
-              <span className="text-muted-foreground">{t("subtitle")}</span>
-            </h1>
-
-            <div className="mt-5 max-w-3xl space-y-4 pt-2 text-sm leading-relaxed sm:text-base">
-              <div>
-                <h2 className="font-semibold text-foreground text-sm sm:text-base">
-                  {t("whatIsTitle")}
-                </h2>
-                <p className="text-muted-foreground">
-                  {t("whatIsDescription")}
-                </p>
-              </div>
-            </div>
-
-            {/* CTAs */}
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              {isSignedIn ? (
-                <>
-                  <Button asChild size="lg">
-                    <Link href="/import">
-                      <Plus className="mr-1.5 size-3.5" />
-                      {t("addCorpus")}
-                    </Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline">
-                    <Link href="/search">
-                      <Search className="mr-1.5 size-3.5" />
-                      {t("advancedSearch")}
-                    </Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button asChild size="sm">
-                    <Link href="/sign-up">{t("getStarted")}</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link href="/sign-in">{t("signIn")}</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href="/library/all">
-                      <Globe className="mr-1.5 size-3.5" />
-                      {t("browsePublicLibrary")}
-                    </Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Tutorial cards */}
         <div className="mb-10 border-border border-b px-10 pb-10">
           <div className="mb-6 space-y-2 text-xs leading-relaxed sm:text-sm">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">
@@ -130,7 +65,6 @@ export function HeroCard() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Corpus tutorial card */}
             <Dialog>
               <DialogTrigger asChild>
                 <button className="w-full text-left" type="button">
@@ -175,7 +109,6 @@ export function HeroCard() {
               </DialogContent>
             </Dialog>
 
-            {/* Search tutorial card */}
             <Dialog>
               <DialogTrigger asChild>
                 <button className="w-full text-left" type="button">
@@ -198,9 +131,7 @@ export function HeroCard() {
                       <ItemHeader>
                         <ItemTitle>{t("tutorialTitle")}</ItemTitle>
                       </ItemHeader>
-                      <ItemDescription>
-                        {t("tutorialDescription")}
-                      </ItemDescription>
+                      <ItemDescription>{t("tutorialDescription")}</ItemDescription>
                     </ItemContent>
                   </Item>
                 </button>
@@ -222,7 +153,7 @@ export function HeroCard() {
           </div>
         </div>
 
-        <PublicSearchesGrid />
+        {isSignedIn ? <PublicSearchesGrid mode="mine" /> : null}
 
         <div className="px-10 pb-10">
           <div className="mb-4 border-border border-t pt-6">

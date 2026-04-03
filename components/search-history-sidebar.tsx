@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, Search, Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTRPC } from "@/lib/trpc/client";
-import { Button } from "./ui/button";
 
 export function MySearchSidebar() {
   const t = useTranslations("sidebar");
@@ -78,16 +77,6 @@ export function MySearchSidebar() {
 
   return (
     <SidebarGroup>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <Button asChild className="w-full" variant="secondary">
-            <Link href="/search">
-              <PlusIcon className="size-4" />
-              <span>{t("newSearch")}</span>
-            </Link>
-          </Button>
-        </SidebarMenuItem>
-      </SidebarMenu>
       <SidebarGroupLabel>{t("mySearches")}</SidebarGroupLabel>
       <SidebarGroupContent>
         {isLoadingSearches ? (

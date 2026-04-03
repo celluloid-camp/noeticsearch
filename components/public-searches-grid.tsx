@@ -18,7 +18,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRelativeTime } from "@/hooks/use-relative-time";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 
-type SearchItem = RouterOutput["search"]["publicExpanded"][number];
+type PublicSearchItem = RouterOutput["search"]["publicExpanded"][number];
+type MineSearchItem = RouterOutput["search"]["mineExpanded"][number];
+type SearchItem = PublicSearchItem | MineSearchItem;
 
 type ThumbnailItem = NonNullable<SearchItem["results"][number]["video"]>;
 
@@ -159,12 +161,24 @@ function SearchCardSkeleton() {
   );
 }
 
-export function PublicSearchesGrid() {
+interface PublicSearchesGridProps {
+  mode?: "mine" | "public";
+}
+
+export function PublicSearchesGrid({ mode = "public" }: PublicSearchesGridProps) {
   const api = useTRPC();
   const t = useTranslations("hero");
-  const { data: searches, isLoading } = useQuery(
-    api.search.publicExpanded.queryOptions()
+  const tSearch = useTranslations("search");
+  const { data: publicSearches, isLoading: isLoadingPublic } = useQuery(
+    api.search.publicExpanded.queryOptions(),
   );
+  const { data: mineSearches, isLoading: isLoadingMine } = useQuery({
+    ...api.search.mineExpanded.queryOptions(),
+    enabled: mode === "mine",
+  });
+
+  const searches = mode === "mine" ? (mineSearches ?? []) : (publicSearches ?? []);
+  const isLoading = mode === "mine" ? isLoadingMine : isLoadingPublic;
 
   const isEmpty = !isLoading && (!searches || searches.length === 0);
 
@@ -172,7 +186,7 @@ export function PublicSearchesGrid() {
     <div className="mt-10 px-10">
       <div className="mb-4 flex items-center gap-2">
         <h2 className="font-semibold text-sm tracking-tight">
-          {t("publicSearchesTitle")}
+          {mode === "mine" ? tSearch("mySearches") : t("publicSearchesTitle")}
         </h2>
         {!isLoading && searches && searches.length > 0 && (
           <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-muted-foreground text-xs">

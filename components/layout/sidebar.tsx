@@ -1,6 +1,6 @@
 "use client";
 
-import { IconVideo, IconWorld } from "@tabler/icons-react";
+import { IconVideo } from "@tabler/icons-react";
 import { LogOut, PlusIcon, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -32,7 +32,6 @@ import {
 } from "@/components/ui/sidebar";
 import { signOut, useSession } from "@/lib/auth-client";
 import OurIcon from "../icons/ouricon";
-import { PublicSearchSidebar } from "../public-search-sidebar";
 
 export function MainSidebar() {
   const pathname = usePathname();
@@ -45,6 +44,8 @@ export function MainSidebar() {
 
   const isLoggedIn = !!session?.user;
   const isExpanded = state === "expanded";
+  const importHref = isLoggedIn ? "/import" : "/sign-in";
+  const searchHref = isLoggedIn ? "/search" : "/sign-in";
 
   const getActiveTab = (): "all" | "public" | "mine" => {
     if (pathname === "/library/public") {
@@ -91,21 +92,31 @@ export function MainSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {isLoggedIn ? <MySearchSidebar /> : null}
-        <PublicSearchSidebar />
-
         <SidebarGroup>
-          {isLoggedIn ? (
+          <SidebarMenu>
             <SidebarMenuItem>
               <Button asChild className="w-full" variant="secondary">
-                <Link href="/import">
+                <Link href={importHref}>
                   <PlusIcon className="size-4" />
                   <span>{t("nav.addVideo")}</span>
                 </Link>
               </Button>
             </SidebarMenuItem>
-          ) : null}
 
+            <SidebarMenuItem>
+              <Button asChild className="w-full" variant="secondary">
+                <Link href={searchHref}>
+                  <PlusIcon className="size-4" />
+                  <span>{t("nav.newSearch")}</span>
+                </Link>
+              </Button>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+
+        {isLoggedIn ? <MySearchSidebar /> : null}
+
+        <SidebarGroup>
           <SidebarGroupLabel>{t("nav.library")}</SidebarGroupLabel>
 
           <SidebarMenu>
@@ -136,18 +147,6 @@ export function MainSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ) : null}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={activeTab === "public"}
-                tooltip={t("nav.publicVideos")}
-              >
-                <Link href="/library/public">
-                  <IconWorld className="size-4" />
-                  <span>{t("nav.publicVideos")}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
