@@ -165,19 +165,22 @@ interface PublicSearchesGridProps {
   mode?: "mine" | "public";
 }
 
-export function PublicSearchesGrid({ mode = "public" }: PublicSearchesGridProps) {
+export function PublicSearchesGrid({
+  mode = "public",
+}: PublicSearchesGridProps) {
   const api = useTRPC();
   const t = useTranslations("hero");
   const tSearch = useTranslations("search");
   const { data: publicSearches, isLoading: isLoadingPublic } = useQuery(
-    api.search.publicExpanded.queryOptions(),
+    api.search.publicExpanded.queryOptions()
   );
   const { data: mineSearches, isLoading: isLoadingMine } = useQuery({
     ...api.search.mineExpanded.queryOptions(),
     enabled: mode === "mine",
   });
 
-  const searches = mode === "mine" ? (mineSearches ?? []) : (publicSearches ?? []);
+  const searches =
+    mode === "mine" ? (mineSearches ?? []) : (publicSearches ?? []);
   const isLoading = mode === "mine" ? isLoadingMine : isLoadingPublic;
 
   const isEmpty = !isLoading && (!searches || searches.length === 0);

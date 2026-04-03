@@ -131,7 +131,9 @@ export function HomePage() {
                       <ItemHeader>
                         <ItemTitle>{t("tutorialTitle")}</ItemTitle>
                       </ItemHeader>
-                      <ItemDescription>{t("tutorialDescription")}</ItemDescription>
+                      <ItemDescription>
+                        {t("tutorialDescription")}
+                      </ItemDescription>
                     </ItemContent>
                   </Item>
                 </button>
