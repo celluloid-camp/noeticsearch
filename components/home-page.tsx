@@ -158,12 +158,7 @@ export function HomePage() {
         {isSignedIn ? <PublicSearchesGrid mode="mine" /> : null}
 
         <div className="px-10 pb-10">
-          <div className="mb-4 border-border border-t pt-6">
-            <h2 className="font-semibold text-foreground text-sm">
-              {t("usedByTitle")}
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <a
               className="flex items-center justify-center rounded-md bg-background px-4 py-3 transition-colors hover:bg-muted/40"
               href="https://eur-artec.fr/"
@@ -172,10 +167,9 @@ export function HomePage() {
             >
               <Image
                 alt="EUR ArTeC"
-                className="h-9 w-full object-contain dark:brightness-0 dark:invert"
-                height={36}
-                src="https://eur-artec.fr/wp-content/themes/eur-artec/img/logo/main-blue.png"
-                unoptimized
+                className="h-12 w-full object-contain dark:brightness-0 dark:invert"
+                height={48}
+                src="/loog-artec.png"
                 width={200}
               />
             </a>
@@ -187,10 +181,37 @@ export function HomePage() {
             >
               <Image
                 alt="MSH Paris Nord"
-                className="h-9 w-full object-contain"
-                height={36}
-                src="https://www.mshparisnord.fr/wp-content/uploads/2025/07/logo-MSH-Paris-Nord-2025.png"
-                unoptimized
+                className="h-12 w-full object-contain"
+                height={48}
+                src="/logo-msh-paris-nord.png"
+                width={200}
+              />
+            </a>
+            <a
+              className="flex items-center justify-center rounded-md bg-background px-4 py-3 transition-colors hover:bg-muted/40"
+              href="https://oscars-project.eu/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                alt="OSCARS"
+                className="h-12 w-full rounded object-contain dark:bg-white dark:p-0.5"
+                height={48}
+                src="/logo-oscars.jpg"
+                width={200}
+              />
+            </a>
+            <a
+              className="flex items-center justify-center rounded-md bg-background px-4 py-3 transition-colors hover:bg-muted/40"
+              href="https://www.univ-paris8.fr/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                alt="Université Paris 8"
+                className="h-12 w-full object-contain dark:brightness-0 dark:invert"
+                height={48}
+                src="/logo-paris8.png"
                 width={200}
               />
             </a>
@@ -202,13 +223,35 @@ export function HomePage() {
             >
               <Image
                 alt="ICP"
-                className="h-9 w-full object-contain dark:brightness-0 dark:invert"
-                height={36}
-                src="https://www.icp.fr/uas/ICP/LOGO_FOOTER/RVB_ICP-Logo-siteicp_500px.png"
-                unoptimized
+                className="h-12 w-full object-contain dark:brightness-0 dark:invert"
+                height={48}
+                src="/logo-icp.png"
                 width={200}
               />
             </a>
+            <a
+              className="flex items-center justify-center rounded-md bg-background px-4 py-3 transition-colors hover:bg-muted/40"
+              href="https://www.univ-lorraine.fr/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                alt="Université de Lorraine"
+                className="h-12 w-full rounded object-contain dark:bg-white/90 dark:p-0.5"
+                height={48}
+                src="/Logo-ul.png"
+                width={200}
+              />
+            </a>
+          </div>
+          <div className="mt-3 flex justify-center rounded-md bg-background px-4 py-3">
+            <Image
+              alt="Funded by the European Union"
+              className="h-14 object-contain"
+              height={56}
+              src="/logo-eu_funded_en.png"
+              width={300}
+            />
           </div>
         </div>
       </div>

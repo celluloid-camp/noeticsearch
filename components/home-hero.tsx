@@ -11,6 +11,7 @@ export function HomeHero() {
   const { data: session } = useSession();
   const isSignedIn = !!session?.user;
   const t = useTranslations("hero");
+  const subtitle = t("subtitle");
 
   return (
     <div className="mb-10 border-border border-b pb-8">
@@ -24,8 +25,12 @@ export function HomeHero() {
 
         <h1 className="font-bold text-3xl tracking-tight sm:text-4xl md:text-5xl">
           {t("title")}
-          <br />
-          <span className="text-muted-foreground">{t("subtitle")}</span>
+          {subtitle ? (
+            <>
+              <br />
+              <span className="text-muted-foreground">{subtitle}</span>
+            </>
+          ) : null}
         </h1>
 
         <div className="mt-5 max-w-3xl space-y-4 pt-2 text-sm leading-relaxed sm:text-base">

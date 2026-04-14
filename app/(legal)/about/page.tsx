@@ -1,17 +1,70 @@
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { StaticPageLayout } from "@/components/static-page-layout";
 
 export default async function AboutPage() {
+  const t = await getTranslations("aboutLegal");
+
   return (
     <StaticPageLayout>
       {/* Header */}
       <div className="border-b px-10 py-8">
-        <h1 className="font-bold text-3xl tracking-tight sm:text-4xl">About</h1>
-
-        <p className="mt-4 max-w-lg text-muted-foreground text-sm leading-relaxed sm:text-base">
-          NoeticSearch is a video transcript search platform. Import PeerTube
-          videos, query their subtitles with AI, and find exact quotes across
-          your library.
+        <h1 className="font-bold text-3xl tracking-tight sm:text-4xl">
+          {t("title")}
+        </h1>
+      </div>
+      <div className="px-10 py-8">
+        <p>
+          {t.rich("paragraph1", {
+            artec: (chunks) => (
+              <Link
+                className="underline"
+                href="https://www.univ-paris8.fr/eur-artec"
+                rel="noreferrer"
+                target="_blank"
+              >
+                {chunks}
+              </Link>
+            ),
+            oasis: (chunks) => (
+              <Link
+                className="underline"
+                href="https://oscars-project.eu/projects/oasis-open-audiovisual-science-innovation-scheme"
+                rel="noreferrer"
+                target="_blank"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
+        <br />
+        <p>
+          {t.rich("paragraph2", {
+            younes: (chunks) => (
+              <Link
+                className="underline"
+                href="https://www.linkedin.com/in/younes0x53/"
+                rel="noreferrer"
+                target="_blank"
+              >
+                {chunks}
+              </Link>
+            ),
+            github: (chunks) => (
+              <Link
+                className="underline"
+                href="https://github.com/celluloid-camp/"
+                rel="noreferrer"
+                target="_blank"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+
+        <p>{t("paragraph3")}</p>
       </div>
     </StaticPageLayout>
   );

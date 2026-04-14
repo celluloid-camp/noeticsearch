@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton as BoneyardSkeleton } from "boneyard-js/react";
 import { Clock, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -214,15 +215,30 @@ export function PublicSearchesGrid({
           </EmptyContent>
         </Empty>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {isLoading
-            ? Array.from({ length: 6 }).map((_, i) => (
+        <BoneyardSkeleton
+          fallback={
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
                 <SearchCardSkeleton key={i} />
-              ))
-            : searches?.map((search) => (
-                <SearchCard key={search.id} search={search} />
               ))}
-        </div>
+            </div>
+          }
+          fixture={
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SearchCardSkeleton key={i} />
+              ))}
+            </div>
+          }
+          loading={isLoading}
+          name="searches-grid"
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {searches?.map((search) => (
+              <SearchCard key={search.id} search={search} />
+            ))}
+          </div>
+        </BoneyardSkeleton>
       )}
     </div>
   );

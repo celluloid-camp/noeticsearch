@@ -18,7 +18,8 @@
     "db:seed": "bun run db/seed.ts",
     "workflow:web": "workflow web --noBrowser",
     "auth:generate": "bun x auth@latest generate --output ./db/schema/auth.ts -y",
-    "deploy": "bun run db:migrate && bun run db:seed && bun run build"
+    "deploy": "bun run db:migrate && bun run db:seed && bun run build",
+    "boneyard:build": "boneyard-js build http://localhost:3000 --out ./bones"
   },
   "dependencies": {
     "@ai-sdk/mistral": "^3.0.20",
@@ -52,6 +53,7 @@
     "agentation": "^2.2.1",
     "ai": "^6.0.94",
     "autoprefixer": "^10.4.20",
+    "boneyard-js": "^1.7.1",
     "better-auth": "1.4.19",
     "better-auth-localization": "^2.3.1",
     "class-variance-authority": "^0.7.1",

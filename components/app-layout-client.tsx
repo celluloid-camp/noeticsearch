@@ -1,3 +1,4 @@
+import { BonesRegistryLoader } from "@/components/bones-registry-loader";
 import {
   SidebarInset,
   SidebarProvider,
@@ -14,6 +15,7 @@ interface AppLayoutClientProps {
 export default function AppLayoutClient({ children }: AppLayoutClientProps) {
   return (
     <SidebarProvider>
+      <BonesRegistryLoader />
       <div className="flex h-dvh w-full overflow-hidden">
         <MainSidebar />
         <SidebarInset className="overflow-hidden">

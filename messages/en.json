@@ -295,8 +295,8 @@
   },
   "hero": {
     "brand": "noeticsearch",
-    "title": "Search inside",
-    "subtitle": "any video.",
+    "title": "Generate and explore the text of your video corpora",
+    "subtitle": "",
     "description": "Find exact quotes, terms, and references across video transcripts with precision.",
     "whatIsTitle": "What is NoeticSearch?",
     "whatIsDescription": "An application to perform keyword searches across one or more digital audiovisual documents. The application can generate video transcripts, search terms and references in those transcripts with precision, and extract citations from them.",
@@ -336,6 +336,12 @@
     "feature3Description": "Our assistant understands natural-language queries and finds the most relevant transcript segments across your entire library.",
     "footerText": "Read our",
     "privacyPolicy": "Privacy Policy"
+  },
+  "aboutLegal": {
+    "title": "About",
+    "paragraph1": "NoeticSearch is developed under the leadership of Anne Alombert (Paris 8 University), Michaël Bourgatte (University of Lorraine), and Laurent Tessier (ICP), as part of a collaboration between the <artec>ArTeC \"Ecologies dismédiatiques du numérique\" project</artec> and the OASIS project <oasis>(Open Audiovisual Science Innovation Schemes)</oasis>.",
+    "paragraph2": "NoeticSearch is developed by <younes>Younès Benomar</younes> and hosted on Huma-Num servers. Noetic Search code is free and open source. It is available on <github>GitHub</github> Heritage.",
+    "paragraph3": "For automatic transcription, the application relies on Mistral AI's language model."
   },
   "privacy": {
     "title": "Privacy",
