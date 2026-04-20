@@ -1,6 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { videoTable } from "./videos";
 
 export type TranscriptionStatus =
@@ -22,6 +22,7 @@ export const transcriptionsTable = pgTable("transcriptions", {
     .$type<TranscriptionStatus>()
     .notNull()
     .default("pending"),
+  progress: integer("progress").notNull().default(0),
   error: text("error"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

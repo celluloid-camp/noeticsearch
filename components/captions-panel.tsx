@@ -486,11 +486,21 @@ export function CaptionsPanel({
     if (targetCaptionIndex < 0) {
       return;
     }
+    const caption = allCaptions[targetCaptionIndex];
     const id = setTimeout(() => {
       scrollToCaptionIndex(targetCaptionIndex);
+      if (caption) {
+        dispatch({
+          type: MediaActionTypes.MEDIA_SEEK_REQUEST,
+          detail: caption.startTime,
+        });
+        dispatch({
+          type: MediaActionTypes.MEDIA_PLAY_REQUEST,
+        });
+      }
     }, 100);
     return () => clearTimeout(id);
-  }, [targetCaptionIndex, scrollToCaptionIndex]);
+  }, [targetCaptionIndex, scrollToCaptionIndex, allCaptions, dispatch]);
 
   // Auto-scroll as playback progresses
   const prevCaptionIndexRef = useRef(-1);

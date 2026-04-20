@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/lib/auth-client";
 import { toggleImportProcessDrawer } from "@/lib/import-process-events";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
+import { formatDuration } from "@/lib/utils";
 import { Button } from "./ui/button";
 
 interface VideoCatalogProps {
@@ -90,6 +91,11 @@ function VideoCard({
               </Button>
             </AddToFolderDialog>
           </div>
+        )}
+        {video.duration != null && video.duration > 0 && (
+          <span className="absolute right-1.5 bottom-1.5 rounded bg-black/80 px-1.5 py-0.5 font-mono text-[11px] text-white leading-none">
+            {formatDuration(video.duration)}
+          </span>
         )}
       </div>
       <CardContent className="px-4 pt-0 pb-4">

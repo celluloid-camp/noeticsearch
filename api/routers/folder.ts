@@ -127,6 +127,8 @@ export const folderRouter = router({
           author,
           authorAvatar,
           instanceName: instanceHost,
+          duration:
+            (row.videoDetails as { duration?: number }).duration ?? null,
         };
       };
 
