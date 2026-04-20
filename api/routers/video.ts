@@ -355,6 +355,7 @@ export const videoRouter = router({
           .update(transcriptionsTable)
           .set({
             status: "pending",
+            progress: 0,
             error: null,
             text: null,
             updatedAt: new Date(),
@@ -390,6 +391,7 @@ export const videoRouter = router({
           status: true,
           language: true,
           text: true,
+          progress: true,
           error: true,
           updatedAt: true,
         },
@@ -781,6 +783,8 @@ export const videoRouter = router({
           author,
           authorAvatar,
           instanceName: instanceHost,
+          duration:
+            (row.videoDetails as { duration?: number }).duration ?? null,
         };
       });
 

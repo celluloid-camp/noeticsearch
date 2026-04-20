@@ -10,18 +10,24 @@ const BATCH_SIZE = 50;
 export async function naturalizeCaptions(videoId: string) {
   "use workflow";
 
-  await updateTranscriptionStatus(videoId, "processing");
+  await updateTranscriptionStatus(videoId, "processing", 0);
 
   const captions = await fetchCaptions(videoId);
 
   if (captions.length === 0) {
-    await updateTranscriptionStatus(videoId, "completed");
+    await updateTranscriptionStatus(videoId, "completed", 100);
     return { videoId, status: "skipped", reason: "no captions" };
   }
 
   try {
     const languages = [...new Set(captions.map((c) => c.language))];
     const results: { language: string; status: string }[] = [];
+
+    const totalBatchesAllLangs = languages.reduce((sum, lang) => {
+      const langCaptions = captions.filter((c) => c.language === lang);
+      return sum + Math.ceil(langCaptions.length / BATCH_SIZE);
+    }, 0);
+    let completedBatches = 0;
 
     for (const language of languages) {
       const langCaptions = captions.filter((c) => c.language === language);
@@ -32,6 +38,12 @@ export async function naturalizeCaptions(videoId: string) {
         const batch = batches[i];
         const text = await naturalizeBatch(batch, language, i, batches.length);
         transcriptionParts.push(text);
+
+        completedBatches++;
+        const progress = Math.round(
+          (completedBatches / totalBatchesAllLangs) * 100
+        );
+        await updateTranscriptionStatus(videoId, "processing", progress);
 
         if (i < batches.length - 1) {
           await sleep("1s");
@@ -107,13 +119,18 @@ ${continuationNote}`,
 
 async function updateTranscriptionStatus(
   videoId: string,
-  status: "pending" | "processing" | "completed" | "failed"
+  status: "pending" | "processing" | "completed" | "failed",
+  progress?: number
 ) {
   "use step";
 
   await db
     .update(transcriptionsTable)
-    .set({ status, updatedAt: new Date() })
+    .set({
+      status,
+      ...(progress !== undefined && { progress }),
+      updatedAt: new Date(),
+    })
     .where(eq(transcriptionsTable.videoId, videoId));
 }
 

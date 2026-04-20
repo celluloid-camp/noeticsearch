@@ -146,7 +146,11 @@ export function Transcription({ videoId, canEdit }: TranscriptionProps) {
     <Card>
       <CardHeader>
         <CardTitle>{t("title")}</CardTitle>
-        <StatusDescription status={status} t={t} />
+        <StatusDescription
+          progress={transcription?.progress}
+          status={status}
+          t={t}
+        />
         <CardDescription>{t("explanation")}</CardDescription>
         {renderAction()}
       </CardHeader>
@@ -380,17 +384,22 @@ function FullscreenDialog({
 }
 
 function StatusDescription({
+  progress,
   status,
   t,
 }: {
+  progress: number | undefined;
   status: string | undefined;
   t: ReturnType<typeof useTranslations>;
 }) {
   if (status === "pending" || status === "processing") {
+    const showProgress =
+      status === "processing" && typeof progress === "number";
     return (
       <CardDescription className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
         <Loader2Icon className="size-3.5 animate-spin" />
         {t(status as "pending" | "processing")}
+        {showProgress && ` — ${progress}%`}
       </CardDescription>
     );
   }
