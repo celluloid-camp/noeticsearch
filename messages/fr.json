@@ -100,7 +100,7 @@
     "all": "Tout"
   },
   "captions": {
-    "transcription": "Transcription",
+    "transcription": "Transcription timecodée",
     "transcript": "Transcription",
     "search": "Recherche",
     "marked": "Marqué",
@@ -388,7 +388,7 @@
     "unexpectedError": "Une erreur inattendue s'est produite"
   },
   "transcription": {
-    "title": "Transcription lisible",
+    "title": "Transcription intégrale",
     "pending": "En attente",
     "processing": "Génération…",
     "completed": "Transcription prête",

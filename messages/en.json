@@ -100,7 +100,7 @@
     "all": "All"
   },
   "captions": {
-    "transcription": "Transcription",
+    "transcription": "Timed Transcription",
     "transcript": "Transcript",
     "search": "Search",
     "marked": "Marked",
@@ -388,7 +388,7 @@
     "unexpectedError": "An unexpected error occurred"
   },
   "transcription": {
-    "title": "Readable Transcript",
+    "title": "Full Transcription",
     "pending": "Pending",
     "processing": "Generating…",
     "completed": "Transcription ready",
