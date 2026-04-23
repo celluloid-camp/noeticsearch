@@ -51,7 +51,7 @@ export function HomeHero() {
                   {t("addCorpus")}
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
+              <Button asChild size="lg">
                 <Link href="/search">
                   <Search className="mr-1.5 size-3.5" />
                   {t("advancedSearch")}
