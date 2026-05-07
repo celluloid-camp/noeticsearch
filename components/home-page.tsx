@@ -243,6 +243,20 @@ export function HomePage() {
                 width={200}
               />
             </a>
+            <a
+              className="flex items-center justify-center rounded-md px-4 py-3 transition-colors hover:bg-muted/40"
+              href="https://organoesis.org/"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                alt="Organoesis"
+                className="h-12 w-full rounded object-contain dark:bg-white dark:p-0.5"
+                height={48}
+                src="/logo-organoesis.png"
+                width={200}
+              />
+            </a>
           </div>
           <div className="mt-3 flex justify-center rounded-md bg-background px-4 py-3">
             <Image
