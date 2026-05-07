@@ -1,1 +1,1 @@
-ALTER TABLE "transcriptions" ADD COLUMN "progress" integer DEFAULT 0 NOT NULL;
+ALTER TABLE "transcriptions" ADD COLUMN IF NOT EXISTS "progress" integer DEFAULT 0 NOT NULL;

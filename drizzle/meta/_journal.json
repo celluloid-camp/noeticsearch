@@ -43,6 +43,13 @@
       "when": 1776701984000,
       "tag": "0005_lonely_ma_gnuci",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778177712381,
+      "tag": "0006_amused_vapor",
+      "breakpoints": true
     }
   ]
 }

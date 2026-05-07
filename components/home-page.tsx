@@ -1,9 +1,9 @@
 "use client";
 
+import ReactPlayer from "@celluloid/react-player";
 import { PlayCircle } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import ReactPlayer from "react-player";
 import { PublicSearchesGrid } from "@/components/public-searches-grid";
 import {
   Dialog,

@@ -1,4 +1,5 @@
 import {
+  getApiV1UsersMeVideos,
   getVideo,
   getVideoCaptions,
   getVideoChapters,
@@ -77,11 +78,14 @@ export function buildPeerTubeWatchUrl(
 }
 
 /**
- * Validate and fetch video information from PeerTube using the client library
+ * Validate and fetch video information from PeerTube using the client library.
+ *
+ * Pass `accessToken` to fetch private/internal videos owned by the authenticated
+ * user. Pass `password` for password-protected videos.
  */
 export async function fetchPeerTubeVideoDetails(
   url: string,
-  options?: { password?: string }
+  options?: { password?: string; accessToken?: string }
 ) {
   const parsed = parsePeerTubeUrl(url);
   if (!parsed) {
@@ -89,7 +93,12 @@ export async function fetchPeerTubeVideoDetails(
   }
 
   const { baseUrl, videoId } = parsed;
-  const client = createClient({ baseUrl });
+  const client = createClient({
+    baseUrl,
+    ...(options?.accessToken
+      ? { headers: { Authorization: `Bearer ${options.accessToken}` } }
+      : {}),
+  });
 
   try {
     const headers =
@@ -197,16 +206,27 @@ function resolveCaptionUrl(
 }
 
 /**
- * Fetch and parse subtitles from PeerTube video
+ * Fetch and parse subtitles from PeerTube video.
+ *
+ * Pass `accessToken` so private/internal video caption files (which are
+ * gated behind auth) can be downloaded.
  */
 export async function parsePeerTubeVideoCaptions(
   url: string,
-  caption: VideoCaption & { captionPath?: string }
+  caption: VideoCaption & { captionPath?: string },
+  accessToken?: string
 ) {
   const baseUrl = parsePeerTubeUrl(url)?.baseUrl ?? "";
   const captionUrl = resolveCaptionUrl(caption, baseUrl);
   try {
-    const parsed = await parseResponse(fetch(captionUrl));
+    const parsed = await parseResponse(
+      fetch(
+        captionUrl,
+        accessToken
+          ? { headers: { Authorization: `Bearer ${accessToken}` } }
+          : undefined
+      )
+    );
 
     // Convert parsed captions to our format
     return parsed.cues.map((cue) => ({
@@ -232,9 +252,14 @@ export async function parsePeerTubeVideoCaptions(
 export async function fetchPeerTubeCaptionList(
   baseUrl: string,
   videoId: string,
-  options?: { password?: string }
+  options?: { password?: string; accessToken?: string }
 ) {
-  const client = createClient({ baseUrl });
+  const client = createClient({
+    baseUrl,
+    ...(options?.accessToken
+      ? { headers: { Authorization: `Bearer ${options.accessToken}` } }
+      : {}),
+  });
 
   try {
     const headers =
@@ -283,11 +308,14 @@ export async function fetchPeerTubeCaptionList(
 }
 
 /**
- * Fetch complete video information including caption list (metadata only)
+ * Fetch complete video information including caption list (metadata only).
+ *
+ * Pass `accessToken` to fetch private/internal videos owned by the
+ * authenticated user.
  */
 export async function fetchPeerTubeVideo(
   url: string,
-  options?: { password?: string }
+  options?: { password?: string; accessToken?: string }
 ) {
   const videoInfo = await fetchPeerTubeVideoDetails(url, options);
   const captions = await fetchPeerTubeCaptionList(
@@ -297,9 +325,14 @@ export async function fetchPeerTubeVideo(
   );
   const storyboard = await fetchStoryboard(
     videoInfo.baseUrl,
-    videoInfo.videoId
+    videoInfo.videoId,
+    options?.accessToken
   );
-  const chapters = await fetchChapters(videoInfo.baseUrl, videoInfo.videoId);
+  const chapters = await fetchChapters(
+    videoInfo.baseUrl,
+    videoInfo.videoId,
+    options?.accessToken
+  );
 
   return {
     ...videoInfo,
@@ -315,9 +348,15 @@ export async function fetchPeerTubeVideo(
  */
 export async function fetchStoryboard(
   baseUrl: string,
-  videoId: string
+  videoId: string,
+  accessToken?: string
 ): Promise<Storyboard | null> {
-  const client = createClient({ baseUrl });
+  const client = createClient({
+    baseUrl,
+    ...(accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : {}),
+  });
   const { data: storyboardData } = await listVideoStoryboards({
     client,
     path: { id: videoId },
@@ -331,8 +370,17 @@ export async function fetchStoryboard(
   return storyboard;
 }
 
-export async function fetchChapters(baseUrl: string, videoId: string) {
-  const client = createClient({ baseUrl });
+export async function fetchChapters(
+  baseUrl: string,
+  videoId: string,
+  accessToken?: string
+) {
+  const client = createClient({
+    baseUrl,
+    ...(accessToken
+      ? { headers: { Authorization: `Bearer ${accessToken}` } }
+      : {}),
+  });
   const { data: chaptersData } = await getVideoChapters({
     client,
     path: { id: videoId },
@@ -461,6 +509,76 @@ export async function searchPeerTubeVideos(
   }
   if (typeof data?.total !== "number" || !Array.isArray(data?.data)) {
     throw new Error("Invalid PeerTube search response");
+  }
+  return {
+    total: data.total ?? 0,
+    data: data.data ?? [],
+  };
+}
+
+export interface PeerTubeSearchPrivateVideosParams {
+  /** Page size (1–100). Default 15. */
+  count?: number;
+  /** Plain text search applied to the user's own videos. Optional. */
+  search?: string;
+  /** Sort key. Default -publishedAt. */
+  sort?: NonNullable<
+    NonNullable<Parameters<typeof getApiV1UsersMeVideos>[0]>["query"]
+  >["sort"];
+  /** Pagination offset. Default 0. */
+  start?: number;
+}
+
+const DEFAULT_PRIVATE_SORT: PeerTubeSearchPrivateVideosParams["sort"] =
+  "-publishedAt";
+
+/**
+ * List the authenticated user's own videos (including private/unlisted)
+ * on a PeerTube instance using `GET /api/v1/users/me/videos`.
+ *
+ * Unlike `searchPeerTubeVideos`, an `accessToken` is required because this
+ * endpoint always operates on the currently authenticated user.
+ */
+export async function searchPeerTubePrivateVideos(
+  baseUrl: string,
+  params: PeerTubeSearchPrivateVideosParams,
+  accessToken: string
+) {
+  const {
+    search,
+    start = 0,
+    count = DEFAULT_COUNT,
+    sort = DEFAULT_PRIVATE_SORT,
+  } = params;
+
+  if (!accessToken) {
+    throw new Error(
+      "An access token is required to list a user's private videos"
+    );
+  }
+
+  const client = createClient({
+    baseUrl: baseUrl.replace(/\/$/, ""),
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  const trimmedSearch = search?.trim();
+
+  const { data, error } = await getApiV1UsersMeVideos({
+    client,
+    query: {
+      ...(trimmedSearch ? { search: trimmedSearch } : {}),
+      start,
+      count: Math.min(100, Math.max(1, count)),
+      sort,
+    },
+  });
+
+  if (error) {
+    throw new Error(`PeerTube private search failed: ${String(error)}`);
+  }
+  if (typeof data?.total !== "number" || !Array.isArray(data?.data)) {
+    throw new Error("Invalid PeerTube private search response");
   }
   return {
     total: data.total ?? 0,

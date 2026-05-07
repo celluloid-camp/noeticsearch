@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { CreateFolderDialog } from "@/components/create-folder-dialog";
@@ -66,10 +66,26 @@ export function BatchImportOptionsForm({
     name: string;
   } | null>(null);
 
+  const hasNonShareableVideo = useMemo(
+    () =>
+      selectedVideos.some((v) => {
+        const id = v.privacy?.id ?? null;
+        // 3 = Private, 5 = Password protected
+        return id === 3 || id === 5;
+      }),
+    [selectedVideos]
+  );
+
   const form = useForm<BatchOptionsSchema>({
     resolver: zodResolver(batchOptionsSchema),
     defaultValues: { isPublic: false, folderId: "__none__" },
   });
+
+  useEffect(() => {
+    if (hasNonShareableVideo && form.getValues("isPublic")) {
+      form.setValue("isPublic", false, { shouldDirty: false });
+    }
+  }, [hasNonShareableVideo, form]);
 
   const { data: folders } = useQuery(api.folder.listMine.queryOptions());
   const folderOptions = [
@@ -178,12 +194,15 @@ export function BatchImportOptionsForm({
                       <div className="space-y-0.5">
                         <FormLabel>{t("publicVideo")}</FormLabel>
                         <FormDescription className="text-xs">
-                          {t("makeVideoVisibleDescription")}
+                          {hasNonShareableVideo
+                            ? t("makeVideoVisibleDisabledPrivate")
+                            : t("makeVideoVisibleDescription")}
                         </FormDescription>
                       </div>
                       <FormControl>
                         <Switch
-                          checked={field.value}
+                          checked={hasNonShareableVideo ? false : field.value}
+                          disabled={hasNonShareableVideo}
                           onCheckedChange={field.onChange}
                         />
                       </FormControl>

@@ -45,6 +45,9 @@ export const videoTable = pgTable(
       .notNull()
       .default(false),
     videoPassword: text("video_password"),
+    requiresInstanceAuth: boolean("requires_instance_auth")
+      .notNull()
+      .default(false),
   },
   (table) => [
     index("search_index").using(

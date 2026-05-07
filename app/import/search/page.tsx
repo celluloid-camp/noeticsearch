@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,11 +61,14 @@ export default function ImportSearchPage() {
 
   const activeInstance = selectedInstance ?? instances?.[0] ?? null;
   const isLoginDisabled = activeInstance?.isIndex ?? false;
+  const isInstanceConnected = activeInstance?.isConnected ?? false;
   const initialQ = searchParams.get("q")?.trim() ?? "";
   const [query, setQuery] = useState(initialQ);
   const [submittedSearch, setSubmittedSearch] = useState<string | null>(
     initialQ.length > 0 ? initialQ : null
   );
+  const [mineOnly, setMineOnly] = useState(false);
+  const [submittedMineOnly, setSubmittedMineOnly] = useState(false);
 
   const [importStage, setImportStage] = useState<ImportStage>({ kind: "idle" });
 
@@ -72,6 +76,8 @@ export default function ImportSearchPage() {
     setSelectedInstance(instance);
     setQuery("");
     setSubmittedSearch(null);
+    setMineOnly(false);
+    setSubmittedMineOnly(false);
     setImportStage({ kind: "idle" });
     router.replace("/import/search");
   };
@@ -79,17 +85,25 @@ export default function ImportSearchPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
-    if (!q) {
+    const onlyMine = mineOnly && isInstanceConnected;
+    if (!(q || onlyMine)) {
       return;
     }
     setSubmittedSearch(q);
-    router.replace(`/import/search?q=${encodeURIComponent(q)}`);
+    setSubmittedMineOnly(onlyMine);
+    router.replace(
+      q.length > 0
+        ? `/import/search?q=${encodeURIComponent(q)}`
+        : "/import/search"
+    );
     setImportStage({ kind: "idle" });
   };
 
   const handleResetSearch = () => {
     setQuery("");
     setSubmittedSearch(null);
+    setMineOnly(false);
+    setSubmittedMineOnly(false);
     router.replace("/import/search");
     setImportStage({ kind: "idle" });
     setSelectedInstance(null);
@@ -245,9 +259,28 @@ export default function ImportSearchPage() {
                   value={query}
                 />
               </div>
+              {isInstanceConnected ? (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={mineOnly}
+                    id="search-mine-only"
+                    onCheckedChange={(checked) => setMineOnly(checked === true)}
+                  />
+                  <Label
+                    className="cursor-pointer font-normal text-sm"
+                    htmlFor="search-mine-only"
+                  >
+                    {t("searchMineOnly")}
+                  </Label>
+                </div>
+              ) : null}
             </CardContent>
             <CardFooter className="mt-4 flex justify-end">
-              <Button disabled={!query.trim()} size="lg" type="submit">
+              <Button
+                disabled={!(query.trim() || (mineOnly && isInstanceConnected))}
+                size="lg"
+                type="submit"
+              >
                 <IconSearch className="size-4 shrink-0" />
                 {t("searchVideosSubmit")}
               </Button>
@@ -256,10 +289,11 @@ export default function ImportSearchPage() {
         </Card>
       </div>
 
-      {submittedSearch && (
+      {submittedSearch !== null && (
         <div className="w-full border-r md:h-[calc(100vh-5rem)] md:w-1/2">
           <PeerTubeSearchResults
             baseUrl={activeInstance?.host ?? ""}
+            mineOnly={submittedMineOnly}
             onImportSelected={handleImportSelected}
             onReset={handleResetSearch}
             search={submittedSearch}
@@ -277,7 +311,7 @@ export default function ImportSearchPage() {
         </div>
       )}
 
-      {importStage.kind === "idle" && !submittedSearch ? (
+      {importStage.kind === "idle" && submittedSearch === null ? (
         <div className="hidden w-full md:block md:w-1/2">
           <Card className="border-none shadow-none ring-0">
             <CardHeader>

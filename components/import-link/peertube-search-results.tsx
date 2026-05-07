@@ -2,10 +2,11 @@
 
 import { IconRefresh } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { CheckSquare, Square } from "lucide-react";
+import { CheckSquare, LockIcon, Square } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,12 +24,14 @@ import { cn, formatDuration } from "@/lib/utils";
 export interface SelectedVideo {
   id: number;
   name: string;
+  privacy?: { id: number | null; label: string | null } | null;
   thumbnailUrl?: string | null;
   url: string;
 }
 
 interface PeerTubeSearchResultsProps {
   baseUrl: string;
+  mineOnly?: boolean;
   onImportSelected: (videos: SelectedVideo[]) => void;
   onReset: () => void;
   search: string;
@@ -36,6 +39,7 @@ interface PeerTubeSearchResultsProps {
 
 export function PeerTubeSearchResults({
   baseUrl,
+  mineOnly = false,
   search,
   onImportSelected,
   onReset,
@@ -45,7 +49,11 @@ export function PeerTubeSearchResults({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const { data, isLoading, isError, error } = useQuery(
-    api.peertubeSearch.searchVideos.queryOptions({ baseUrl, search })
+    api.peertubeSearch.searchVideos.queryOptions({
+      baseUrl,
+      search,
+      mineOnly,
+    })
   );
 
   const handleToggle = (videoId: number) => {
@@ -71,6 +79,7 @@ export function PeerTubeSearchResults({
         name: v.name ?? "",
         thumbnailUrl: v.thumbnailUrl ?? null,
         url: `${baseUrl.replace(/\/$/, "")}/w/${v.uuid}`,
+        privacy: v.privacy ?? null,
       }));
     onImportSelected(selected);
   };
@@ -139,6 +148,12 @@ export function PeerTubeSearchResults({
                   v.account?.name ??
                   null;
                 const isSelected = selectedIds.has(v.id);
+                const privacyId = v.privacy?.id ?? null;
+                const isNonPublic = privacyId !== null && privacyId !== 1;
+                const privacyLabel =
+                  privacyId === 3
+                    ? t("privacyPrivate")
+                    : (v.privacy?.label ?? null);
 
                 return (
                   <button
@@ -169,9 +184,17 @@ export function PeerTubeSearchResults({
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 font-medium text-foreground text-sm">
-                        {v.name}
-                      </p>
+                      <div className="flex items-start gap-2">
+                        <p className="line-clamp-2 flex-1 font-medium text-foreground text-sm">
+                          {v.name}
+                        </p>
+                        {isNonPublic && privacyLabel ? (
+                          <Badge className="shrink-0" variant="secondary">
+                            <LockIcon className="size-3" />
+                            {privacyLabel}
+                          </Badge>
+                        ) : null}
+                      </div>
                       {(author || v.duration) && (
                         <p className="mt-0.5 text-muted-foreground text-xs">
                           {[

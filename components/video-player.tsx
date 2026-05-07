@@ -1,32 +1,30 @@
 "use client";
 
-import PeerTubeVideo from "@celluloid/peertube-video-element/react";
+import ReactPlayer from "@celluloid/react-player";
 import { Settings } from "lucide-react";
 import { useMediaRef } from "media-chrome/react/media-store";
 import { useTranslations } from "next-intl";
-import ReactPlayer from "react-player";
-import type { PlayerEntry } from "react-player/players";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { VideoById } from "@/lib/trpc/client";
 import { EditVideoDialog } from "./edit-video-dialog";
 import { Transcription } from "./transcription-status";
 
-const MATCH_SRC = /(https?):\/\/([^/]+)\/(?:videos\/watch|w)\/(.+)$/;
-function canPlay(src: string): boolean {
-  return MATCH_SRC.test(src);
-}
+// const MATCH_SRC = /(https?):\/\/([^/]+)\/(?:videos\/watch|w)\/(.+)$/;
+// function canPlay(src: string): boolean {
+//   return MATCH_SRC.test(src);
+// }
 
-// Create a PlayerEntry for the PeerTube player
-const peertubePlayerEntry: PlayerEntry = {
-  key: "peertube",
-  name: "PeerTube",
-  canPlay,
-  player: PeerTubeVideo as any,
-};
+// // Create a PlayerEntry for the PeerTube player
+// const peertubePlayerEntry: PlayerEntry = {
+//   key: "peertube",
+//   name: "PeerTube",
+//   canPlay,
+//   player: PeerTubeVideo as unknown as ComponentType<VideoElementProps>,
+// };
 
-// Register the custom PeerTube player
-ReactPlayer.addCustomPlayer?.(peertubePlayerEntry);
+// // Register the custom PeerTube player
+// ReactPlayer.addCustomPlayer?.(peertubePlayerEntry);
 
 interface VideoPlayerProps {
   video: VideoById;
@@ -47,6 +45,11 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
               {/* Embedded Player */}
               <div className="no-scrollbar relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black">
                 <ReactPlayer
+                  config={{
+                    peertube: {
+                      waitPasswordFromEmbedAPI: 1,
+                    },
+                  }}
                   controls={true}
                   height="100%"
                   ref={mediaRefCallback}

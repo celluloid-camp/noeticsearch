@@ -19,6 +19,7 @@ import {
   parsePeerTubeUrl,
   resolveAuthorAvatarUrl,
 } from "@/lib/peertube-client";
+import { resolveAccessToken } from "@/lib/peertube-token";
 import { importVideo } from "@/workflows/import-video";
 import { naturalizeCaptions } from "@/workflows/naturalize-captions";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
@@ -87,6 +88,7 @@ export const videoRouter = router({
 
         start(importVideo, [
           {
+            ownerUserId: userId,
             password: videoPassword,
             url,
             videoId: video.id,
@@ -253,9 +255,14 @@ export const videoRouter = router({
             continue;
           }
 
-          // Check for duplicate (same externalId + baseUrl + user)
+          // Check for duplicate (same externalId + baseUrl + user). Previously-
+          // failed imports are recycled in-place so the user can retry; any
+          // other status is treated as a real duplicate.
           const [existing] = await ctx.db
-            .select({ id: videoTable.id })
+            .select({
+              id: videoTable.id,
+              importStatus: videoTable.importStatus,
+            })
             .from(videoTable)
             .where(
               and(
@@ -266,16 +273,48 @@ export const videoRouter = router({
             )
             .limit(1);
 
-          if (existing) {
+          if (existing && existing.importStatus !== "failed") {
             rejected.push({ url, reason: "alreadyImported" });
             continue;
           }
 
-          const videoId = createId();
-          const [video] = await ctx.db
-            .insert(videoTable)
-            .values({
-              id: videoId,
+          let resolvedVideoId: string;
+          if (existing) {
+            resolvedVideoId = existing.id;
+
+            // Wipe any partial state left over from the failed run so the
+            // workflow can repopulate cleanly.
+            await Promise.all([
+              ctx.db
+                .delete(captionsTable)
+                .where(eq(captionsTable.videoId, resolvedVideoId)),
+              ctx.db
+                .delete(chaptersTable)
+                .where(eq(chaptersTable.videoId, resolvedVideoId)),
+              ctx.db
+                .delete(transcriptionsTable)
+                .where(eq(transcriptionsTable.videoId, resolvedVideoId)),
+            ]);
+
+            await ctx.db
+              .update(videoTable)
+              .set({
+                title: "Importing video...",
+                description: null,
+                thumbnail: null,
+                videoDetails: {} as VideoDetails,
+                captionList: null,
+                storyboard: null,
+                importStatus: "processing",
+                isPublic,
+                isPasswordProtected: Boolean(videoPassword),
+                videoPassword: videoPassword ?? null,
+              })
+              .where(eq(videoTable.id, resolvedVideoId));
+          } else {
+            resolvedVideoId = createId();
+            await ctx.db.insert(videoTable).values({
+              id: resolvedVideoId,
               userId,
               externalId: parsed.videoId,
               baseUrl: parsed.baseUrl,
@@ -291,31 +330,39 @@ export const videoRouter = router({
               publishedAt: new Date(),
               isPasswordProtected: Boolean(videoPassword),
               videoPassword: videoPassword ?? null,
-            })
-            .returning({ id: videoTable.id });
+            });
+          }
 
           if (validatedFolderId) {
             await ctx.db
               .insert(videoFoldersTable)
-              .values({ folderId: validatedFolderId, videoId: video.id })
+              .values({
+                folderId: validatedFolderId,
+                videoId: resolvedVideoId,
+              })
               .onConflictDoNothing();
           }
 
           start(importVideo, [
             {
+              ownerUserId: userId,
               password: videoPassword,
               url,
-              videoId: video.id,
+              videoId: resolvedVideoId,
             },
           ]).catch(async (err) => {
             console.error("Failed to start import workflow:", err);
             await ctx.db
               .update(videoTable)
               .set({ importStatus: "failed" })
-              .where(eq(videoTable.id, video.id));
+              .where(eq(videoTable.id, resolvedVideoId));
           });
 
-          accepted.push({ id: video.id, url, status: "processing" });
+          accepted.push({
+            id: resolvedVideoId,
+            url,
+            status: "processing",
+          });
         } catch (error) {
           console.error("Failed to import video in batch:", error);
           rejected.push({ url, reason: "Failed to import video" });
@@ -865,7 +912,14 @@ export const videoRouter = router({
         throw new Error("You don't have permission to update this video");
       }
 
+      const parsed = parsePeerTubeUrl(video.url);
+      const accessToken = parsed
+        ? ((await resolveAccessToken(video.userId, parsed.baseUrl)) ??
+          undefined)
+        : undefined;
+
       const details = await fetchPeerTubeVideoDetails(video.url, {
+        accessToken,
         password: video.isPasswordProtected
           ? (video.videoPassword ?? undefined)
           : undefined,

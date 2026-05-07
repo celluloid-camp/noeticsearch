@@ -11,11 +11,19 @@ import { db } from "@/lib/db";
 import {
   computeSpriteUrl,
   fetchPeerTubeVideo,
+  parsePeerTubeUrl,
   parsePeerTubeVideoCaptions,
 } from "@/lib/peertube-client";
+import { resolveAccessToken } from "@/lib/peertube-token";
 import { naturalizeCaptions } from "./naturalize-captions";
 
 type ImportVideoWorkflowInput = {
+  /**
+   * Optional user id whose PeerTube auth (if any) should be used when
+   * fetching video metadata and captions. Lets the workflow import private
+   * or internal videos owned by that user.
+   */
+  ownerUserId?: string;
   password?: string;
   url: string;
   videoId: string;
@@ -35,7 +43,11 @@ export async function importVideo(input: ImportVideoWorkflowInput) {
   await updateImportStatus(input.videoId, "processing");
 
   try {
-    const videoInfo = await fetchVideoInfo(input.url, input.password);
+    const videoInfo = await fetchVideoInfo(
+      input.url,
+      input.password,
+      input.ownerUserId
+    );
     await updateVideoMetadata(input.videoId, videoInfo);
 
     const preferredCaption =
@@ -48,7 +60,11 @@ export async function importVideo(input: ImportVideoWorkflowInput) {
       throw new Error("No captions available for this video");
     }
 
-    const parsedCaptions = await parseCaptions(input.url, preferredCaption);
+    const parsedCaptions = await parseCaptions(
+      input.url,
+      preferredCaption,
+      input.ownerUserId
+    );
 
     if (parsedCaptions.length > 0) {
       await insertCaptions(
@@ -83,9 +99,28 @@ export async function importVideo(input: ImportVideoWorkflowInput) {
   }
 }
 
-async function fetchVideoInfo(url: string, password?: string) {
+async function resolveTokenForUrl(
+  url: string,
+  ownerUserId?: string
+): Promise<string | undefined> {
+  if (!ownerUserId) {
+    return undefined;
+  }
+  const parsed = parsePeerTubeUrl(url);
+  if (!parsed) {
+    return undefined;
+  }
+  return (await resolveAccessToken(ownerUserId, parsed.baseUrl)) ?? undefined;
+}
+
+async function fetchVideoInfo(
+  url: string,
+  password?: string,
+  ownerUserId?: string
+) {
   "use step";
-  return fetchPeerTubeVideo(url, { password });
+  const accessToken = await resolveTokenForUrl(url, ownerUserId);
+  return fetchPeerTubeVideo(url, { password, accessToken });
 }
 
 async function updateImportStatus(
@@ -104,10 +139,12 @@ async function updateImportStatus(
 
 async function parseCaptions(
   url: string,
-  caption: Parameters<typeof parsePeerTubeVideoCaptions>[1]
+  caption: Parameters<typeof parsePeerTubeVideoCaptions>[1],
+  ownerUserId?: string
 ) {
   "use step";
-  const parsed = await parsePeerTubeVideoCaptions(url, caption);
+  const accessToken = await resolveTokenForUrl(url, ownerUserId);
+  const parsed = await parsePeerTubeVideoCaptions(url, caption, accessToken);
 
   // Workflow steps must return serializable values only.
   return parsed.map(
@@ -136,6 +173,14 @@ async function updateVideoMetadata(
     videoInfo.videoDetails.uuid ||
     videoInfo.videoId;
 
+  // PeerTube privacy ids: 1 = Public, 2 = Unlisted, 3 = Private,
+  // 4 = Internal, 5 = Password-protected. Anything other than Public or
+  // Unlisted requires an authenticated request to the instance to fetch
+  // the video and its assets.
+  const privacyId = videoInfo.videoDetails.privacy?.id ?? null;
+  const requiresInstanceAuth =
+    privacyId !== null && privacyId !== 1 && privacyId !== 2;
+
   await db
     .update(videoTable)
     .set({
@@ -144,6 +189,7 @@ async function updateVideoMetadata(
       description: videoInfo.description,
       externalId,
       publishedAt: videoInfo.videoDetails.publishedAt ?? new Date(),
+      requiresInstanceAuth,
       storyboard: videoInfo.storyboard,
       thumbnail: videoInfo.thumbnail || null,
       title: videoInfo.title,

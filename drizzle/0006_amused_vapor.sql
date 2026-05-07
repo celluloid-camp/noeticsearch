@@ -1,0 +1,1 @@
+ALTER TABLE "videos" ADD COLUMN IF NOT EXISTS "requires_instance_auth" boolean DEFAULT false NOT NULL;
