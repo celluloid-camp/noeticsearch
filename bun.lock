@@ -37,7 +37,7 @@
         "ai": "^6.0.94",
         "autoprefixer": "^10.4.20",
         "better-auth": "1.4.19",
-        "better-auth-localization": "^2.3.1",
+        "better-auth-localization": "^3.0.0",
         "boneyard-js": "^1.7.1",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -1209,7 +1209,7 @@
 
     "better-auth": ["better-auth@1.4.19", "", { "dependencies": { "@better-auth/core": "1.4.19", "@better-auth/telemetry": "1.4.19", "@better-auth/utils": "0.3.0", "@better-fetch/fetch": "1.1.21", "@noble/ciphers": "^2.0.0", "@noble/hashes": "^2.0.0", "better-call": "1.1.8", "defu": "^6.1.4", "jose": "^6.1.0", "kysely": "^0.28.5", "nanostores": "^1.0.1", "zod": "^4.3.5" }, "peerDependencies": { "@lynx-js/react": "*", "@prisma/client": "^5.0.0 || ^6.0.0 || ^7.0.0", "@sveltejs/kit": "^2.0.0", "@tanstack/react-start": "^1.0.0", "@tanstack/solid-start": "^1.0.0", "better-sqlite3": "^12.0.0", "drizzle-kit": ">=0.31.4", "drizzle-orm": ">=0.41.0", "mongodb": "^6.0.0 || ^7.0.0", "mysql2": "^3.0.0", "next": "^14.0.0 || ^15.0.0 || ^16.0.0", "pg": "^8.0.0", "prisma": "^5.0.0 || ^6.0.0 || ^7.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0", "solid-js": "^1.0.0", "svelte": "^4.0.0 || ^5.0.0", "vitest": "^2.0.0 || ^3.0.0 || ^4.0.0", "vue": "^3.0.0" }, "optionalPeers": ["@lynx-js/react", "@prisma/client", "@sveltejs/kit", "@tanstack/react-start", "@tanstack/solid-start", "better-sqlite3", "drizzle-kit", "drizzle-orm", "mongodb", "mysql2", "next", "pg", "prisma", "react", "react-dom", "solid-js", "svelte", "vitest", "vue"] }, "sha512-3RlZJcA0+NH25wYD85vpIGwW9oSTuEmLIaGbT8zg41w/Pa2hVWHKedjoUHHJtnzkBXzDb+CShkLnSw7IThDdqQ=="],
 
-    "better-auth-localization": ["better-auth-localization@2.3.1", "", { "peerDependencies": { "better-auth": "^1.4.19" } }, "sha512-3XBH+yffIt7NtBNeKA9gbxe0lOrwyBaGIYHFX0Pvb4CZZlnnzIFuvRcofF0hrJQH1tRN8FxG9BrWhSDb2VTfzg=="],
+    "better-auth-localization": ["better-auth-localization@3.0.0", "", { "peerDependencies": { "@better-auth/api-key": "^1.5.0", "@better-auth/passkey": "^1.5.0", "better-auth": "^1.5.0" }, "optionalPeers": ["@better-auth/api-key", "@better-auth/passkey"] }, "sha512-JeKONv+GCNPYV8j5mjXbM/tDWse8kXrfIyEfDmvijFjuHInDWxp9iilAwdX3LnwRryAjmt+f9yeQ4avgXWAUAw=="],
 
     "better-call": ["better-call@1.1.8", "", { "dependencies": { "@better-auth/utils": "^0.3.0", "@better-fetch/fetch": "^1.1.4", "rou3": "^0.7.10", "set-cookie-parser": "^2.7.1" }, "peerDependencies": { "zod": "^4.0.0" }, "optionalPeers": ["zod"] }, "sha512-XMQ2rs6FNXasGNfMjzbyroSwKwYbZ/T3IxruSS6U2MJRsSYh3wYtG3o6H00ZlKZ/C/UPOAD97tqgQJNsxyeTXw=="],
 
