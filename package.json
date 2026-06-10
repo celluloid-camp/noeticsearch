@@ -27,7 +27,6 @@
     "@base-ui/react": "^1.2.0",
     "@better-auth/drizzle-adapter": "^1.5.3",
     "@celluloid/peertube-api": "1.4.1",
-    "@celluloid/peertube-video-element": "^1.0.0",
     "@daveyplate/better-auth-tanstack": "^1.3.6",
     "@hookform/resolvers": "^5.2.2",
     "@hugeicons/core-free-icons": "^4.0.0",

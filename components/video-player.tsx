@@ -2,37 +2,119 @@
 
 import ReactPlayer from "@celluloid/react-player";
 import { Settings } from "lucide-react";
-import { useMediaRef } from "media-chrome/react/media-store";
+import { useMediaRef, useMediaSelector } from "media-chrome/react/media-store";
 import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { VideoById } from "@/lib/trpc/client";
 import { EditVideoDialog } from "./edit-video-dialog";
 import { Transcription } from "./transcription-status";
 
-// const MATCH_SRC = /(https?):\/\/([^/]+)\/(?:videos\/watch|w)\/(.+)$/;
-// function canPlay(src: string): boolean {
-//   return MATCH_SRC.test(src);
-// }
-
-// // Create a PlayerEntry for the PeerTube player
-// const peertubePlayerEntry: PlayerEntry = {
-//   key: "peertube",
-//   name: "PeerTube",
-//   canPlay,
-//   player: PeerTubeVideo as unknown as ComponentType<VideoElementProps>,
-// };
-
-// // Register the custom PeerTube player
-// ReactPlayer.addCustomPlayer?.(peertubePlayerEntry);
-
 interface VideoPlayerProps {
   video: VideoById;
 }
 
+// PeerTube embed-api player surface we rely on. The element's `api` property
+// is set asynchronously once the iframe has loaded the embed SDK.
+type PeerTubeEmbedApi = {
+  ready: Promise<void>;
+  setVideoPassword?: (password: string) => Promise<void>;
+};
+
+type PeerTubePlayerElement = HTMLElement & {
+  api: PeerTubeEmbedApi | null;
+};
+
+/**
+ * Append the user's PeerTube access token to the embed URL so the instance
+ * authorizes playback of private/internal videos. PeerTube reads the token
+ * from the URL fragment when present.
+ */
+function buildPlayableUrl(url: string, accessToken: string | null): string {
+  if (!accessToken) {
+    return url;
+  }
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("accessToken", accessToken);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 export default function VideoPlayer({ video }: VideoPlayerProps) {
   const mediaRefCallback = useMediaRef();
+  const mediaPaused = useMediaSelector((state) => state.mediaPaused);
   const t = useTranslations();
+  const playerElementRef = useRef<PeerTubePlayerElement | null>(null);
+  // Capture once on mount — toggling autoplay later reloads the PeerTube iframe.
+
+  const playableUrl = useMemo(
+    () => buildPlayableUrl(video.url, video.accessToken),
+    [video.url, video.accessToken]
+  );
+
+  const peertubeConfig = useMemo(
+    () =>
+      video.isPasswordProtected && video.videoPassword
+        ? { waitPasswordFromEmbedAPI: 1 as const, warningTitle: 0 as const }
+        : undefined,
+    [video.isPasswordProtected, video.videoPassword]
+  );
+
+  const setPlayerRef = useCallback(
+    (element: HTMLMediaElement | null) => {
+      playerElementRef.current =
+        element as unknown as PeerTubePlayerElement | null;
+      mediaRefCallback(element);
+    },
+    [mediaRefCallback]
+  );
+
+  // When the video is password-protected we must inject the password through
+  // the embed API as soon as it becomes available (the element awaits
+  // `api.ready`, which only resolves after `setVideoPassword` is called).
+  useEffect(() => {
+    if (!(video.isPasswordProtected && video.videoPassword)) {
+      return;
+    }
+    const element = playerElementRef.current;
+    if (!element) {
+      return;
+    }
+
+    let cancelled = false;
+    const password = video.videoPassword;
+
+    const trySetPassword = () => {
+      const api = element.api;
+      if (!api?.setVideoPassword) {
+        return false;
+      }
+
+      // The embed API resolves once the password is accepted; ignore failures
+      // since PeerTube will surface them in the iframe UI.
+      api.setVideoPassword(password).catch(() => undefined);
+      return true;
+    };
+
+    if (trySetPassword()) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      if (cancelled || trySetPassword()) {
+        window.clearInterval(interval);
+      }
+    }, 100);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [video.isPasswordProtected, video.videoPassword, playableUrl]);
 
   return (
     <div className="no-scrollbar mt-4 ml-4 flex h-full w-full flex-col">
@@ -45,16 +127,18 @@ export default function VideoPlayer({ video }: VideoPlayerProps) {
               {/* Embedded Player */}
               <div className="no-scrollbar relative aspect-video w-full overflow-hidden rounded-lg border border-border bg-black">
                 <ReactPlayer
-                  config={{
-                    peertube: {
-                      waitPasswordFromEmbedAPI: 1,
-                    },
-                  }}
+                  autoPlay={true}
+                  config={
+                    peertubeConfig
+                      ? { peertube: peertubeConfig }
+                      : { peertube: { warningTitle: 0 } }
+                  }
                   controls={true}
                   height="100%"
-                  ref={mediaRefCallback}
+                  playing={mediaPaused === false}
+                  ref={setPlayerRef}
                   slot="media"
-                  src={video.url}
+                  src={playableUrl}
                   width="100%"
                 />
               </div>

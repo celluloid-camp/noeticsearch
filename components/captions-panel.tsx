@@ -367,7 +367,9 @@ export function CaptionsPanel({
   const isSearching = debouncedSearch.length > 0;
 
   const mediaCurrentTime = useMediaSelector((state) => state.mediaCurrentTime);
+  const mediaDuration = useMediaSelector((state) => state.mediaDuration);
   const dispatch = useMediaDispatch();
+  const hasSeekedToTargetRef = useRef(false);
 
   const captionsQueryOptions = searchId
     ? api.video.getCaptionBySearchId.queryOptions({
@@ -483,24 +485,53 @@ export function CaptionsPanel({
   );
 
   useEffect(() => {
-    if (targetCaptionIndex < 0) {
+    hasSeekedToTargetRef.current = false;
+  }, [captionHighlightId]);
+
+  // Seek to the shared caption once the media store has metadata. Do not wait
+  // for mediaLoading (readyState >= 3) — PeerTube only reaches that after play.
+  useEffect(() => {
+    if (targetCaptionIndex < 0 || hasSeekedToTargetRef.current) {
       return;
     }
+    if (
+      mediaDuration == null ||
+      !Number.isFinite(mediaDuration) ||
+      mediaDuration <= 0
+    ) {
+      return;
+    }
+
     const caption = allCaptions[targetCaptionIndex];
-    const id = setTimeout(() => {
-      scrollToCaptionIndex(targetCaptionIndex);
-      if (caption) {
-        dispatch({
-          type: MediaActionTypes.MEDIA_SEEK_REQUEST,
-          detail: caption.startTime,
-        });
-        dispatch({
-          type: MediaActionTypes.MEDIA_PLAY_REQUEST,
-        });
-      }
-    }, 100);
-    return () => clearTimeout(id);
-  }, [targetCaptionIndex, scrollToCaptionIndex, allCaptions, dispatch]);
+    if (!caption) {
+      return;
+    }
+
+    hasSeekedToTargetRef.current = true;
+    scrollToCaptionIndex(targetCaptionIndex);
+
+    dispatch({
+      type: MediaActionTypes.MEDIA_SEEK_REQUEST,
+      detail: caption.startTime,
+    });
+    dispatch({
+      type: MediaActionTypes.MEDIA_PLAY_REQUEST,
+    });
+
+    const playRetry = window.setTimeout(() => {
+      dispatch({
+        type: MediaActionTypes.MEDIA_PLAY_REQUEST,
+      });
+    }, 400);
+
+    return () => window.clearTimeout(playRetry);
+  }, [
+    targetCaptionIndex,
+    allCaptions,
+    mediaDuration,
+    scrollToCaptionIndex,
+    dispatch,
+  ]);
 
   // Auto-scroll as playback progresses
   const prevCaptionIndexRef = useRef(-1);

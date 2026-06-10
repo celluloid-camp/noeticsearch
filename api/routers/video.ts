@@ -483,6 +483,17 @@ export const videoRouter = router({
         ? new URL(author, video.baseUrl).toString()
         : null;
 
+      const isOwner = video.userId === ctx.user?.id;
+      const canEdit = isOwner || ctx.user?.role === "admin";
+
+      // Only the owner gets credentials needed to play protected videos.
+      const videoPassword =
+        isOwner && video.isPasswordProtected ? video.videoPassword : null;
+      const accessToken =
+        isOwner && video.requiresInstanceAuth
+          ? await resolveAccessToken(video.userId, video.baseUrl)
+          : null;
+
       return {
         id: video.id.toString(),
         title: video.title,
@@ -496,7 +507,11 @@ export const videoRouter = router({
         authorAvatar,
         addedDate: video.createdAt,
         isPublic: video.isPublic,
-        canEdit: video.userId === ctx.user?.id || ctx.user?.role === "admin",
+        canEdit,
+        isPasswordProtected: video.isPasswordProtected,
+        requiresInstanceAuth: video.requiresInstanceAuth,
+        videoPassword,
+        accessToken,
       };
     }),
 
