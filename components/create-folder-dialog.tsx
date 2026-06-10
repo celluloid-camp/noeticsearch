@@ -5,6 +5,7 @@ import { Loader2, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +16,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 interface CreateFolderDialogProps {
@@ -36,7 +36,6 @@ export function CreateFolderDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const [name, setName] = useState("");
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
   const dialogOpen = open ?? internalOpen;
@@ -51,17 +50,13 @@ export function CreateFolderDialog({
     api.folder.create.mutationOptions({
       onSuccess: (folder) => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
-        toast({ title: t("folders.createSuccess") });
+        toast.success(t("folders.createSuccess"));
         setName("");
         setDialogOpen(false);
         onCreated?.({ id: folder.id, name: folder.name });
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );

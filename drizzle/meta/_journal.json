@@ -50,6 +50,27 @@
       "when": 1778177712381,
       "tag": "0006_amused_vapor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781113423477,
+      "tag": "0007_clever_phantom_reporter",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781114497295,
+      "tag": "0008_puzzling_raza",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781114514266,
+      "tag": "0009_bored_blob",
+      "breakpoints": true
     }
   ]
 }

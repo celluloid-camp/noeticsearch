@@ -211,7 +211,11 @@ export function SearchAssistant({
                                           className="relative aspect-video w-full shrink-0 bg-muted"
                                           href={`/search/${chatId}/video/${videoId}`}
                                         >
-                                          {thumbnail !== "/placeholder.svg" ? (
+                                          {thumbnail === "/placeholder.svg" ? (
+                                            <div className="flex h-full items-center justify-center text-muted-foreground">
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            </div>
+                                          ) : (
                                             <Image
                                               alt={title}
                                               className="object-cover"
@@ -219,10 +223,6 @@ export function SearchAssistant({
                                               sizes="128px"
                                               src={thumbnail}
                                             />
-                                          ) : (
-                                            <div className="flex h-full items-center justify-center text-muted-foreground">
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            </div>
                                           )}
                                         </Link>
                                         <CardContent className="p-1.5">

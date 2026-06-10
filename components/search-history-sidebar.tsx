@@ -80,7 +80,7 @@ export function MySearchSidebar() {
       <SidebarGroupLabel>{t("mySearches")}</SidebarGroupLabel>
       <SidebarGroupContent>
         {isLoadingSearches ? (
-          <div className="space-y-2 px-2">
+          <div className="space-y-2 px-2 group-data-[collapsible=icon]:hidden">
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
@@ -101,7 +101,7 @@ export function MySearchSidebar() {
                       {search.title ? (
                         <span className="truncate">{search.title}</span>
                       ) : (
-                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-24 group-data-[collapsible=icon]:hidden" />
                       )}
                     </Link>
                   </SidebarMenuButton>

@@ -42,7 +42,7 @@ export default function SignUpPage() {
         router.push("/");
         router.refresh();
       }
-    } catch (_err) {
+    } catch {
       setError(t("unexpectedError"));
     } finally {
       setLoading(false);

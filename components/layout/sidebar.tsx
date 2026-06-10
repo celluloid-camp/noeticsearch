@@ -1,7 +1,7 @@
 "use client";
 
 import { IconVideo } from "@tabler/icons-react";
-import { LogOut, PlusIcon, Settings, User } from "lucide-react";
+import { LogOut, PlusIcon, Search, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -95,21 +95,29 @@ export function MainSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Button asChild className="w-full" variant="secondary">
+              <SidebarMenuButton
+                asChild
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:text-secondary-foreground"
+                tooltip={t("nav.addVideo")}
+              >
                 <Link href={importHref}>
                   <PlusIcon className="size-4" />
                   <span>{t("nav.addVideo")}</span>
                 </Link>
-              </Button>
+              </SidebarMenuButton>
             </SidebarMenuItem>
 
             <SidebarMenuItem>
-              <Button asChild className="w-full" variant="secondary">
+              <SidebarMenuButton
+                asChild
+                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:text-secondary-foreground"
+                tooltip={t("nav.newSearch")}
+              >
                 <Link href={searchHref}>
-                  <PlusIcon className="size-4" />
+                  <Search className="size-4" />
                   <span>{t("nav.newSearch")}</span>
                 </Link>
-              </Button>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

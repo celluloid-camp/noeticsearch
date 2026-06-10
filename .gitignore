@@ -31,3 +31,4 @@ next-env.d.ts
 .git/hooks
 sandbox
 notes.txt
+.swc

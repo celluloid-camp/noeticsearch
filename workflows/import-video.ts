@@ -104,11 +104,11 @@ async function resolveTokenForUrl(
   ownerUserId?: string
 ): Promise<string | undefined> {
   if (!ownerUserId) {
-    return undefined;
+    return;
   }
   const parsed = parsePeerTubeUrl(url);
   if (!parsed) {
-    return undefined;
+    return;
   }
   return (await resolveAccessToken(ownerUserId, parsed.baseUrl)) ?? undefined;
 }

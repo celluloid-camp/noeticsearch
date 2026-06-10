@@ -65,7 +65,11 @@ function SearchResultVideoItem({
         className="relative block h-40 shrink-0 overflow-hidden bg-muted"
         href={`/search/${searchId}/video/${videoId}`}
       >
-        {videoThumbnail !== "/placeholder.svg" ? (
+        {videoThumbnail === "/placeholder.svg" ? (
+          <div className="flex h-full items-center justify-center text-muted-foreground">
+            <Loader2 className="size-8 animate-spin" />
+          </div>
+        ) : (
           <Image
             alt={title}
             className="object-cover transition-opacity hover:opacity-90"
@@ -73,10 +77,6 @@ function SearchResultVideoItem({
             sizes="(min-width: 768px) 50vw, 100vw"
             src={videoThumbnail}
           />
-        ) : (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <Loader2 className="size-8 animate-spin" />
-          </div>
         )}
       </Link>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import type { ComponentProps } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +47,6 @@ export function ConnectInstanceDialog({
   const [password, setPassword] = useState("");
   const t = useTranslations("peertubeAuth");
   const tCommon = useTranslations("common");
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -59,7 +58,7 @@ export function ConnectInstanceDialog({
   const connectMutation = useMutation(
     api.peertubeInstance.connect.mutationOptions({
       onSuccess: () => {
-        toast({ title: t("connectSuccess") });
+        toast.success(t("connectSuccess"));
         setEmail("");
         setPassword("");
         setOpen(false);
@@ -68,12 +67,10 @@ export function ConnectInstanceDialog({
       },
       onError: (err) => {
         const isInvalidCreds = err.message.includes("invalid_credentials");
-        toast({
-          title: tCommon("error"),
+        toast.error(tCommon("error"), {
           description: isInvalidCreds
             ? t("errorInvalidCredentials")
             : t("errorConnectionFailed"),
-          variant: "destructive",
         });
       },
     })

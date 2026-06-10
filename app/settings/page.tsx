@@ -140,9 +140,8 @@ export default function SettingsPage() {
     router.refresh();
   };
 
-  const getLocaleLabel = (loc: Locale) => {
-    return loc === "en" ? "English" : "Français";
-  };
+  const getLocaleLabel = (loc: Locale) =>
+    loc === "en" ? "English" : "Français";
 
   const handleNameChange = (value: string) => {
     setName(value);

@@ -6,5 +6,6 @@ export * from "./schema/peertube-instance";
 export * from "./schema/peertube-instance-auth";
 export * from "./schema/search";
 export * from "./schema/search-result";
+export * from "./schema/speakers";
 export * from "./schema/transcriptions";
 export * from "./schema/videos";

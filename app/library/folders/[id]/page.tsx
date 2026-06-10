@@ -16,6 +16,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import React from "react";
+import { toast } from "sonner";
 import { AddToFolderButton } from "@/components/add-to-folder-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,6 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 export default function FolderDetailPage() {
@@ -51,7 +51,6 @@ export default function FolderDetailPage() {
   const locale = useLocale();
   const t = useTranslations();
   const api = useTRPC();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const folderId = params.id as string;
@@ -71,15 +70,11 @@ export default function FolderDetailPage() {
     api.folder.rename.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
-        toast({ title: t("folders.renameSuccess") });
+        toast.success(t("folders.renameSuccess"));
         setRenameOpen(false);
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );
@@ -87,16 +82,12 @@ export default function FolderDetailPage() {
     api.folder.delete.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
-        toast({ title: t("folders.deleteSuccess") });
+        toast.success(t("folders.deleteSuccess"));
         setDeleteOpen(false);
         router.push("/library/mine");
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );

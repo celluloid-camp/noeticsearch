@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import React from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -34,7 +35,6 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 function RenameFolderDialog({
@@ -48,7 +48,6 @@ function RenameFolderDialog({
 }) {
   const [name, setName] = React.useState(folder.name);
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -62,15 +61,11 @@ function RenameFolderDialog({
     api.folder.rename.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
-        toast({ title: t("folders.renameSuccess") });
+        toast.success(t("folders.renameSuccess"));
         onOpenChange(false);
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );
@@ -124,7 +119,6 @@ function DeleteFolderDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -132,15 +126,11 @@ function DeleteFolderDialog({
     api.folder.delete.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
-        toast({ title: t("folders.deleteSuccess") });
+        toast.success(t("folders.deleteSuccess"));
         onOpenChange(false);
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );
@@ -178,7 +168,6 @@ function DeleteFolderDialog({
 
 export default function FoldersPage() {
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -201,16 +190,12 @@ export default function FoldersPage() {
     api.folder.create.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [["folder"]] });
-        toast({ title: t("folders.createSuccess") });
+        toast.success(t("folders.createSuccess"));
         setNewFolderName("");
         setIsCreating(false);
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );

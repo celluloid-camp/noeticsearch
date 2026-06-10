@@ -292,9 +292,7 @@ export const setSearchTitle = createTool({
   inputSchema: z.object({
     title: z.string(),
   }),
-  execute: async ({ title }) => {
-    return title;
-  },
+  execute: async ({ title }) => title,
 });
 
 export type SearchVideoCaptionsUITool = InferUITool<

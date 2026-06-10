@@ -30,9 +30,8 @@ export function LocaleSwitcher() {
     });
   };
 
-  const getLocaleLabel = (loc: Locale) => {
-    return loc === "en" ? "English" : "Français";
-  };
+  const getLocaleLabel = (loc: Locale) =>
+    loc === "en" ? "English" : "Français";
 
   return (
     <DropdownMenu>

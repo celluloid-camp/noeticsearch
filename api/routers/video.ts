@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { chaptersTable } from "@/db/schema/chapters";
 import { searchResultTable } from "@/db/schema/search-result";
+import { speakersTable } from "@/db/schema/speakers";
 import { getDbErrorMessage } from "@/lib/db";
 import {
   fetchPeerTubeVideoDetails,
@@ -292,6 +293,9 @@ export const videoRouter = router({
                 .delete(chaptersTable)
                 .where(eq(chaptersTable.videoId, resolvedVideoId)),
               ctx.db
+                .delete(speakersTable)
+                .where(eq(speakersTable.videoId, resolvedVideoId)),
+              ctx.db
                 .delete(transcriptionsTable)
                 .where(eq(transcriptionsTable.videoId, resolvedVideoId)),
             ]);
@@ -522,6 +526,7 @@ export const videoRouter = router({
 
       const chapters = await ctx.db
         .select({
+          id: chaptersTable.id,
           title: chaptersTable.title,
           timecode: chaptersTable.timecode,
         })
@@ -531,6 +536,285 @@ export const videoRouter = router({
 
       return chapters;
     }),
+
+  updateChapter: protectedProcedure
+    .input(
+      z.object({
+        chapterId: z.string(),
+        title: z.string().min(1, "Chapter title is required"),
+        timecode: z.number().min(0),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const trimmedTitle = input.title.trim();
+      if (!trimmedTitle) {
+        throw new Error("Chapter title is required");
+      }
+
+      const [chapter] = await ctx.db
+        .select({
+          id: chaptersTable.id,
+          videoId: chaptersTable.videoId,
+        })
+        .from(chaptersTable)
+        .where(eq(chaptersTable.id, input.chapterId))
+        .limit(1);
+
+      if (!chapter) {
+        throw new Error("Chapter not found");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, chapter.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to edit this chapter");
+      }
+
+      await ctx.db
+        .update(chaptersTable)
+        .set({ title: trimmedTitle, timecode: input.timecode })
+        .where(eq(chaptersTable.id, input.chapterId));
+
+      return { success: true };
+    }),
+
+  createChapter: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+        title: z.string().min(1, "Chapter title is required"),
+        timecode: z.number().min(0),
+        language: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const trimmedTitle = input.title.trim();
+      if (!trimmedTitle) {
+        throw new Error("Chapter title is required");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, input.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to add a chapter");
+      }
+
+      await ctx.db.insert(chaptersTable).values({
+        videoId: input.videoId,
+        title: trimmedTitle,
+        timecode: input.timecode,
+        language: input.language ?? "fr",
+      });
+
+      return { success: true };
+    }),
+
+  deleteChapter: protectedProcedure
+    .input(z.object({ chapterId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [chapter] = await ctx.db
+        .select({
+          id: chaptersTable.id,
+          videoId: chaptersTable.videoId,
+        })
+        .from(chaptersTable)
+        .where(eq(chaptersTable.id, input.chapterId))
+        .limit(1);
+
+      if (!chapter) {
+        throw new Error("Chapter not found");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, chapter.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to delete this chapter");
+      }
+
+      await ctx.db
+        .delete(chaptersTable)
+        .where(eq(chaptersTable.id, input.chapterId));
+
+      return { success: true };
+    }),
+
+  getSpeakers: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const speakers = await ctx.db
+        .select({
+          id: speakersTable.id,
+          name: speakersTable.name,
+          start: speakersTable.start,
+          end: speakersTable.end,
+        })
+        .from(speakersTable)
+        .where(eq(speakersTable.videoId, input.id))
+        .orderBy(asc(speakersTable.start));
+
+      return speakers;
+    }),
+
+  createSpeaker: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string(),
+        name: z.string().min(1, "Speaker name is required"),
+        start: z.number().min(0),
+        end: z.number().min(0),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const trimmedName = input.name.trim();
+      if (!trimmedName) {
+        throw new Error("Speaker name is required");
+      }
+      if (input.end < input.start) {
+        throw new Error("End time must be after start time");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, input.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to add a speaker");
+      }
+
+      await ctx.db.insert(speakersTable).values({
+        videoId: input.videoId,
+        name: trimmedName,
+        start: input.start,
+        end: input.end,
+      });
+
+      return { success: true };
+    }),
+
+  updateSpeaker: protectedProcedure
+    .input(
+      z.object({
+        speakerId: z.string(),
+        name: z.string().min(1, "Speaker name is required"),
+        start: z.number().min(0),
+        end: z.number().min(0),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const trimmedName = input.name.trim();
+      if (!trimmedName) {
+        throw new Error("Speaker name is required");
+      }
+      if (input.end < input.start) {
+        throw new Error("End time must be after start time");
+      }
+
+      const [speaker] = await ctx.db
+        .select({
+          id: speakersTable.id,
+          videoId: speakersTable.videoId,
+        })
+        .from(speakersTable)
+        .where(eq(speakersTable.id, input.speakerId))
+        .limit(1);
+
+      if (!speaker) {
+        throw new Error("Speaker not found");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, speaker.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to edit this speaker");
+      }
+
+      await ctx.db
+        .update(speakersTable)
+        .set({
+          name: trimmedName,
+          start: input.start,
+          end: input.end,
+        })
+        .where(eq(speakersTable.id, input.speakerId));
+
+      return { success: true };
+    }),
+
+  deleteSpeaker: protectedProcedure
+    .input(z.object({ speakerId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const [speaker] = await ctx.db
+        .select({
+          id: speakersTable.id,
+          videoId: speakersTable.videoId,
+        })
+        .from(speakersTable)
+        .where(eq(speakersTable.id, input.speakerId))
+        .limit(1);
+
+      if (!speaker) {
+        throw new Error("Speaker not found");
+      }
+
+      const [video] = await ctx.db
+        .select({ userId: videoTable.userId })
+        .from(videoTable)
+        .where(eq(videoTable.id, speaker.videoId))
+        .limit(1);
+
+      if (!video) {
+        throw new Error("Video not found");
+      }
+
+      if (video.userId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("You don't have permission to delete this speaker");
+      }
+
+      await ctx.db
+        .delete(speakersTable)
+        .where(eq(speakersTable.id, input.speakerId));
+
+      return { success: true };
+    }),
+
   getCaptions: publicProcedure
     .input(
       z.object({

@@ -47,7 +47,7 @@ export default function SignInPage() {
         router.push("/");
         router.refresh();
       }
-    } catch (_err) {
+    } catch {
       setError(t("unexpectedError"));
     } finally {
       setLoading(false);

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import React from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import type { VideoById } from "@/lib/trpc/client";
 import { useTRPC } from "@/lib/trpc/client";
 import DeleteVideoDialog from "./delete-video-dialog";
@@ -133,7 +133,6 @@ export function EditVideoDialog({
   };
 
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -173,8 +172,7 @@ export function EditVideoDialog({
   const syncThumbnail = useMutation(
     api.video.syncThumbnail.mutationOptions({
       onSuccess: () => {
-        toast({
-          title: t("video.syncThumbnail"),
+        toast.success(t("video.syncThumbnail"), {
           description: t("common.success"),
         });
         queryClient.invalidateQueries({
@@ -185,10 +183,8 @@ export function EditVideoDialog({
         });
       },
       onError: (error) => {
-        toast({
-          title: t("common.error") || "Error",
+        toast.error(t("common.error") || "Error", {
           description: error.message,
-          variant: "destructive",
         });
       },
     })
@@ -227,8 +223,7 @@ export function EditVideoDialog({
         });
       }
 
-      toast({
-        title: t("video.editVideo"),
+      toast.success(t("video.editVideo"), {
         description:
           t("common.success") || "The video has been successfully updated.",
       });
@@ -242,11 +237,9 @@ export function EditVideoDialog({
       setOpen(false);
       onSuccess?.();
     } catch (error) {
-      toast({
-        title: t("common.error") || "Error",
+      toast.error(t("common.error") || "Error", {
         description:
           error instanceof Error ? error.message : "Failed to update video",
-        variant: "destructive",
       });
     }
   };

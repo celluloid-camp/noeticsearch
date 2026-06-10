@@ -102,9 +102,9 @@ export async function fetchPeerTubeVideoDetails(
 
   try {
     const headers =
-      options?.password != null
-        ? { "x-peertube-video-password": options.password }
-        : undefined;
+      options?.password == null
+        ? undefined
+        : { "x-peertube-video-password": options.password };
 
     const { data: videoData, error: apiError } = await getVideo({
       client,
@@ -263,9 +263,9 @@ export async function fetchPeerTubeCaptionList(
 
   try {
     const headers =
-      options?.password != null
-        ? { "x-peertube-video-password": options.password }
-        : undefined;
+      options?.password == null
+        ? undefined
+        : { "x-peertube-video-password": options.password };
     const { data: captionsResponse } = await getVideoCaptions({
       client,
       path: { id: videoId },

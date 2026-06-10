@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 export interface BatchImportItem {
@@ -73,7 +73,6 @@ export function BatchImportStatus({
   const api = useTRPC();
   const t = useTranslations("import");
   const tCommon = useTranslations("common");
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const videoIds = accepted.map((item) => item.id);
@@ -102,19 +101,13 @@ export function BatchImportStatus({
           });
         }
         if (result.rejected.length > 0) {
-          toast({
-            title: t("importFailedTitle"),
+          toast.error(t("importFailedTitle"), {
             description: result.rejected.map((r) => r.reason).join(", "),
-            variant: "destructive",
           });
         }
       },
       onError: (err) => {
-        toast({
-          title: t("importFailedTitle"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("importFailedTitle"), { description: err.message });
       },
     })
   );

@@ -74,7 +74,11 @@ export function SearchInfoPanel({
                         key={video.videoId}
                       >
                         <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
-                          {thumbnail !== "/placeholder.svg" ? (
+                          {thumbnail === "/placeholder.svg" ? (
+                            <div className="flex size-full items-center justify-center text-muted-foreground text-xs">
+                              No preview
+                            </div>
+                          ) : (
                             <Image
                               alt={title}
                               className="object-cover"
@@ -82,10 +86,6 @@ export function SearchInfoPanel({
                               sizes="144px"
                               src={thumbnail}
                             />
-                          ) : (
-                            <div className="flex size-full items-center justify-center text-muted-foreground text-xs">
-                              No preview
-                            </div>
                           )}
                         </div>
                         <span className="line-clamp-3 truncate px-1.5 pb-1.5 text-left text-foreground text-xs">

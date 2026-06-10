@@ -5,10 +5,14 @@ import { useDebouncedCallback } from "@tanstack/react-pacer";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
+  EllipsisVertical,
   LinkIcon,
+  Mic2,
   PencilIcon,
+  PlusIcon,
   SearchIcon,
   Trash2Icon,
+  UserPlus,
   XIcon,
 } from "lucide-react";
 import {
@@ -22,8 +26,8 @@ import { useQueryState } from "nuqs";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 import { StoryboardImage } from "./storyboard-image";
 import {
@@ -47,6 +51,12 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
@@ -67,7 +77,16 @@ type CaptionsPanelProps = {
 };
 
 export type Caption = RouterOutput["video"]["getCaptions"][number];
+type Chapter = RouterOutput["video"]["getChapters"][number];
+type Speaker = RouterOutput["video"]["getSpeakers"][number];
 const CAPTION_KEY_SEPARATOR = "::";
+
+function findSpeakerAtTime(speakers: Speaker[], time: number): Speaker | null {
+  return (
+    speakers.find((speaker) => time >= speaker.start && time <= speaker.end) ??
+    null
+  );
+}
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -156,7 +175,6 @@ function EditCaptionDialog({
   videoId,
 }: EditCaptionDialogProps) {
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -174,7 +192,7 @@ function EditCaptionDialog({
   const updateCaption = useMutation(
     api.video.updateCaption.mutationOptions({
       onSuccess: () => {
-        toast({ title: t("captions.editCaptionSuccess") });
+        toast.success(t("captions.editCaptionSuccess"));
         queryClient.invalidateQueries({
           queryKey: [["video", "getCaptions"], { input: { id: videoId } }],
         });
@@ -184,10 +202,8 @@ function EditCaptionDialog({
         onOpenChange(false);
       },
       onError: (error) => {
-        toast({
-          title: t("captions.editCaptionError"),
+        toast.error(t("captions.editCaptionError"), {
           description: error.message,
-          variant: "destructive",
         });
       },
     })
@@ -265,14 +281,13 @@ function DeleteCaptionDialog({
   videoId,
 }: DeleteCaptionDialogProps) {
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
   const deleteCaption = useMutation(
     api.video.deleteCaption.mutationOptions({
       onSuccess: () => {
-        toast({ title: t("captions.deleteCaptionSuccess") });
+        toast.success(t("captions.deleteCaptionSuccess"));
         queryClient.invalidateQueries({
           queryKey: [["video", "getCaptions"], { input: { id: videoId } }],
         });
@@ -282,10 +297,8 @@ function DeleteCaptionDialog({
         onOpenChange(false);
       },
       onError: (error) => {
-        toast({
-          title: t("captions.deleteCaptionError"),
+        toast.error(t("captions.deleteCaptionError"), {
           description: error.message,
-          variant: "destructive",
         });
         onOpenChange(false);
       },
@@ -327,6 +340,613 @@ function DeleteCaptionDialog({
   );
 }
 
+const editChapterSchema = z.object({
+  title: z.string().min(1, "Chapter title is required"),
+  timecode: z
+    .string()
+    .min(1, "Start time is required")
+    .refine((value) => parseTimeInput(value) !== null, "Invalid time"),
+});
+type EditChapterSchema = z.infer<typeof editChapterSchema>;
+
+interface ChapterDialogProps {
+  chapter: Chapter | null;
+  defaultTimecode?: string;
+  mode: "create" | "edit";
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  videoId: string;
+}
+
+function ChapterDialog({
+  chapter,
+  defaultTimecode = "00:00",
+  mode,
+  open,
+  onOpenChange,
+  videoId,
+}: ChapterDialogProps) {
+  const t = useTranslations();
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const isCreate = mode === "create";
+
+  const form = useForm<EditChapterSchema>({
+    resolver: zodResolver(editChapterSchema),
+    defaultValues: {
+      title: "",
+      timecode: defaultTimecode,
+    },
+  });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    if (isCreate) {
+      form.reset({ title: "", timecode: defaultTimecode });
+      return;
+    }
+    if (chapter) {
+      form.reset({
+        title: chapter.title,
+        timecode: formatTime(chapter.timecode),
+      });
+    }
+  }, [open, isCreate, chapter, defaultTimecode, form]);
+
+  const invalidateChapters = () => {
+    queryClient.invalidateQueries({
+      queryKey: [["video", "getChapters"], { input: { id: videoId } }],
+    });
+  };
+
+  const createChapter = useMutation(
+    api.video.createChapter.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("captions.addChapterSuccess"));
+        invalidateChapters();
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        toast.error(t("captions.addChapterError"), {
+          description: error.message,
+        });
+      },
+    })
+  );
+
+  const updateChapter = useMutation(
+    api.video.updateChapter.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("captions.editChapterSuccess"));
+        invalidateChapters();
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        toast.error(t("captions.editChapterError"), {
+          description: error.message,
+        });
+      },
+    })
+  );
+
+  const deleteChapter = useMutation(
+    api.video.deleteChapter.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("captions.deleteChapterSuccess"));
+        invalidateChapters();
+        setDeleteConfirmOpen(false);
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        toast.error(t("captions.deleteChapterError"), {
+          description: error.message,
+        });
+        setDeleteConfirmOpen(false);
+      },
+    })
+  );
+
+  const onSubmit = (data: EditChapterSchema) => {
+    const timecode = parseTimeInput(data.timecode);
+    if (timecode === null) {
+      form.setError("timecode", {
+        message: t("captions.chapterTimecodeInvalid"),
+      });
+      return;
+    }
+
+    if (isCreate) {
+      createChapter.mutate({
+        videoId,
+        title: data.title,
+        timecode,
+      });
+      return;
+    }
+
+    if (!chapter) {
+      return;
+    }
+
+    updateChapter.mutate({
+      chapterId: chapter.id,
+      title: data.title,
+      timecode,
+    });
+  };
+
+  const handleDelete = () => {
+    if (!chapter) {
+      return;
+    }
+    deleteChapter.mutate({ chapterId: chapter.id });
+  };
+
+  const isDirty = form.formState.isDirty;
+  const isPending = isCreate
+    ? createChapter.isPending
+    : updateChapter.isPending;
+  const isDisabled = isCreate
+    ? !form.formState.isValid || isPending
+    : !isDirty || isPending;
+
+  return (
+    <>
+      <Dialog onOpenChange={onOpenChange} open={open}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {isCreate
+                ? t("captions.addChapterTitle")
+                : t("captions.editChapterTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("captions.chapterTitle")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="timecode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("captions.chapterTimecode")}</FormLabel>
+                    <FormControl>
+                      <Input placeholder="mm:ss" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter
+                className={
+                  isCreate ? "gap-2 sm:justify-end" : "gap-2 sm:justify-between"
+                }
+              >
+                {!isCreate && (
+                  <Button
+                    disabled={deleteChapter.isPending}
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    type="button"
+                    variant="destructive"
+                  >
+                    {t("captions.deleteChapter")}
+                  </Button>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => onOpenChange(false)}
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button disabled={isDisabled} type="submit">
+                    {isPending ? t("common.loading") : t("common.save")}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog onOpenChange={setDeleteConfirmOpen} open={deleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("captions.deleteChapterTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("captions.deleteChapterDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteChapter.isPending}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteChapter.isPending}
+              onClick={handleDelete}
+            >
+              {deleteChapter.isPending
+                ? t("common.loading")
+                : t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+const editSpeakerSchema = z
+  .object({
+    name: z.string().min(1, "Speaker name is required"),
+    start: z
+      .string()
+      .min(1, "Start time is required")
+      .refine((value) => parseTimeInput(value) !== null, "Invalid time"),
+    end: z
+      .string()
+      .min(1, "End time is required")
+      .refine((value) => parseTimeInput(value) !== null, "Invalid time"),
+  })
+  .refine(
+    (data) => {
+      const start = parseTimeInput(data.start);
+      const end = parseTimeInput(data.end);
+      return start !== null && end !== null && end >= start;
+    },
+    { message: "End time must be after start time", path: ["end"] }
+  );
+type EditSpeakerSchema = z.infer<typeof editSpeakerSchema>;
+
+interface SpeakerDialogProps {
+  defaultEnd?: string;
+  defaultStart?: string;
+  mode: "create" | "edit";
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  speaker: Speaker | null;
+  videoId: string;
+}
+
+function SpeakerDialog({
+  defaultEnd = "00:00",
+  defaultStart = "00:00",
+  mode,
+  open,
+  onOpenChange,
+  speaker,
+  videoId,
+}: SpeakerDialogProps) {
+  const t = useTranslations();
+  const api = useTRPC();
+  const queryClient = useQueryClient();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const isCreate = mode === "create";
+
+  const form = useForm<EditSpeakerSchema>({
+    resolver: zodResolver(editSpeakerSchema),
+    defaultValues: {
+      name: "",
+      start: defaultStart,
+      end: defaultEnd,
+    },
+  });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    if (isCreate) {
+      form.reset({ name: "", start: defaultStart, end: defaultEnd });
+      return;
+    }
+    if (speaker) {
+      form.reset({
+        name: speaker.name,
+        start: formatTime(speaker.start),
+        end: formatTime(speaker.end),
+      });
+    }
+  }, [open, isCreate, speaker, defaultStart, defaultEnd, form]);
+
+  const invalidateSpeakers = () => {
+    queryClient.invalidateQueries({
+      queryKey: [["video", "getSpeakers"], { input: { id: videoId } }],
+    });
+  };
+
+  const createSpeaker = useMutation(
+    api.video.createSpeaker.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("captions.addSpeakerSuccess"));
+        invalidateSpeakers();
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        toast.error(t("captions.addSpeakerError"), {
+          description: error.message,
+        });
+      },
+    })
+  );
+
+  const updateSpeaker = useMutation(
+    api.video.updateSpeaker.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("captions.editSpeakerSuccess"));
+        invalidateSpeakers();
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        toast.error(t("captions.editSpeakerError"), {
+          description: error.message,
+        });
+      },
+    })
+  );
+
+  const deleteSpeaker = useMutation(
+    api.video.deleteSpeaker.mutationOptions({
+      onSuccess: () => {
+        toast.success(t("captions.deleteSpeakerSuccess"));
+        invalidateSpeakers();
+        setDeleteConfirmOpen(false);
+        onOpenChange(false);
+      },
+      onError: (error) => {
+        toast.error(t("captions.deleteSpeakerError"), {
+          description: error.message,
+        });
+        setDeleteConfirmOpen(false);
+      },
+    })
+  );
+
+  const onSubmit = (data: EditSpeakerSchema) => {
+    const start = parseTimeInput(data.start);
+    const end = parseTimeInput(data.end);
+    if (start === null || end === null) {
+      return;
+    }
+
+    if (isCreate) {
+      createSpeaker.mutate({
+        videoId,
+        name: data.name,
+        start,
+        end,
+      });
+      return;
+    }
+
+    if (!speaker) {
+      return;
+    }
+
+    updateSpeaker.mutate({
+      speakerId: speaker.id,
+      name: data.name,
+      start,
+      end,
+    });
+  };
+
+  const handleDelete = () => {
+    if (!speaker) {
+      return;
+    }
+    deleteSpeaker.mutate({ speakerId: speaker.id });
+  };
+
+  const isDirty = form.formState.isDirty;
+  const isPending = isCreate
+    ? createSpeaker.isPending
+    : updateSpeaker.isPending;
+  const isDisabled = isCreate
+    ? !form.formState.isValid || isPending
+    : !isDirty || isPending;
+
+  return (
+    <>
+      <Dialog onOpenChange={onOpenChange} open={open}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {isCreate
+                ? t("captions.addSpeakerTitle")
+                : t("captions.editSpeakerTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("captions.speakerName")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="start"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("captions.speakerStart")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="mm:ss" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="end"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t("captions.speakerEnd")}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="mm:ss" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <DialogFooter
+                className={
+                  isCreate ? "gap-2 sm:justify-end" : "gap-2 sm:justify-between"
+                }
+              >
+                {!isCreate && (
+                  <Button
+                    disabled={deleteSpeaker.isPending}
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    type="button"
+                    variant="destructive"
+                  >
+                    {t("captions.deleteSpeaker")}
+                  </Button>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => onOpenChange(false)}
+                    type="button"
+                    variant="outline"
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button disabled={isDisabled} type="submit">
+                    {isPending ? t("common.loading") : t("common.save")}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog onOpenChange={setDeleteConfirmOpen} open={deleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("captions.deleteSpeakerTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("captions.deleteSpeakerDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteSpeaker.isPending}>
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteSpeaker.isPending}
+              onClick={handleDelete}
+            >
+              {deleteSpeaker.isPending
+                ? t("common.loading")
+                : t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function CaptionActionsMenu({
+  canEdit,
+  caption,
+  onAddChapter,
+  onAddSpeaker,
+  onDelete,
+  onEdit,
+  onShare,
+}: {
+  canEdit: boolean;
+  caption: Caption;
+  onAddChapter: (caption: Caption) => void;
+  onAddSpeaker: (caption: Caption) => void;
+  onDelete: (caption: Caption) => void;
+  onEdit: (caption: Caption) => void;
+  onShare: (caption: Caption) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          aria-label={t("captions.captionActions")}
+          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          type="button"
+        >
+          <EllipsisVertical className="size-3.5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        {canEdit && (
+          <>
+            <DropdownMenuItem onSelect={() => onEdit(caption)}>
+              <PencilIcon />
+              {t("captions.editCaption")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onAddChapter(caption)}>
+              <PlusIcon />
+              {t("captions.addChapter")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onAddSpeaker(caption)}>
+              <UserPlus />
+              {t("captions.addSpeaker")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => onDelete(caption)}
+              variant="destructive"
+            >
+              <Trash2Icon />
+              {t("captions.deleteCaption")}
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuItem onSelect={() => onShare(caption)}>
+          <LinkIcon />
+          {t("captions.shareCaption")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export function CaptionsPanel({
   videoId,
   searchId,
@@ -334,7 +954,6 @@ export function CaptionsPanel({
 }: CaptionsPanelProps) {
   const api = useTRPC();
   const t = useTranslations();
-  const { toast } = useToast();
   const [captionHighlightId] = useQueryState("c");
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -347,6 +966,17 @@ export function CaptionsPanel({
 
   const [editCaption, setEditCaption] = useState<Caption | null>(null);
   const [deleteCaption, setDeleteCaption] = useState<Caption | null>(null);
+  const [editChapter, setEditChapter] = useState<Chapter | null>(null);
+  const [chapterDialogMode, setChapterDialogMode] = useState<
+    "create" | "edit" | null
+  >(null);
+  const [createChapterTimecode, setCreateChapterTimecode] = useState("00:00");
+  const [editSpeaker, setEditSpeaker] = useState<Speaker | null>(null);
+  const [speakerDialogMode, setSpeakerDialogMode] = useState<
+    "create" | "edit" | null
+  >(null);
+  const [createSpeakerStart, setCreateSpeakerStart] = useState("00:00");
+  const [createSpeakerEnd, setCreateSpeakerEnd] = useState("00:00");
   const [shareCaption, setShareCaption] = useState<Caption | null>(null);
 
   const debouncedSetSearch = useDebouncedCallback(
@@ -381,6 +1011,9 @@ export function CaptionsPanel({
 
   const { data: chapters = [] } = useQuery(
     api.video.getChapters.queryOptions({ id: videoId })
+  );
+  const { data: speakers = [] } = useQuery(
+    api.video.getSpeakers.queryOptions({ id: videoId })
   );
   const searchCaptionsQueryOptions = searchId
     ? api.video.getCaptionBySearchId.queryOptions({
@@ -444,6 +1077,15 @@ export function CaptionsPanel({
       return null;
     });
   }, [captions, chapters]);
+  const speakerByCaptionIndex = useMemo(() => {
+    if (captions.length === 0 || speakers.length === 0) {
+      return captions.map(() => null);
+    }
+
+    return captions.map((caption) =>
+      findSpeakerAtTime(speakers, caption.startTime)
+    );
+  }, [captions, speakers]);
   const rowVirtualizer = useVirtualizer({
     count: captions.length,
     getScrollElement: () => scrollContainerRef.current,
@@ -568,12 +1210,6 @@ export function CaptionsPanel({
     });
   };
 
-  const handleShareCaption = (caption: Caption, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShareCaption(caption);
-  };
-
   const getShareUrl = () => {
     if (!shareCaption) {
       return "";
@@ -591,26 +1227,50 @@ export function CaptionsPanel({
     navigator.clipboard
       .writeText(shareUrl)
       .then(() => {
-        toast({ title: t("captions.shareCaptionSuccess") });
+        toast.success(t("captions.shareCaptionSuccess"));
       })
       .catch(() => {
-        toast({
-          title: t("captions.shareCaptionError"),
-          variant: "destructive",
-        });
+        toast.error(t("captions.shareCaptionError"));
       });
   };
 
-  const handleEditCaption = (caption: Caption, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleEditCaption = (caption: Caption) => {
     setEditCaption(caption);
   };
 
-  const handleDeleteCaption = (caption: Caption, e: React.MouseEvent) => {
+  const handleDeleteCaption = (caption: Caption) => {
+    setDeleteCaption(caption);
+  };
+
+  const handleShareCaption = (caption: Caption) => {
+    setShareCaption(caption);
+  };
+
+  const handleEditChapter = (chapter: Chapter, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDeleteCaption(caption);
+    setEditChapter(chapter);
+    setChapterDialogMode("edit");
+  };
+
+  const handleAddChapterFromCaption = (caption: Caption) => {
+    setEditChapter(null);
+    setCreateChapterTimecode(formatTime(caption.startTime));
+    setChapterDialogMode("create");
+  };
+
+  const handleAddSpeakerFromCaption = (caption: Caption) => {
+    setEditSpeaker(null);
+    setCreateSpeakerStart(formatTime(caption.startTime));
+    setCreateSpeakerEnd(formatTime(caption.endTime));
+    setSpeakerDialogMode("create");
+  };
+
+  const handleEditSpeaker = (speaker: Speaker, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditSpeaker(speaker);
+    setSpeakerDialogMode("edit");
   };
 
   const handleEditDialogChange = (open: boolean) => {
@@ -622,6 +1282,23 @@ export function CaptionsPanel({
   const handleDeleteDialogChange = (open: boolean) => {
     if (!open) {
       setDeleteCaption(null);
+    }
+  };
+
+  const handleEditChapterDialogChange = (open: boolean) => {
+    if (!open) {
+      setEditChapter(null);
+      setChapterDialogMode(null);
+      setCreateChapterTimecode("00:00");
+    }
+  };
+
+  const handleEditSpeakerDialogChange = (open: boolean) => {
+    if (!open) {
+      setEditSpeaker(null);
+      setSpeakerDialogMode(null);
+      setCreateSpeakerStart("00:00");
+      setCreateSpeakerEnd("00:00");
     }
   };
 
@@ -715,6 +1392,10 @@ export function CaptionsPanel({
                 const showChapterTitle =
                   Boolean(chapter?.title) &&
                   chapter?.title !== previousChapter?.title;
+                const speaker = speakerByCaptionIndex[index];
+                const previousSpeaker = speakerByCaptionIndex[index - 1];
+                const showSpeaker =
+                  Boolean(speaker?.name) && speaker?.id !== previousSpeaker?.id;
 
                 return (
                   <div
@@ -724,11 +1405,39 @@ export function CaptionsPanel({
                     ref={rowVirtualizer.measureElement}
                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
-                    {showChapterTitle && (
+                    {showChapterTitle && chapter && (
                       <div className="relative my-3 text-center before:absolute before:inset-x-0 before:top-1/2 before:h-px before:-translate-y-1/2 before:bg-border">
-                        <span className="relative z-10 bg-secondary px-2 font-medium text-muted-foreground text-sm">
-                          {chapter?.title}
+                        <span className="relative z-10 inline-flex items-center gap-1 bg-secondary px-2 font-medium text-muted-foreground text-sm">
+                          {chapter.title}
+                          {canEdit && (
+                            <button
+                              aria-label={t("captions.editChapter")}
+                              className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                              onClick={(e) => handleEditChapter(chapter, e)}
+                              type="button"
+                            >
+                              <PencilIcon className="size-3" />
+                            </button>
+                          )}
                         </span>
+                      </div>
+                    )}
+                    {showSpeaker && speaker && (
+                      <div className="my-2 flex items-center gap-1.5 px-2">
+                        <Mic2 className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="font-medium text-muted-foreground text-sm">
+                          {speaker.name}
+                        </span>
+                        {canEdit && (
+                          <button
+                            aria-label={t("captions.editSpeaker")}
+                            className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                            onClick={(e) => handleEditSpeaker(speaker, e)}
+                            type="button"
+                          >
+                            <PencilIcon className="size-3" />
+                          </button>
+                        )}
                       </div>
                     )}
                     <span
@@ -761,35 +1470,16 @@ export function CaptionsPanel({
                           __html: caption.headline ?? caption.text,
                         }}
                       />
-                      <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
-                        {canEdit && (
-                          <>
-                            <button
-                              aria-label={t("captions.editCaption")}
-                              className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                              onClick={(e) => handleEditCaption(caption, e)}
-                              type="button"
-                            >
-                              <PencilIcon className="size-3" />
-                            </button>
-                            <button
-                              aria-label={t("captions.deleteCaption")}
-                              className="rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              onClick={(e) => handleDeleteCaption(caption, e)}
-                              type="button"
-                            >
-                              <Trash2Icon className="size-3" />
-                            </button>
-                          </>
-                        )}
-                        <button
-                          aria-label={t("captions.shareCaption")}
-                          className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                          onClick={(e) => handleShareCaption(caption, e)}
-                          type="button"
-                        >
-                          <LinkIcon className="size-3" />
-                        </button>
+                      <span className="shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+                        <CaptionActionsMenu
+                          canEdit={canEdit}
+                          caption={caption}
+                          onAddChapter={handleAddChapterFromCaption}
+                          onAddSpeaker={handleAddSpeakerFromCaption}
+                          onDelete={handleDeleteCaption}
+                          onEdit={handleEditCaption}
+                          onShare={handleShareCaption}
+                        />
                       </span>
                     </span>
                   </div>
@@ -831,6 +1521,26 @@ export function CaptionsPanel({
         open={deleteCaption !== null}
         videoId={videoId}
       />
+
+      <ChapterDialog
+        chapter={editChapter}
+        defaultTimecode={createChapterTimecode}
+        mode={chapterDialogMode ?? "edit"}
+        onOpenChange={handleEditChapterDialogChange}
+        open={chapterDialogMode !== null}
+        videoId={videoId}
+      />
+
+      <SpeakerDialog
+        defaultEnd={createSpeakerEnd}
+        defaultStart={createSpeakerStart}
+        mode={speakerDialogMode ?? "edit"}
+        onOpenChange={handleEditSpeakerDialogChange}
+        open={speakerDialogMode !== null}
+        speaker={editSpeaker}
+        videoId={videoId}
+      />
+
       <Dialog
         onOpenChange={handleShareDialogChange}
         open={shareCaption !== null}

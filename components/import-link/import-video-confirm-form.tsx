@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { VideoPreviewCard } from "@/components/import-link/video-preview-card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import { openImportProcessDrawer } from "@/lib/import-process-events";
 import {
   buildPeerTubeWatchUrl,
@@ -64,7 +64,6 @@ export function ImportVideoConfirmForm({
   const api = useTRPC();
   const t = useTranslations("import");
   const tGlobal = useTranslations();
-  const { toast } = useToast();
   const watchUrl = buildPeerTubeWatchUrl(baseUrl, videoId);
 
   const {
@@ -91,10 +90,8 @@ export function ImportVideoConfirmForm({
         onSuccess?.(video);
       },
       onError: (err) => {
-        toast({
-          title: t("importFailedTitle"),
+        toast.error(t("importFailedTitle"), {
           description: err.message ?? t("importFailedDescription"),
-          variant: "destructive",
         });
       },
     })

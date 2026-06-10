@@ -167,7 +167,7 @@ export function HomePage() {
             >
               <Image
                 alt="EUR ArTeC"
-                className="h-12 w-full object-contain dark:brightness-0 dark:invert"
+                className="h-12 w-auto max-w-full object-contain dark:brightness-0 dark:invert"
                 height={48}
                 src="/loog-artec.png"
                 width={200}
@@ -181,7 +181,7 @@ export function HomePage() {
             >
               <Image
                 alt="MSH Paris Nord"
-                className="h-12 w-full object-contain"
+                className="h-12 w-auto max-w-full object-contain"
                 height={48}
                 src="/logo-msh-paris-nord.png"
                 width={200}
@@ -195,7 +195,7 @@ export function HomePage() {
             >
               <Image
                 alt="OSCARS"
-                className="h-12 w-full rounded object-contain dark:bg-white dark:p-0.5"
+                className="h-12 w-auto max-w-full rounded object-contain dark:bg-white dark:p-0.5"
                 height={48}
                 src="/logo-oscars.jpg"
                 width={200}
@@ -209,7 +209,7 @@ export function HomePage() {
             >
               <Image
                 alt="Université Paris 8"
-                className="h-12 w-full object-contain dark:brightness-0 dark:invert"
+                className="h-12 w-auto max-w-full object-contain dark:brightness-0 dark:invert"
                 height={48}
                 src="/logo-paris8.png"
                 width={200}
@@ -223,7 +223,7 @@ export function HomePage() {
             >
               <Image
                 alt="ICP"
-                className="h-12 w-full object-contain dark:brightness-0 dark:invert"
+                className="h-12 w-auto max-w-full object-contain dark:brightness-0 dark:invert"
                 height={48}
                 src="/logo-icp.png"
                 width={200}
@@ -237,7 +237,7 @@ export function HomePage() {
             >
               <Image
                 alt="Université de Lorraine"
-                className="h-12 w-full rounded object-contain dark:bg-white/90 dark:p-0.5"
+                className="h-12 w-auto max-w-full rounded object-contain dark:bg-white/90 dark:p-0.5"
                 height={48}
                 src="/Logo-ul.png"
                 width={200}
@@ -251,7 +251,7 @@ export function HomePage() {
             >
               <Image
                 alt="Organoesis"
-                className="h-12 w-full rounded object-contain dark:bg-white dark:p-0.5"
+                className="h-12 w-auto max-w-full rounded object-contain dark:bg-white dark:p-0.5"
                 height={48}
                 src="/logo-organoesis.png"
                 width={200}
@@ -261,7 +261,7 @@ export function HomePage() {
           <div className="mt-3 flex justify-center rounded-md bg-background px-4 py-3">
             <Image
               alt="Funded by the European Union"
-              className="h-14 object-contain"
+              className="h-14 w-auto max-w-full object-contain"
               height={56}
               src="/logo-eu_funded_en.png"
               width={300}

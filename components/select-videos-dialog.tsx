@@ -412,15 +412,13 @@ export function SelectVideosDialog({
                     No videos selected.
                   </p>
                 ) : (
-                  selectedVideos.map((video) => {
-                    return (
-                      <SelectedRow
-                        key={video.id}
-                        onRemove={() => handleRemove(video.id)}
-                        video={video}
-                      />
-                    );
-                  })
+                  selectedVideos.map((video) => (
+                    <SelectedRow
+                      key={video.id}
+                      onRemove={() => handleRemove(video.id)}
+                      video={video}
+                    />
+                  ))
                 )}
               </div>
             </ScrollArea>

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderPlus, Loader2, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useTRPC } from "@/lib/trpc/client";
 
 interface AddToFolderDialogProps {
@@ -32,7 +32,6 @@ export function AddToFolderDialog({
   const [newFolderName, setNewFolderName] = React.useState("");
   const [isCreating, setIsCreating] = React.useState(false);
   const t = useTranslations();
-  const { toast } = useToast();
   const api = useTRPC();
   const queryClient = useQueryClient();
 
@@ -59,14 +58,10 @@ export function AddToFolderDialog({
         invalidate();
         setNewFolderName("");
         setIsCreating(false);
-        toast({ title: t("folders.createSuccess") });
+        toast.success(t("folders.createSuccess"));
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );
@@ -75,14 +70,10 @@ export function AddToFolderDialog({
     api.folder.addVideo.mutationOptions({
       onSuccess: () => {
         invalidate();
-        toast({ title: t("folders.addVideoSuccess") });
+        toast.success(t("folders.addVideoSuccess"));
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );
@@ -91,14 +82,10 @@ export function AddToFolderDialog({
     api.folder.removeVideo.mutationOptions({
       onSuccess: () => {
         invalidate();
-        toast({ title: t("folders.removeVideoSuccess") });
+        toast.success(t("folders.removeVideoSuccess"));
       },
       onError: (err) => {
-        toast({
-          title: t("common.error"),
-          description: err.message,
-          variant: "destructive",
-        });
+        toast.error(t("common.error"), { description: err.message });
       },
     })
   );

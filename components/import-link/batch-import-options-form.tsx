@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { CreateFolderDialog } from "@/components/create-folder-dialog";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
 import { openImportProcessDrawer } from "@/lib/import-process-events";
 import { useTRPC } from "@/lib/trpc/client";
 import type { SelectedVideo } from "./peertube-search-results";
@@ -59,7 +59,6 @@ export function BatchImportOptionsForm({
   const api = useTRPC();
   const t = useTranslations("import");
   const tGlobal = useTranslations();
-  const { toast } = useToast();
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [newlyCreatedFolder, setNewlyCreatedFolder] = useState<{
     id: string;
@@ -117,20 +116,16 @@ export function BatchImportOptionsForm({
         });
 
         if (result.rejected.length > 0 && result.accepted.length > 0) {
-          toast({
-            title: t("importFailedTitle"),
+          toast.error(t("importFailedTitle"), {
             description: t("batchPartialFailure", {
               count: result.rejected.length,
             }),
-            variant: "destructive",
           });
         }
       },
       onError: (err) => {
-        toast({
-          title: t("importFailedTitle"),
+        toast.error(t("importFailedTitle"), {
           description: err.message ?? t("importFailedDescription"),
-          variant: "destructive",
         });
       },
     })

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { toast } from "sonner";
 import { BatchImportOptionsForm } from "@/components/import-link/batch-import-options-form";
 import {
   ConnectInstanceDialog,
@@ -34,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { type RouterOutput, useTRPC } from "@/lib/trpc/client";
 
 export type PeerTubeInstance =
@@ -48,7 +48,6 @@ export default function ImportSearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const api = useTRPC();
-  const { toast } = useToast();
   const t = useTranslations("import");
   const { data: instances, refetch: refetchInstances } = useQuery(
     api.peertubeInstance.listWithAuth.queryOptions({
@@ -128,10 +127,8 @@ export default function ImportSearchPage() {
       return;
     }
 
-    toast({
-      title: t("importFailedTitle"),
+    toast.error(t("importFailedTitle"), {
       description: t("importFailedDescription"),
-      variant: "destructive",
     });
   };
 

@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ImportVideoConfirmForm } from "@/components/import-link/import-video-confirm-form";
@@ -42,7 +43,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
 import { fetchPeerTubeVideo, parsePeerTubeUrl } from "@/lib/peertube-client";
 
 const importVideoSchema = z.object({
@@ -62,7 +62,6 @@ export default function ImportLinkPage() {
   const t = useTranslations("import");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
 
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -164,8 +163,7 @@ export default function ImportLinkPage() {
   }, [urlValue, form]);
 
   const handleImportSuccess = (video: { id: string }) => {
-    toast({
-      title: "Success",
+    toast.success("Success", {
       description: "Video imported successfully!",
     });
     form.reset();

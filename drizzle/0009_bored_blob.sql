@@ -1,0 +1,1 @@
+ALTER TABLE "speakers" RENAME COLUMN "timecode" TO "start";

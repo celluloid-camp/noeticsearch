@@ -121,9 +121,9 @@ export const searchRouter = router({
       const searchHistory = await ctx.db.query.searchHistoryTable.findFirst({
         where: and(
           eq(searchHistoryTable.id, input.id),
-          userId != null
-            ? sql`(${searchHistoryTable.isPublic} = true OR ${searchHistoryTable.userId} = ${userId})`
-            : eq(searchHistoryTable.isPublic, true)
+          userId == null
+            ? eq(searchHistoryTable.isPublic, true)
+            : sql`(${searchHistoryTable.isPublic} = true OR ${searchHistoryTable.userId} = ${userId})`
         ),
         columns: {
           id: true,
@@ -344,12 +344,12 @@ export const searchRouter = router({
     const userId = ctx.user?.id;
     const searchHistories = await ctx.db.query.searchHistoryTable.findMany({
       where:
-        userId != null
-          ? and(
+        userId == null
+          ? eq(searchHistoryTable.isPublic, true)
+          : and(
               eq(searchHistoryTable.isPublic, true),
               ne(searchHistoryTable.userId, userId)
-            )
-          : eq(searchHistoryTable.isPublic, true),
+            ),
       columns: {
         id: true,
         title: true,

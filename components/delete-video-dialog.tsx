@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +15,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 import type { VideoById } from "@/lib/trpc/client";
 import { useTRPC } from "@/lib/trpc/client";
 
@@ -31,7 +31,6 @@ export default function DeleteVideoDialog({
 }: DeleteVideoDialogProps) {
   const [open, setOpen] = useState(false);
   const onOpenChange = setOpen;
-  const { toast } = useToast();
   const router = useRouter();
   const api = useTRPC();
   const queryClient = useQueryClient();
@@ -39,8 +38,7 @@ export default function DeleteVideoDialog({
   const deleteVideo = useMutation(
     api.video.delete.mutationOptions({
       onSuccess: () => {
-        toast({
-          title: "Video deleted",
+        toast.success("Video deleted", {
           description: "The video has been successfully deleted.",
         });
         queryClient.invalidateQueries({
@@ -50,10 +48,8 @@ export default function DeleteVideoDialog({
         router.push("/");
       },
       onError: (error) => {
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: error.message || "Failed to delete video",
-          variant: "destructive",
         });
       },
     })
