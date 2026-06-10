@@ -43,6 +43,11 @@
     "assistant": "Assistant",
     "publicSearches": "Recherches publiques",
     "mySearches": "Mes recherches",
+    "noMySearchesTitle": "Aucune recherche",
+    "noMySearchesDescription": "Lancez une recherche pour explorer vos sous-titres et trouver des citations précises.",
+    "noPublicSearchesTitle": "Aucune recherche publique",
+    "noPublicSearchesDescription": "Soyez le premier à partager une recherche avec la communauté.",
+    "sortOldest": "Plus anciennes",
     "deleteSearch": "Supprimer la recherche",
     "editSearch": "Modifier la recherche",
     "titleField": "Titre",
@@ -269,7 +274,8 @@
     "areYouSureDelete": "Êtes-vous sûr de vouloir supprimer cette recherche ? Cette action est irréversible.",
     "cancel": "Annuler",
     "delete": "Supprimer",
-    "deleting": "Suppression..."
+    "deleting": "Suppression...",
+    "seeAllSearches": "Toutes les recherches"
   },
   "app": {
     "name": "NoeticSearch"

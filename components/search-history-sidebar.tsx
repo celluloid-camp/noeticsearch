@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Trash2 } from "lucide-react";
+import { LayoutGrid, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -85,9 +85,9 @@ export function MySearchSidebar() {
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
-        ) : searchList && searchList.count > 0 ? (
+        ) : (
           <SidebarMenu>
-            {searchList.items.map((search) => {
+            {searchList?.items.map((search) => {
               const isActive = pathname === `/search/${search.id}`;
               return (
                 <SidebarMenuItem key={search.id}>
@@ -115,8 +115,20 @@ export function MySearchSidebar() {
                 </SidebarMenuItem>
               );
             })}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/mysearch"}
+                tooltip={t("seeAllSearches")}
+              >
+                <Link href="/mysearch">
+                  <LayoutGrid className="size-4 shrink-0" />
+                  <span>{t("seeAllSearches")}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
-        ) : null}
+        )}
       </SidebarGroupContent>
 
       {/* Delete Confirmation Dialog */}

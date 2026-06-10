@@ -41,7 +41,7 @@ export function HomePage() {
         x={-1}
         y={-1}
       />
-      <div className="relative z-10 mx-auto min-h-full w-full max-w-4xl border-x bg-background py-8">
+      <div className="relative z-10 mx-auto min-h-full w-full max-w-4xl border-x bg-background pt-12 pb-8">
         <HomeHero />
 
         <div className="mb-10 border-border border-b px-10 pb-10">

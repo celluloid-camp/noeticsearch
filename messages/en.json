@@ -43,6 +43,11 @@
     "assistant": "Assistant",
     "publicSearches": "Public searches",
     "mySearches": "My searches",
+    "noMySearchesTitle": "No searches yet",
+    "noMySearchesDescription": "Start a search to explore your video subtitles and find exact quotes.",
+    "noPublicSearchesTitle": "No public searches yet",
+    "noPublicSearchesDescription": "Be the first to share a search with the community.",
+    "sortOldest": "Oldest first",
     "deleteSearch": "Delete Search",
     "editSearch": "Edit search",
     "titleField": "Title",
@@ -269,7 +274,8 @@
     "areYouSureDelete": "Are you sure you want to delete this search? This action cannot be undone.",
     "cancel": "Cancel",
     "delete": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "seeAllSearches": "All searches"
   },
   "app": {
     "name": "NoeticSearch"

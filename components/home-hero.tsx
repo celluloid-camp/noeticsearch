@@ -15,7 +15,7 @@ export function HomeHero() {
 
   return (
     <div className="mb-10 border-border border-b pb-8">
-      <div className="border-border border-t px-10 pt-10">
+      <div className="border-border border-t px-10 pt-14">
         <div className="mb-4 flex items-center gap-2">
           <OurIcon />
           <span className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
