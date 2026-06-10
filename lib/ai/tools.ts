@@ -2,6 +2,10 @@ import { tool as createTool, type InferUITool } from "ai";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, getDbErrorMessage } from "../db";
+import {
+  captionLanguageCode,
+  regconfigForLanguageCode,
+} from "../search/full-text-sql";
 
 interface CaptionSearchRow {
   endTime: number;
@@ -45,7 +49,7 @@ const searchVideoCaptionsInputSchema = z.object({
     .array(z.string())
     .min(1)
     .describe(
-      "Keywords to search for in video captions. Each keyword is OR-combined that will be used in a pg full-text search."
+      "Keywords to search for in video captions, titles, and descriptions. Each keyword is OR-combined for PostgreSQL full-text search."
     ),
 });
 
@@ -61,7 +65,8 @@ export const searchVideoTool = ({
   userId,
 }: SearchVideoToolArgs) =>
   createTool({
-    description: "Search videos in the database using caption full-text search",
+    description:
+      "Search videos in the database using full-text search on captions, video titles, and descriptions",
     inputSchema: searchVideoCaptionsInputSchema,
     execute: async ({ keywords, limit }) => {
       const terms = keywords
@@ -92,10 +97,11 @@ export const searchVideoTool = ({
       try {
         const result = await db.execute(
           sql`
-				WITH matches AS (
+				WITH caption_rows AS (
 					SELECT
 						v.id AS video_id,
 						v.title AS video_title,
+						v.description AS video_description,
 						v.thumbnail AS video_thumbnail,
 						v.url AS video_url,
 						c.id AS subtitle_id,
@@ -103,25 +109,83 @@ export const searchVideoTool = ({
 						c.start_time,
 						c.end_time,
 						c.language,
-					to_tsvector(
-						CASE c.language
-							WHEN 'fr' THEN 'french'::regconfig
-							WHEN 'en' THEN 'english'::regconfig
-							ELSE 'simple'::regconfig
-						END,
-						lower(unaccent(coalesce(c.text, '')))
-					) AS document,
-				to_tsquery(
-					CASE c.language
-						WHEN 'fr' THEN 'french'::regconfig
-						WHEN 'en' THEN 'english'::regconfig
-						ELSE 'simple'::regconfig
-					END,
-					lower(unaccent(${prefixQuery}))
-				) AS query
+						${captionLanguageCode(sql`c.language`)} AS caption_language
 					FROM captions c
 					INNER JOIN videos v ON v.id = c.video_id
 					WHERE true ${filterCondition}
+				),
+				matches AS (
+					SELECT
+						video_id,
+						video_title,
+						video_thumbnail,
+						video_url,
+						subtitle_id,
+						subtitle_text,
+						start_time,
+						end_time,
+						language,
+						caption_language,
+						to_tsvector(
+							${regconfigForLanguageCode(sql`caption_language`)},
+							lower(unaccent(coalesce(subtitle_text, '')))
+						) AS caption_document,
+						setweight(
+							to_tsvector(
+								'french',
+								lower(unaccent(coalesce(video_title, '')))
+							),
+							'A'
+						) || setweight(
+							to_tsvector(
+								'french',
+								lower(unaccent(coalesce(video_description, '')))
+							),
+							'B'
+						) AS video_document,
+						to_tsquery(
+							${regconfigForLanguageCode(sql`caption_language`)},
+							lower(unaccent(${prefixQuery}))
+						) AS caption_query,
+						to_tsquery('french', lower(unaccent(${prefixQuery}))) AS video_query
+					FROM caption_rows
+				),
+				caption_hits AS (
+					SELECT
+						video_id,
+						video_title,
+						video_thumbnail,
+						video_url,
+						subtitle_id,
+						subtitle_text,
+						start_time,
+						end_time,
+						language,
+						ts_rank_cd(caption_document, caption_query) AS rank
+					FROM matches
+					WHERE caption_document @@ caption_query
+				),
+				video_only_hits AS (
+					SELECT DISTINCT ON (video_id)
+						video_id,
+						video_title,
+						video_thumbnail,
+						video_url,
+						subtitle_id,
+						subtitle_text,
+						start_time,
+						end_time,
+						language,
+						ts_rank_cd(video_document, video_query) AS rank
+					FROM matches
+					WHERE video_document @@ video_query
+						AND video_id NOT IN (SELECT video_id FROM caption_hits)
+					ORDER BY video_id, start_time ASC
+				),
+				combined AS (
+					SELECT * FROM caption_hits
+					UNION ALL
+					SELECT * FROM video_only_hits
 				),
 				ranked AS (
 					SELECT
@@ -134,14 +198,12 @@ export const searchVideoTool = ({
 						start_time,
 						end_time,
 						language,
-						ts_rank_cd(document, query) AS rank,
-						query,
+						rank,
 						row_number() OVER (
 							PARTITION BY video_id
-							ORDER BY ts_rank_cd(document, query) DESC, start_time ASC
+							ORDER BY rank DESC, start_time ASC
 						) AS row_number
-					FROM matches
-					WHERE document @@ query
+					FROM combined
 				)
 				SELECT
 					video_id AS "videoId",

@@ -3,6 +3,10 @@ import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { searchHistoryTable, searchResultTable } from "@/db/schema";
 import { getDbErrorMessage } from "@/lib/db";
+import {
+  captionLanguageCode,
+  regconfigForLanguageCode,
+} from "@/lib/search/full-text-sql";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
 export const searchRouter = router({
   create: protectedProcedure
@@ -152,6 +156,7 @@ export const searchRouter = router({
             SELECT
               v.id AS "videoId",
               v.title AS "videoTitle",
+              v.description AS "videoDescription",
               v.thumbnail AS "videoThumbnail",
               v.url AS "videoUrl",
               c.id AS "captionId",
@@ -159,60 +164,105 @@ export const searchRouter = router({
               c.start_time AS "startTime",
               c.end_time AS "endTime",
               c.thumbnail AS "thumbnail",
-              c.language,
+              ${captionLanguageCode(sql`c.language`)} AS "captionLanguage",
               sr.accuracy
             FROM search_result sr
             INNER JOIN captions c ON c.id = sr.caption_id
             INNER JOIN videos v ON v.id = sr.video_id
             WHERE sr.search_id = ${input.id}
           ),
-          grouped AS (
+          all_videos AS (
+            SELECT DISTINCT ON (v.id)
+              v.id AS "videoId",
+              v.title AS "videoTitle",
+              v.description AS "videoDescription",
+              v.thumbnail AS "videoThumbnail",
+              v.url AS "videoUrl"
+            FROM search_result sr
+            INNER JOIN captions c ON c.id = sr.caption_id
+            INNER JOIN videos v ON v.id = sr.video_id
+            WHERE sr.search_id = ${input.id}
+            ORDER BY v.id, c.start_time ASC
+          ),
+          matching_captions AS (
+            SELECT base.*
+            FROM base
+            WHERE to_tsvector(
+              ${regconfigForLanguageCode(sql`"captionLanguage"`)},
+              lower(unaccent(coalesce("captionText", '')))
+            ) @@ to_tsquery(
+              ${regconfigForLanguageCode(sql`"captionLanguage"`)},
+              lower(unaccent(${keywords}))
+            )
+          ),
+          with_headlines AS (
             SELECT
               "videoId",
               "videoTitle",
+              "videoDescription",
               "videoThumbnail",
               "videoUrl",
-              json_agg(
-                json_build_object(
-                  'id',
-                  "captionId",
-                  'text',
-                  "captionText",
-                  'headline',
-                  ts_headline(
-                    CASE language
-                      WHEN 'fr' THEN 'french'::regconfig
-                      WHEN 'en' THEN 'english'::regconfig
-                      ELSE 'simple'::regconfig
-                    END,
-                    lower(unaccent(coalesce("captionText", ''))),
-                    to_tsquery(
-                      CASE language
-                        WHEN 'fr' THEN 'french'::regconfig
-                        WHEN 'en' THEN 'english'::regconfig
-                        ELSE 'simple'::regconfig
-                      END,
-                      lower(unaccent(${keywords}))
-                    ),
-                    'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15'
-                  ),
-                  'startTime',
-                  "startTime",
-                  'endTime',
-                  "endTime",
-                  'thumbnail',
-                  "thumbnail",
-                  'language',
-                  language,
-                  'rank',
-                  0,
-                  'accuracy',
-                  accuracy
-                )
-                ORDER BY "startTime"
+              "captionId",
+              "captionText",
+              "startTime",
+              "endTime",
+              "thumbnail",
+              "captionLanguage",
+              accuracy,
+              ts_headline(
+                ${regconfigForLanguageCode(sql`"captionLanguage"`)},
+                lower(unaccent(coalesce("captionText", ''))),
+                to_tsquery(
+                  ${regconfigForLanguageCode(sql`"captionLanguage"`)},
+                  lower(unaccent(${keywords}))
+                ),
+                'StartSel=<mark>, StopSel=</mark>, MaxWords=35, MinWords=15'
+              ) AS headline
+            FROM matching_captions
+          ),
+          grouped AS (
+            SELECT
+              av."videoId",
+              av."videoTitle",
+              ts_headline(
+                'french',
+                lower(unaccent(coalesce(av."videoTitle", ''))),
+                to_tsquery('french', lower(unaccent(${keywords}))),
+                'StartSel=<mark>, StopSel=</mark>, MaxWords=20, MinWords=1'
+              ) AS "videoTitleHeadline",
+              av."videoThumbnail",
+              av."videoUrl",
+              coalesce(
+                (
+                  SELECT json_agg(
+                    json_build_object(
+                      'id',
+                      wh."captionId",
+                      'text',
+                      wh."captionText",
+                      'headline',
+                      wh.headline,
+                      'startTime',
+                      wh."startTime",
+                      'endTime',
+                      wh."endTime",
+                      'thumbnail',
+                      wh."thumbnail",
+                      'language',
+                      wh."captionLanguage",
+                      'rank',
+                      0,
+                      'accuracy',
+                      wh.accuracy
+                    )
+                    ORDER BY wh."startTime"
+                  )
+                  FROM with_headlines wh
+                  WHERE wh."videoId" = av."videoId"
+                ),
+                '[]'::json
               ) AS captions
-            FROM base
-            GROUP BY "videoId", "videoTitle", "videoThumbnail", "videoUrl"
+            FROM all_videos av
           )
           SELECT
             coalesce(
@@ -222,6 +272,8 @@ export const searchRouter = router({
                   "videoId",
                   'videoTitle',
                   "videoTitle",
+                  'videoTitleHeadline',
+                  "videoTitleHeadline",
                   'videoThumbnail',
                   "videoThumbnail",
                   'videoUrl',
@@ -246,6 +298,7 @@ export const searchRouter = router({
         results: results as {
           videoId: string;
           videoTitle: string;
+          videoTitleHeadline?: string;
           videoThumbnail: string | null;
           videoUrl: string;
           captions: Array<{

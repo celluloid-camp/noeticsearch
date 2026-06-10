@@ -1,13 +1,7 @@
 "use client";
 
-import { type UIMessage, useChat } from "@ai-sdk/react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-import { DefaultChatTransport } from "ai";
+import type { ChatStatus, UIMessage, UseChatHelpers } from "@ai-sdk/react";
+import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   CopyIcon,
   Globe,
@@ -71,13 +65,18 @@ const FILTER_OPTIONS = [
 
 export function SearchAssistant({
   chatId,
-  initialMessages,
+  messages,
+  sendMessage,
+  status,
+  regenerate,
 }: {
   chatId: string;
-  initialMessages: UIMessage[];
+  messages: UIMessage[];
+  sendMessage: UseChatHelpers<UIMessage>["sendMessage"];
+  status: ChatStatus;
+  regenerate: UseChatHelpers<UIMessage>["regenerate"];
 }) {
   const api = useTRPC();
-  const queryClient = useQueryClient();
   const [input, setInput] = useState("");
   const [customVideoDialogOpen, setCustomVideoDialogOpen] = useState(false);
   const tSearch = useTranslations("search");
@@ -110,24 +109,6 @@ export function SearchAssistant({
     name: folder.name,
     videoIds: folder.videos.map((video) => video.id),
   }));
-
-  const { messages, sendMessage, status, regenerate } = useChat({
-    id: chatId,
-    messages: initialMessages,
-    resume: true,
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      prepareSendMessagesRequest({ messages, id }) {
-        return { body: { message: messages.at(-1), id } };
-      },
-    }),
-    onFinish: async () => {
-      await queryClient.invalidateQueries(
-        api.search.captionResults.queryOptions({ id: chatId })
-      );
-      refetchSearch();
-    },
-  });
 
   const handleSubmit = (message: PromptInputMessage) => {
     if (!message.text) {
@@ -181,6 +162,7 @@ export function SearchAssistant({
                   }
                   case "tool-search_video":
                     switch (part.state) {
+                      case "input-streaming":
                       case "input-available":
                         return (
                           <Shimmer
@@ -291,7 +273,7 @@ export function SearchAssistant({
               })}
             </Fragment>
           ))}
-          {status === "streaming" && (
+          {status === "submitted" && (
             <div className="mt-2">
               <Shimmer className="text-xs" duration={3} spread={3}>
                 {tSearch("searching")}

@@ -1,12 +1,18 @@
 "use client";
 
-import type { UIMessage } from "@ai-sdk/react";
+import { type UIMessage, useChat } from "@ai-sdk/react";
 import { IconDownload, IconEdit, IconShare } from "@tabler/icons-react";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { DefaultChatTransport } from "ai";
 import { GlobeIcon, Loader2, LockIcon, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { EditSearchDialog } from "@/components/edit-search-dialog";
 import { ExportSearchDialog } from "@/components/export-search-dialog";
 import { ShareSearchDialog } from "@/components/share-search-dialog";
@@ -45,6 +51,12 @@ function SearchResultVideoItem({
   const videoId = video.videoId.toString();
   const videoThumbnail = video.videoThumbnail || "/placeholder.svg";
   const title = video.videoTitle || "Untitled";
+  const titleHeadline =
+    "videoTitleHeadline" in video &&
+    typeof video.videoTitleHeadline === "string" &&
+    video.videoTitleHeadline.includes("<mark>")
+      ? video.videoTitleHeadline
+      : null;
   const captions = video.captions ?? [];
 
   return (
@@ -69,10 +81,14 @@ function SearchResultVideoItem({
       </Link>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
         <Link
-          className="line-clamp-2 shrink-0 font-semibold text-sm hover:underline"
+          className="line-clamp-2 shrink-0 font-semibold text-sm hover:underline [&_mark]:rounded [&_mark]:bg-yellow-200 [&_mark]:px-0.5 [&_mark]:text-foreground dark:[&_mark]:bg-yellow-600"
           href={`/search/${searchId}/video/${videoId}`}
         >
-          {title}
+          {titleHeadline ? (
+            <span dangerouslySetInnerHTML={{ __html: titleHeadline }} />
+          ) : (
+            title
+          )}
         </Link>
         <ScrollArea className="min-h-0 flex-1 rounded-md border">
           <div className="space-y-0.5 p-2">
@@ -109,6 +125,32 @@ function SearchResultVideoItem({
   );
 }
 
+function VideoResultsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {(["a", "b", "c"] as const).map((key) => (
+        <Card
+          className="flex h-[420px] min-w-0 flex-col gap-0 overflow-hidden py-0"
+          key={key}
+        >
+          <Skeleton className="h-40 w-full shrink-0 rounded-none" />
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+            <Skeleton className="h-4 w-3/4 shrink-0" />
+            <div className="flex min-h-0 flex-1 flex-col gap-1.5 rounded-md border p-2">
+              {(["a", "b", "c", "d", "e", "f"] as const).map((key) => (
+                <div className="flex items-center gap-2 px-2 py-1.5" key={key}>
+                  <Skeleton className="h-3 w-8 shrink-0" />
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export function SearchChat({
   id,
   initialMessages,
@@ -117,16 +159,40 @@ export function SearchChat({
   initialMessages: UIMessage[];
 }) {
   const api = useTRPC();
+  const queryClient = useQueryClient();
   const t = useTranslations();
   const { data: session } = useSession();
-  const { data: search } = useSuspenseQuery(
+  const { data: search, refetch: refetchSearch } = useSuspenseQuery(
     api.search.load.queryOptions({ id })
   );
-  const { data: captionData } = useQuery(
+  const isOwner = session?.user?.id === search.user.id;
+
+  const { messages, sendMessage, status, regenerate } = useChat({
+    id,
+    messages: initialMessages,
+    resume: isOwner,
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      prepareSendMessagesRequest({ messages, id }) {
+        return { body: { message: messages.at(-1), id } };
+      },
+    }),
+    onFinish: async () => {
+      await queryClient.invalidateQueries(
+        api.search.captionResults.queryOptions({ id })
+      );
+      refetchSearch();
+    },
+  });
+
+  const { data: captionData, isPending: captionResultsPending } = useQuery(
     api.search.captionResults.queryOptions({ id })
   );
   const captionResults = captionData?.results ?? [];
   const canEdit = captionData?.canEdit ?? false;
+  const isSearching = status === "submitted" || status === "streaming";
+  const showResultsLoading =
+    captionResultsPending || (isSearching && captionResults.length === 0);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -187,7 +253,16 @@ export function SearchChat({
         {/* Central video grid */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-auto">
-            {captionResults.length > 0 ? (
+            {showResultsLoading ? (
+              <div className="flex flex-col gap-4">
+                {isSearching && (
+                  <Shimmer className="text-sm" duration={3} spread={3}>
+                    {t("search.searching")}
+                  </Shimmer>
+                )}
+                <VideoResultsSkeleton />
+              </div>
+            ) : captionResults.length > 0 ? (
               <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {captionResults.map((video) => (
                   <SearchResultVideoItem
@@ -215,8 +290,14 @@ export function SearchChat({
           </div>
         </div>
 
-        {session?.user?.id === search.user.id && (
-          <SearchAssistant chatId={id} initialMessages={initialMessages} />
+        {isOwner && (
+          <SearchAssistant
+            chatId={id}
+            messages={messages}
+            regenerate={regenerate}
+            sendMessage={sendMessage}
+            status={status}
+          />
         )}
       </div>
     </div>
