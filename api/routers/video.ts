@@ -14,13 +14,17 @@ import {
 import { chaptersTable } from "@/db/schema/chapters";
 import { searchResultTable } from "@/db/schema/search-result";
 import { speakersTable } from "@/db/schema/speakers";
-import { getDbErrorMessage } from "@/lib/db";
 import {
   fetchPeerTubeVideoDetails,
   parsePeerTubeUrl,
   resolveAuthorAvatarUrl,
 } from "@/lib/peertube-client";
 import { resolveAccessToken } from "@/lib/peertube-token";
+import {
+  ensureCaptionHeadline,
+  parseCaptionSearchTerms,
+  searchCaptionsWithHybridFallback,
+} from "@/lib/search/caption-search";
 import { importVideo } from "@/workflows/import-video";
 import { naturalizeCaptions } from "@/workflows/naturalize-captions";
 import { protectedProcedure, publicProcedure, router } from "../trpc";
@@ -827,59 +831,25 @@ export const videoRouter = router({
       const trimmed = input.keywords?.trim();
 
       if (trimmed) {
-        const prefixQuery = trimmed
-          .split(/[,\s]+/)
-          .map((k) =>
-            k
-              .trim()
-              .toLowerCase()
-              .replace(/[^\p{L}\p{N}]/gu, "")
-          )
-          .filter(Boolean)
-          .map((k) => `${k}:*`)
-          .join(" | ");
-        const tsQuery = sql`to_tsquery('french', lower(unaccent(${prefixQuery})))`;
-
-        try {
-          const captions = await ctx.db
-            .select({
-              id: captionsTable.id,
-              text: captionsTable.text,
-              thumbnail: captionsTable.thumbnail,
-              startTime: captionsTable.startTime,
-              endTime: captionsTable.endTime,
-              headline: sql<string>`ts_headline(
-              'french',
-              ${captionsTable.text},
-              ${tsQuery},
-              'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
-            )`,
-            })
-            .from(captionsTable)
-            .where(
-              sql`${eq(captionsTable.videoId, videoId)} AND to_tsvector('french', lower(unaccent(${captionsTable.text}))) @@ ${tsQuery}`
-            )
-            .orderBy(asc(captionsTable.startTime));
-
-          return captions.map((sub) => ({
-            id: sub.id,
-            text: sub.text,
-            headline: sub.headline,
-            thumbnail: sub.thumbnail,
-            timestamp: formatTimestamp(sub.startTime),
-            startTime: sub.startTime,
-            endTime: sub.endTime,
-          }));
-        } catch (error) {
-          console.error(error);
-          const { message, constraint } = getDbErrorMessage(error);
-          console.error("Failed to get captions:", {
-            message,
-            constraint,
-            originalError: error,
-          });
+        const terms = parseCaptionSearchTerms(trimmed);
+        if (terms.length === 0) {
           return [];
         }
+
+        const captions = await searchCaptionsWithHybridFallback(ctx.db, {
+          videoId,
+          terms,
+        });
+
+        return captions.map((sub) => ({
+          id: sub.id,
+          text: sub.text,
+          headline: sub.headline,
+          thumbnail: sub.thumbnail,
+          timestamp: formatTimestamp(sub.startTime),
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }));
       }
 
       const captions = await ctx.db
@@ -920,19 +890,12 @@ export const videoRouter = router({
         },
       });
 
-      const sanitize = (k: string) =>
-        k
-          .trim()
-          .toLowerCase()
-          .replace(/[^\p{L}\p{N}]/gu, "");
-
       const savedKeywords =
-        searchHistory?.keywords?.map(sanitize).filter(Boolean) ?? [];
-      const additionalKeywords =
-        input.keywords
-          ?.split(/[,\s]+/)
-          .map(sanitize)
-          .filter(Boolean) ?? [];
+        searchHistory?.keywords?.flatMap((k) => parseCaptionSearchTerms(k)) ??
+        [];
+      const additionalKeywords = input.keywords
+        ? parseCaptionSearchTerms(input.keywords)
+        : [];
       const keywordsArray = [...savedKeywords, ...additionalKeywords];
 
       if (keywordsArray.length === 0) {
@@ -968,34 +931,13 @@ export const videoRouter = router({
 
       const hasAdditionalKeywords = additionalKeywords.length > 0;
 
-      const highlightQuery = keywordsArray.map((k) => `${k}:*`).join(" | ");
-      const highlightTsQuery = sql`to_tsquery('french', lower(unaccent(${highlightQuery})))`;
-
       if (hasAdditionalKeywords) {
-        const filterQuery = additionalKeywords.map((k) => `${k}:*`).join(" | ");
-        const filterTsQuery = sql`to_tsquery('french', lower(unaccent(${filterQuery})))`;
+        const captions = await searchCaptionsWithHybridFallback(ctx.db, {
+          videoId,
+          terms: additionalKeywords,
+        });
 
-        const rows = await ctx.db
-          .select({
-            id: captionsTable.id,
-            text: captionsTable.text,
-            thumbnail: captionsTable.thumbnail,
-            startTime: captionsTable.startTime,
-            endTime: captionsTable.endTime,
-            headline: sql<string>`ts_headline(
-              'french',
-              ${captionsTable.text},
-              ${highlightTsQuery},
-              'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
-            )`,
-          })
-          .from(captionsTable)
-          .where(
-            sql`${eq(captionsTable.videoId, videoId)} AND to_tsvector('french', lower(unaccent(coalesce(${captionsTable.text}, '')))) @@ ${filterTsQuery}`
-          )
-          .orderBy(asc(captionsTable.startTime));
-
-        return rows.map((sub) => ({
+        return captions.map((sub) => ({
           id: sub.id,
           text: sub.text,
           headline: sub.headline,
@@ -1006,40 +948,70 @@ export const videoRouter = router({
         }));
       }
 
-      const rows = await ctx.db
-        .select({
-          id: captionsTable.id,
-          text: captionsTable.text,
-          thumbnail: captionsTable.thumbnail,
-          startTime: captionsTable.startTime,
-          endTime: captionsTable.endTime,
-          headline: sql<string>`ts_headline(
+      const searchResultJoin = and(
+        eq(searchResultTable.captionId, captionsTable.id),
+        eq(searchResultTable.searchId, input.searchId),
+        eq(searchResultTable.videoId, videoId)
+      );
+
+      try {
+        const highlightQuery = keywordsArray.map((k) => `${k}:*`).join(" | ");
+        const highlightTsQuery = sql`to_tsquery('french', lower(unaccent(${highlightQuery})))`;
+
+        const rows = await ctx.db
+          .select({
+            id: captionsTable.id,
+            text: captionsTable.text,
+            thumbnail: captionsTable.thumbnail,
+            startTime: captionsTable.startTime,
+            endTime: captionsTable.endTime,
+            headline: sql<string>`ts_headline(
             'french',
             ${captionsTable.text},
             ${highlightTsQuery},
             'StartSel=<mark>, StopSel=</mark>, MaxFragments=0'
           )`,
-        })
-        .from(captionsTable)
-        .innerJoin(
-          searchResultTable,
-          and(
-            eq(searchResultTable.captionId, captionsTable.id),
-            eq(searchResultTable.searchId, input.searchId),
-            eq(searchResultTable.videoId, videoId)
-          )
-        )
-        .orderBy(asc(captionsTable.startTime));
+          })
+          .from(captionsTable)
+          .innerJoin(searchResultTable, searchResultJoin)
+          .orderBy(asc(captionsTable.startTime));
 
-      return rows.map((sub) => ({
-        id: sub.id,
-        text: sub.text,
-        headline: sub.headline,
-        thumbnail: sub.thumbnail,
-        timestamp: formatTimestamp(sub.startTime),
-        startTime: sub.startTime,
-        endTime: sub.endTime,
-      }));
+        return rows.map((sub) => ({
+          id: sub.id,
+          text: sub.text,
+          headline: ensureCaptionHeadline(
+            sub.text,
+            sub.headline,
+            keywordsArray
+          ),
+          thumbnail: sub.thumbnail,
+          timestamp: formatTimestamp(sub.startTime),
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }));
+      } catch {
+        const rows = await ctx.db
+          .select({
+            id: captionsTable.id,
+            text: captionsTable.text,
+            thumbnail: captionsTable.thumbnail,
+            startTime: captionsTable.startTime,
+            endTime: captionsTable.endTime,
+          })
+          .from(captionsTable)
+          .innerJoin(searchResultTable, searchResultJoin)
+          .orderBy(asc(captionsTable.startTime));
+
+        return rows.map((sub) => ({
+          id: sub.id,
+          text: sub.text,
+          headline: ensureCaptionHeadline(sub.text, null, keywordsArray),
+          thumbnail: sub.thumbnail,
+          timestamp: formatTimestamp(sub.startTime),
+          startTime: sub.startTime,
+          endTime: sub.endTime,
+        }));
+      }
     }),
 
   getAll: publicProcedure
