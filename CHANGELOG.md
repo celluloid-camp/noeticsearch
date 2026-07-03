@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.1...v0.1.2) (2026-07-03)
+
+
+### Features
+
+* update stack configuration to include Redis service and adjust PostgreSQL volume path; enhance NoeticSearch app with new image reference ([b866186](https://github.com/celluloid-camp/noeticsearch/commit/b8661866d262263545d816807403cb5820de9689))
+
 ## [0.1.1](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.0...v0.1.1) (2026-07-03)
 
 
