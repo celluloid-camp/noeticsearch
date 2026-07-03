@@ -3,9 +3,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  output: "standalone",
   images: {
     unoptimized: true,
   },

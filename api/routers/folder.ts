@@ -121,6 +121,7 @@ export const folderRouter = router({
           title: row.title,
           url: row.url,
           thumbnail: row.thumbnail || "/placeholder.svg",
+          subtitles: [], // Subtitles not returned in listMineWithVideos
           addedDate: row.createdAt,
           publishedAt: row.publishedAt,
           isPublic: row.isPublic,
@@ -333,7 +334,11 @@ export const folderRouter = router({
 
       // Verify folder ownership
       const [folder] = await ctx.db
-        .select({ userId: foldersTable.userId, name: foldersTable.name })
+        .select({
+          id: foldersTable.id,
+          userId: foldersTable.userId,
+          name: foldersTable.name,
+        })
         .from(foldersTable)
         .where(eq(foldersTable.id, input.folderId))
         .limit(1);

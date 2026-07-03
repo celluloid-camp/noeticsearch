@@ -329,14 +329,11 @@ export default function VideoCatalog({
           <EmptyHeader>
             <EmptyTitle>{t("video.noVideosFound")}</EmptyTitle>
             <EmptyDescription>
-              {filter === "mine"
-                ? t("video.noVideosMine") ||
-                  "You haven't imported any videos yet."
-                : t("video.startImport") ||
-                  "Start by importing a video from PeerTube."}
+              {t("video.startImport") ||
+                "Start by importing a video from PeerTube."}
             </EmptyDescription>
           </EmptyHeader>
-          {["mine", "all"].includes(filter) ? (
+          {filter === "all" ? (
             <Link href="/import">
               <Button size="lg" variant="secondary">
                 <PlusIcon className="size-4" />

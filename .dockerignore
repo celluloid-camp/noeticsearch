@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.swc
+.vscode
+.env
+.env.local
+.env.*.local
+*.md
+Dockerfile
+stack.yml
+docker-compose*.yml
+.dockerignore
+sandbox
+notes.txt
+.DS_Store

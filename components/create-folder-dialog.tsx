@@ -107,7 +107,7 @@ export function CreateFolderDialog({
         />
         <DialogFooter>
           <Button
-            onClick={() => setOpen(false)}
+            onClick={() => setDialogOpen(false)}
             type="button"
             variant="outline"
           >

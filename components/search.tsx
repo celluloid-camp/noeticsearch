@@ -5,18 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import type { FindVideosUITool } from "@/lib/ai/tools";
+import type { SearchVideoCaptionsUITool } from "@/lib/ai/tools";
 
-export type FindVideosUIToolOutput = FindVideosUITool["output"];
+export type FindVideosUIToolOutput = SearchVideoCaptionsUITool["output"];
 
-interface VideoItem {
-  createdAt?: Date | string;
-  id: number | string;
-  isPublic?: boolean;
-  thumbnail?: string | null;
-  title: string;
-  url: string;
-}
 export const SearchVideo = ({ videos }: { videos: FindVideosUIToolOutput }) => {
   // Handle case where videos might be undefined or not an array
   const videoArray = Array.isArray(videos) ? videos : [];
@@ -33,13 +25,10 @@ export const SearchVideo = ({ videos }: { videos: FindVideosUIToolOutput }) => {
     <div className="w-full py-4">
       <ScrollArea className="w-full">
         <div className="flex gap-4 pb-4" style={{ width: "max-content" }}>
-          {videoArray.map((video: VideoItem) => {
-            const videoId = video.id?.toString() || "";
-            const thumbnail = video.thumbnail || "/placeholder.svg";
-            const title = video.title || "Untitled";
-            const createdAt = video.createdAt
-              ? new Date(video.createdAt).toLocaleDateString()
-              : "";
+          {videoArray.map((video) => {
+            const videoId = video.videoId;
+            const thumbnail = video.videoThumbnail || "/placeholder.svg";
+            const title = video.videoTitle || "Untitled";
 
             return (
               <Link
@@ -67,11 +56,6 @@ export const SearchVideo = ({ videos }: { videos: FindVideosUIToolOutput }) => {
                     <h3 className="mb-1 line-clamp-2 font-semibold text-sm">
                       {title}
                     </h3>
-                    {createdAt && (
-                      <p className="text-muted-foreground text-xs">
-                        {createdAt}
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
               </Link>

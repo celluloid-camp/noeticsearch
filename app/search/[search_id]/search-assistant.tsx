@@ -1,7 +1,8 @@
 "use client";
 
-import type { ChatStatus, UIMessage, UseChatHelpers } from "@ai-sdk/react";
+import type { UIMessage, UseChatHelpers } from "@ai-sdk/react";
 import { useMutation, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import type { ChatStatus } from "ai";
 import {
   CopyIcon,
   Globe,

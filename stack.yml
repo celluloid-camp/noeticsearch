@@ -1,0 +1,103 @@
+# Self-hosting stack for NoeticSearch
+# Includes: Traefik reverse proxy, PostgreSQL, Adminer, and the NoeticSearch app.
+#
+# Usage:
+#   cp .env.sample .env
+#   docker compose -f stack.yml --env-file .env up -d
+#
+# Or inline:
+#   HOST=noeticsearch.huma-num.fr docker compose -f stack.yml up -d
+#
+# Default hostnames (when HOST is not set):
+#   - http://noeticsearch.localhost/         -> app
+#   - http://noeticsearch.localhost/adminer  -> database UI
+#
+# For local testing, Traefik is exposed on port 18080. Change it to 80:80 on the server.
+#
+# On first start the app container runs migrations, workflow setup, and seeding.
+
+services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--ping=true"
+    ports:
+      - "18080:80"
+    volumes:
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    networks:
+      - noeticsearch
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-noeticsearch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noeticsearch}
+      POSTGRES_DB: ${POSTGRES_DB:-noeticsearch}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-noeticsearch} -d ${POSTGRES_DB:-noeticsearch}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - noeticsearch
+
+  adminer:
+    image: adminer:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.adminer.rule=Host(`${HOST:-noeticsearch.localhost}`) \u0026\u0026 PathPrefix(`/adminer`)"
+      - "traefik.http.routers.adminer.entrypoints=web"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.adminer-stripprefix.stripprefix.prefixes=/adminer"
+      - "traefik.http.routers.adminer.middlewares=adminer-stripprefix@docker"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - noeticsearch
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-noeticsearch}:${POSTGRES_PASSWORD:-noeticsearch}@postgres:5432/${POSTGRES_DB:-noeticsearch}
+      WORKFLOW_TARGET_WORLD: "@workflow/world-postgres"
+      WORKFLOW_POSTGRES_URL: postgres://${POSTGRES_USER:-noeticsearch}:${POSTGRES_PASSWORD:-noeticsearch}@postgres:5432/${POSTGRES_DB:-noeticsearch}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-change-me-in-production}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@noeticsearch.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      REDIS_URL: ${REDIS_URL:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`${HOST:-noeticsearch.localhost}`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - noeticsearch
+
+networks:
+  noeticsearch:
+    driver: bridge
+
+volumes:
+  postgres-data:
