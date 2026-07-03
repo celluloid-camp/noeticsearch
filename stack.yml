@@ -1,5 +1,5 @@
 # Self-hosting stack for NoeticSearch
-# Includes: Traefik reverse proxy, PostgreSQL, Adminer, and the NoeticSearch app.
+# Includes: Traefik reverse proxy, PostgreSQL, Redis, Adminer, and the NoeticSearch app.
 #
 # Usage:
 #   cp .env.sample .env
@@ -39,13 +39,26 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noeticsearch}
       POSTGRES_DB: ${POSTGRES_DB:-noeticsearch}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
           "pg_isready -U ${POSTGRES_USER:-noeticsearch} -d ${POSTGRES_DB:-noeticsearch}",
         ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - noeticsearch
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - ${DATA_DIR:-./data}/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -71,6 +84,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ghcr.io/celluloid-camp/noeticsearch:latest
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-noeticsearch}:${POSTGRES_PASSWORD:-noeticsearch}@postgres:5432/${POSTGRES_DB:-noeticsearch}
       WORKFLOW_TARGET_WORLD: "@workflow/world-postgres"
@@ -79,7 +93,7 @@ services:
       MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@noeticsearch.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
-      REDIS_URL: ${REDIS_URL:-}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       NODE_ENV: production
@@ -92,12 +106,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - noeticsearch
 
 networks:
   noeticsearch:
     driver: bridge
-
-volumes:
-  postgres-data:
