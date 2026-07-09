@@ -3,7 +3,6 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { localization } from "better-auth-localization";
-import { env } from "@/env";
 import { db } from "./db";
 
 export const auth = betterAuth({
@@ -17,12 +16,6 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
-  },
-  socialProviders: {
-    github: {
-      clientId: env.GITHUB_CLIENT_ID || "",
-      clientSecret: env.GITHUB_CLIENT_SECRET || "",
-    },
   },
   plugins: [
     nextCookies(),
