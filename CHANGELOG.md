@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.2...v0.1.3) (2026-07-09)
+
+
+### Features
+
+* remove GitHub OAuth credentials from .env.sample and env.ts; update auth.ts to eliminate GitHub social provider configuration ([e3d0ec3](https://github.com/celluloid-camp/noeticsearch/commit/e3d0ec311610d26a094da8471cde7f8ce548a9df))
+
 ## [0.1.2](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.1...v0.1.2) (2026-07-03)
 
 
