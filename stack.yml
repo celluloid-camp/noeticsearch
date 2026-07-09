@@ -9,8 +9,9 @@
 #   HOST=noeticsearch.huma-num.fr docker compose -f stack.yml up -d
 #
 # Default hostnames (when HOST is not set):
-#   - http://noeticsearch.localhost/         -> app
-#   - http://noeticsearch.localhost/adminer  -> database UI
+#   - http://noeticsearch.localhost:18080/         -> app
+#   - http://localhost:18080/                        -> app (same, local alias)
+#   - http://noeticsearch.localhost:18080/adminer  -> database UI
 #
 # For local testing, Traefik is exposed on port 18080. Change it to 80:80 on the server.
 #
@@ -26,7 +27,7 @@ services:
       - "--entrypoints.web.address=:80"
       - "--ping=true"
     ports:
-      - "18080:80"
+      - "3000:80"
     volumes:
       - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock:ro
     networks:
@@ -69,7 +70,7 @@ services:
     image: adminer:latest
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adminer.rule=Host(`${HOST:-noeticsearch.localhost}`) \u0026\u0026 PathPrefix(`/adminer`)"
+      - "traefik.http.routers.adminer.rule=(Host(`${HOST:-noeticsearch.localhost}`) || Host(`localhost`)) \u0026\u0026 PathPrefix(`/adminer`)"
       - "traefik.http.routers.adminer.entrypoints=web"
       - "traefik.http.services.adminer.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.adminer-stripprefix.stripprefix.prefixes=/adminer"
@@ -100,7 +101,7 @@ services:
       NEXT_TELEMETRY_DISABLED: "1"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.app.rule=Host(`${HOST:-noeticsearch.localhost}`)"
+      - "traefik.http.routers.app.rule=Host(`${HOST:-noeticsearch.localhost}`) || Host(`localhost`)"
       - "traefik.http.routers.app.entrypoints=web"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
     depends_on:

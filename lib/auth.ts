@@ -7,9 +7,10 @@ import { env } from "@/env";
 import { db } from "./db";
 
 export const auth = betterAuth({
-  baseURL: process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000",
+  baseURL:
+    process.env.NODE_ENV === "production"
+      ? "https://noeticsearch.huma-num.fr"
+      : "http://localhost:3000",
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
@@ -31,14 +32,7 @@ export const auth = betterAuth({
       fallbackLocale: "default",
     }),
   ],
-  trustedOrigins: [
-    "http://localhost:3000",
-    "https://noeticsearch.vercel.app",
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
-    process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "",
-  ],
+  trustedOrigins: ["http://localhost:3000", "https://noeticsearch.huma-num.fr"],
   session: {
     cookieCache: {
       enabled: true,
