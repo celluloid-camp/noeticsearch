@@ -32,6 +32,14 @@ configs:
         exit 0
       fi
 
+      case "$$BACKUP_DATABASE_URL" in
+        *-pooler*)
+          echo "ERROR: BACKUP_DATABASE_URL uses a Neon pooled endpoint (-pooler)."
+          echo "pg_dump requires a direct connection. In Neon Connect, disable Connection pooling."
+          exit 1
+          ;;
+      esac
+
       DUMP=/tmp/backup.dump
 
       echo "Waiting for PostgreSQL at $${PGHOST}:$${PGPORT}..."
