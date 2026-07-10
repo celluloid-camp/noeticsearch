@@ -40,10 +40,27 @@ configs:
           ;;
       esac
 
+      # channel_binding=require can fail on some host networks; sslmode=require is enough.
+      BACKUP_DATABASE_URL=$$(printf %s "$$BACKUP_DATABASE_URL" | sed -E 's/[?&]channel_binding=[^&]*//g; s/\?&/?/g; s/\?$$//')
+
       DUMP=/tmp/backup.dump
 
       echo "Waiting for PostgreSQL at $${PGHOST}:$${PGPORT}..."
       until pg_isready -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" -d "$$PGDATABASE" >/dev/null 2>&1; do sleep 1; done
+
+      echo "Waking / testing remote database..."
+      attempt=1
+      until psql "$$BACKUP_DATABASE_URL" -c "select 1" >/dev/null 2>&1; do
+        if [ "$$attempt" -ge 10 ]; then
+          echo "ERROR: cannot connect to BACKUP_DATABASE_URL after $$attempt attempts."
+          echo "From this host, check: outbound TCP 5432, Neon IP allowlist, and that the compute is active."
+          psql "$$BACKUP_DATABASE_URL" -c "select 1" || true
+          exit 1
+        fi
+        echo "Remote DB not ready (attempt $$attempt/10), retrying..."
+        attempt=$$((attempt + 1))
+        sleep 3
+      done
 
       echo "Backing up remote database..."
       pg_dump "$$BACKUP_DATABASE_URL" --no-owner --no-acl -Fc -f "$$DUMP"
