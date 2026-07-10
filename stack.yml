@@ -1,5 +1,5 @@
 # Self-hosting stack for NoeticSearch
-# Includes: Traefik reverse proxy, PostgreSQL, Redis, Adminer, Databasus, and the app.
+# Includes: Traefik reverse proxy, PostgreSQL, Redis, Adminer, and the NoeticSearch app.
 #
 # Usage:
 #   cp .env.sample .env
@@ -9,9 +9,8 @@
 #   HOST=noeticsearch.huma-num.fr ACME_EMAIL=you@example.com docker compose -f stack.yml up -d
 #
 # Default hostnames (when HOST is not set):
-#   - https://noeticsearch.localhost/            -> app
-#   - https://noeticsearch.localhost/adminer     -> database UI
-#   - https://noeticsearch.localhost/databasus   -> database backups
+#   - https://noeticsearch.localhost/         -> app
+#   - https://noeticsearch.localhost/adminer  -> database UI
 #
 # Traefik listens on 80 (HTTP → HTTPS redirect) and 443 (TLS via Let's Encrypt).
 # Point DNS for HOST at this machine and set ACME_EMAIL before first start.
@@ -88,31 +87,6 @@ services:
       - "traefik.http.services.adminer.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.adminer-stripprefix.stripprefix.prefixes=/adminer"
       - "traefik.http.routers.adminer.middlewares=adminer-stripprefix@docker"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - noeticsearch
-
-  databasus:
-    image: databasus/databasus:latest
-    volumes:
-      - ${DATA_DIR:-./data}/databasus:/databasus-data
-    healthcheck:
-      test: ["CMD", "databasus", "healthcheck"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.databasus.rule=Host(`${HOST:-noeticsearch.localhost}`) \u0026\u0026 PathPrefix(`/databasus`)"
-      - "traefik.http.routers.databasus.entrypoints=websecure"
-      - "traefik.http.routers.databasus.tls=true"
-      - "traefik.http.routers.databasus.tls.certresolver=letsencrypt"
-      - "traefik.http.services.databasus.loadbalancer.server.port=4005"
-      - "traefik.http.middlewares.databasus-stripprefix.stripprefix.prefixes=/databasus"
-      - "traefik.http.routers.databasus.middlewares=databasus-stripprefix@docker"
     depends_on:
       postgres:
         condition: service_healthy
