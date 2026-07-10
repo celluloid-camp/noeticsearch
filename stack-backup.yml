@@ -1,0 +1,67 @@
+# PostgreSQL backup then restore (pg_dump / pg_restore 17 in Docker).
+# On run: dumps the source database into /tmp, restores into stack postgres, then exits.
+# The dump is ephemeral (container filesystem only; discarded when the container exits).
+#
+# --- Migrate from Neon (or any remote Postgres) into stack postgres ---
+#   docker compose -f stack.yml up -d postgres
+#   BACKUP_DATABASE_URL="postgresql://user:pass@host/db?sslmode=require" \
+#     docker compose -f stack.yml -f stack-db.yml --env-file .env --profile db run --rm db
+#
+# --- Refresh stack postgres from its own dump ---
+#   docker compose -f stack.yml -f stack-db.yml --env-file .env --profile db run --rm db
+#
+# Options (env):
+#   BACKUP_DATABASE_URL=...      remote source; if unset, dumps stack postgres
+
+configs:
+  postgres_db_sh:
+    content: |
+      #!/bin/sh
+      set -eu
+
+      DUMP=/tmp/backup.dump
+
+      if [ -n "$${BACKUP_DATABASE_URL:-}" ]; then
+        echo "Backing up remote database..."
+        pg_dump "$$BACKUP_DATABASE_URL" --no-owner --no-acl -Fc -f "$$DUMP"
+      else
+        echo "Waiting for PostgreSQL at $${PGHOST}:$${PGPORT}..."
+        until pg_isready -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" -d "$$PGDATABASE" >/dev/null 2>&1; do sleep 1; done
+        echo "Backing up stack database \"$${PGDATABASE}\"..."
+        pg_dump -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" -d "$$PGDATABASE" --no-owner --no-acl -Fc -f "$$DUMP"
+      fi
+
+      echo "Backup written: $$DUMP ($$(wc -c <"$$DUMP" | tr -d ' ') bytes)"
+
+      echo "Waiting for PostgreSQL at $${PGHOST}:$${PGPORT}..."
+      until pg_isready -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" -d "$$PGDATABASE" >/dev/null 2>&1; do sleep 1; done
+
+      echo "Restoring into \"$${PGDATABASE}\"..."
+      psql -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS unaccent;"
+      psql -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();"
+      pg_restore -v --no-owner --no-acl --clean --if-exists -d "$$PGDATABASE" "$$DUMP"
+
+      echo "Backup and restore complete."
+
+services:
+  db:
+    image: postgres:17-alpine
+    profiles:
+      - db
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-noeticsearch}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-noeticsearch}
+      PGDATABASE: ${POSTGRES_DB:-noeticsearch}
+      BACKUP_DATABASE_URL: ${BACKUP_DATABASE_URL:-}
+    configs:
+      - source: postgres_db_sh
+        target: /postgres-db.sh
+    entrypoint: ["/bin/sh", "/postgres-db.sh"]
+    networks:
+      - noeticsearch
+
+networks:
+  noeticsearch:
+    driver: bridge
