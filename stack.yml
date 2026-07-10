@@ -1,5 +1,5 @@
 # Self-hosting stack for NoeticSearch
-# Includes: Traefik reverse proxy, PostgreSQL, Redis, Adminer, and the NoeticSearch app.
+# Includes: Traefik reverse proxy, PostgreSQL, Redis, Adminer, Databasus, and the app.
 #
 # Usage:
 #   cp .env.sample .env
@@ -9,69 +9,14 @@
 #   HOST=noeticsearch.huma-num.fr ACME_EMAIL=you@example.com docker compose -f stack.yml up -d
 #
 # Default hostnames (when HOST is not set):
-#   - https://noeticsearch.localhost/         -> app
-#   - https://noeticsearch.localhost/adminer  -> database UI
+#   - https://noeticsearch.localhost/            -> app
+#   - https://noeticsearch.localhost/adminer     -> database UI
+#   - https://noeticsearch.localhost/databasus   -> database backups
 #
 # Traefik listens on 80 (HTTP → HTTPS redirect) and 443 (TLS via Let's Encrypt).
 # Point DNS for HOST at this machine and set ACME_EMAIL before first start.
 #
-# Optional one-shot DB import: set BACKUP_DATABASE_URL (e.g. Neon) to dump that
-# database and restore into stack postgres before the app starts. Unset it after
-# the first successful import so later restarts do not overwrite local data.
-#
 # On first start the app container runs migrations, workflow setup, and seeding.
-
-configs:
-  postgres_db_sh:
-    content: |
-      #!/bin/sh
-      set -eu
-
-      if [ -z "$${BACKUP_DATABASE_URL:-}" ]; then
-        echo "BACKUP_DATABASE_URL not set, skipping backup/restore."
-        exit 0
-      fi
-
-      case "$$BACKUP_DATABASE_URL" in
-        *-pooler*)
-          echo "ERROR: BACKUP_DATABASE_URL uses a Neon pooled endpoint (-pooler)."
-          echo "pg_dump requires a direct connection. In Neon Connect, disable Connection pooling."
-          exit 1
-          ;;
-      esac
-
-      # channel_binding=require can fail on some host networks; sslmode=require is enough.
-      BACKUP_DATABASE_URL=$$(printf %s "$$BACKUP_DATABASE_URL" | sed -E 's/[?&]channel_binding=[^&]*//g; s/\?&/?/g; s/\?$$//')
-
-      DUMP=/tmp/backup.dump
-
-      echo "Waiting for PostgreSQL at $${PGHOST}:$${PGPORT}..."
-      until pg_isready -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" -d "$$PGDATABASE" >/dev/null 2>&1; do sleep 1; done
-
-      echo "Waking / testing remote database..."
-      attempt=1
-      until psql "$$BACKUP_DATABASE_URL" -c "select 1" >/dev/null 2>&1; do
-        if [ "$$attempt" -ge 10 ]; then
-          echo "ERROR: cannot connect to BACKUP_DATABASE_URL after $$attempt attempts."
-          echo "From this host, check: outbound TCP 5432, Neon IP allowlist, and that the compute is active."
-          psql "$$BACKUP_DATABASE_URL" -c "select 1" || true
-          exit 1
-        fi
-        echo "Remote DB not ready (attempt $$attempt/10), retrying..."
-        attempt=$$((attempt + 1))
-        sleep 3
-      done
-
-      echo "Backing up remote database..."
-      pg_dump "$$BACKUP_DATABASE_URL" --no-owner --no-acl -Fc -f "$$DUMP"
-      echo "Backup written: $$DUMP ($$(wc -c <"$$DUMP" | tr -d ' ') bytes)"
-
-      echo "Restoring into \"$${PGDATABASE}\"..."
-      psql -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS unaccent;"
-      psql -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = current_database() AND pid <> pg_backend_pid();"
-      pg_restore -v --no-owner --no-acl --clean --if-exists -d "$$PGDATABASE" "$$DUMP"
-
-      echo "Backup and restore complete."
 
 services:
   traefik:
@@ -119,26 +64,6 @@ services:
     networks:
       - noeticsearch
 
-  db-restore:
-    image: postgres:17-alpine
-    restart: "no"
-    environment:
-      PGHOST: postgres
-      PGPORT: "5432"
-      PGUSER: ${POSTGRES_USER:-noeticsearch}
-      PGPASSWORD: ${POSTGRES_PASSWORD:-noeticsearch}
-      PGDATABASE: ${POSTGRES_DB:-noeticsearch}
-      BACKUP_DATABASE_URL: ${BACKUP_DATABASE_URL:-}
-    configs:
-      - source: postgres_db_sh
-        target: /postgres-db.sh
-    entrypoint: ["/bin/sh", "/postgres-db.sh"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - noeticsearch
-
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
@@ -166,8 +91,31 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-restore:
-        condition: service_completed_successfully
+    networks:
+      - noeticsearch
+
+  databasus:
+    image: databasus/databasus:latest
+    volumes:
+      - ${DATA_DIR:-./data}/databasus:/databasus-data
+    healthcheck:
+      test: ["CMD", "databasus", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.databasus.rule=Host(`${HOST:-noeticsearch.localhost}`) \u0026\u0026 PathPrefix(`/databasus`)"
+      - "traefik.http.routers.databasus.entrypoints=websecure"
+      - "traefik.http.routers.databasus.tls=true"
+      - "traefik.http.routers.databasus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.databasus.loadbalancer.server.port=4005"
+      - "traefik.http.middlewares.databasus-stripprefix.stripprefix.prefixes=/databasus"
+      - "traefik.http.routers.databasus.middlewares=databasus-stripprefix@docker"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - noeticsearch
 
@@ -201,8 +149,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      db-restore:
-        condition: service_completed_successfully
     networks:
       - noeticsearch
 
