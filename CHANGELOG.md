@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.4](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.3...v0.1.4) (2026-07-10)
+
+
+### Features
+
+* add PostgreSQL backup and restore script in stack-backup.yml for containerized environments ([e9dea9a](https://github.com/celluloid-camp/noeticsearch/commit/e9dea9a60b56045d891825ad9401de32c72d05c8))
+* enhance Traefik configuration for HTTPS support and add ACME email in .env.sample ([4a65758](https://github.com/celluloid-camp/noeticsearch/commit/4a65758e0da971d654e32c8b62c51abf163fdf52))
+
+
+### Bug Fixes
+
+* add validation for BACKUP_DATABASE_URL to prevent use of pooled endpoints in PostgreSQL backup script ([4271abc](https://github.com/celluloid-camp/noeticsearch/commit/4271abc975c239bfb3f99ca1cc1c8c3829416d79))
+* improve connection validation for BACKUP_DATABASE_URL in PostgreSQL backup script, adding retry logic and error handling ([43ef157](https://github.com/celluloid-camp/noeticsearch/commit/43ef157e77d4b21f1814f3e7b29453f2645d3b20))
+
 ## [0.1.3](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.2...v0.1.3) (2026-07-09)
 
 
