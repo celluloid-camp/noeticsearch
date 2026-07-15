@@ -19,6 +19,7 @@
 
 services:
   traefik:
+    restart: unless-stopped
     image: traefik:latest
     command:
       - "--api.dashboard=false"
@@ -44,6 +45,7 @@ services:
       - noeticsearch
 
   postgres:
+    restart: unless-stopped
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-noeticsearch}
@@ -64,6 +66,7 @@ services:
       - noeticsearch
 
   redis:
+    restart: unless-stopped
     image: redis:7-alpine
     command: redis-server --appendonly yes
     volumes:
@@ -77,6 +80,7 @@ services:
       - noeticsearch
 
   adminer:
+    restart: unless-stopped
     image: adminer:latest
     labels:
       - "traefik.enable=true"
@@ -94,6 +98,7 @@ services:
       - noeticsearch
 
   app:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: Dockerfile
