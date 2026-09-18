@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.6...v0.1.7) (2026-09-18)
+
+
+### Features
+
+* update GitHub Actions to use Ubuntu 26.04 for release and build jobs ([3d5d225](https://github.com/celluloid-camp/noeticsearch/commit/3d5d225b1f8ed82bd1a784c6137cee89cf2fc82d))
+
 ## [0.1.6](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.5...v0.1.6) (2026-09-18)
 
 
