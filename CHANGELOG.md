@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.4...v0.1.5) (2026-09-18)
+
+
+### Features
+
+* migrate from docker to k3s configuration. ([c7bf0b3](https://github.com/celluloid-camp/noeticsearch/commit/c7bf0b3ed1234a71bdf5c65c09aa29681fe86796))
+
 ## [0.1.4](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.3...v0.1.4) (2026-07-10)
 
 
