@@ -11,6 +11,10 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
+# release-please tag (e.g. v0.1.5) — baked into the Next.js client bundle
+ARG APP_VERSION=
+ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -28,6 +32,8 @@ FROM oven/bun:1-slim AS runner
 
 WORKDIR /app
 
+ARG APP_VERSION=
+ENV NEXT_PUBLIC_APP_VERSION=${APP_VERSION}
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000

@@ -15,6 +15,10 @@ export const env = createEnv({
     WORKFLOW_POSTGRES_WORKER_CONCURRENCY: z.coerce.number().optional(),
     WORKFLOW_POSTGRES_MAX_POOL_SIZE: z.coerce.number().optional(),
   },
+  client: {
+    /** release-please / Docker build tag (e.g. v0.1.5); optional for local dev */
+    NEXT_PUBLIC_APP_VERSION: z.string().min(1).optional(),
+  },
   experimental__runtimeEnv: process.env,
   emptyStringAsUndefined: true,
 });

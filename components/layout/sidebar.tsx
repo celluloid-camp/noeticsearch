@@ -30,6 +30,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { getAppVersion } from "@/lib/app-version";
 import { signOut, useSession } from "@/lib/auth-client";
 import OurIcon from "../icons/ouricon";
 
@@ -41,6 +42,7 @@ export function MainSidebar() {
   const tNav = useTranslations("nav");
   const { data: session } = useSession();
   const { state } = useSidebar();
+  const appVersion = getAppVersion();
 
   const isLoggedIn = !!session?.user;
   const isExpanded = state === "expanded";
@@ -179,6 +181,9 @@ export function MainSidebar() {
             >
               {tNav("termsOfService")}
             </Link>
+            <span className="font-mono text-muted-foreground/70 text-xs">
+              {tNav("version", { version: appVersion })}
+            </span>
           </div>
         )}
       </SidebarFooter>

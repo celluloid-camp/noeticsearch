@@ -31,7 +31,8 @@
     "addVideo": "Add video",
     "about": "About",
     "privacy": "Privacy",
-    "termsOfService": "Terms of Service"
+    "termsOfService": "Terms of Service",
+    "version": "{version}"
   },
   "search": {
     "title": "Search Assistant",
@@ -384,7 +385,7 @@
   "aboutLegal": {
     "title": "About",
     "paragraph1": "NoeticSearch is developed under the leadership of Anne Alombert (Paris 8 University), Michaël Bourgatte (University of Lorraine), and Laurent Tessier (ICP), as part of a collaboration between the <artec>ArTeC \"Ecologies dismédiatiques du numérique\" project</artec> and the OASIS project <oasis>(Open Audiovisual Science Innovation Schemes)</oasis>.",
-    "paragraph2": "NoeticSearch is developed by <younes>Context212.com</younes> and hosted on Huma-Num servers. Noetic Search code is free and open source. It is available on <github>GitHub</github> Heritage.",
+    "paragraph2": "NoeticSearch is developed by <context212>Context212.com</context212> and hosted on Huma-Num servers. Noetic Search code is free and open source. It is available on <github>GitHub</github> Heritage.",
     "paragraph3": "For automatic transcription, the application relies on Mistral AI's language model."
   },
   "privacy": {

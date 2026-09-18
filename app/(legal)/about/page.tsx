@@ -41,7 +41,7 @@ export default async function AboutPage() {
         <br />
         <p>
           {t.rich("paragraph2", {
-            younes: (chunks) => (
+            context212: (chunks) => (
               <Link
                 className="underline"
                 href="https://context212.com"
@@ -54,7 +54,7 @@ export default async function AboutPage() {
             github: (chunks) => (
               <Link
                 className="underline"
-                href="https://github.com/celluloid-camp/"
+                href="https://github.com/celluloid-edu/"
                 rel="noreferrer"
                 target="_blank"
               >

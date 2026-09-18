@@ -67,10 +67,10 @@ export default async function PrivacyPage() {
               Michael Bourgatte et Laurent Tessier
             </p>
             <p>
-              <strong>Conception :</strong> Younes Benaomar
+              <strong>Conception :</strong> Context212.com
             </p>
             <p>
-              <strong>Réalisation et hébergement :</strong> Younes Benaomar
+              <strong>Réalisation et hébergement :</strong> Context212.com
             </p>
             <p>
               NoeticSearch est un projet open source, partagé ici :{" "}
@@ -80,7 +80,7 @@ export default async function PrivacyPage() {
                 rel="noopener noreferrer"
                 target="_blank"
               >
-                github.com/celluloid-edu
+                github.com/celluloid-camp
               </a>
               . Les contenus du site internet NoeticSearch ainsi que leur
               structuration en catégories et thématiques font l&apos;objet
