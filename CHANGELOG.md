@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.5...v0.1.6) (2026-09-18)
+
+
+### Features
+
+* update references to Context212 in About and Privacy pages, correcting links and text for consistency ([c72b460](https://github.com/celluloid-camp/noeticsearch/commit/c72b46059163d4c4cfb0a77427ff8c97580375c2))
+
 ## [0.1.5](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.4...v0.1.5) (2026-09-18)
 
 
