@@ -6,7 +6,7 @@ metadata:
   labels:
     app: noeticsearch
   annotations:
-    keel.sh/policy: major
+    keel.sh/policy: minor
     keel.sh/trigger: poll
     keel.sh/pollSchedule: "@every 5m"
 spec:
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/celluloid-camp/noeticsearch:0.1.4
+          image: ghcr.io/celluloid-camp/noeticsearch:0.1.7
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
