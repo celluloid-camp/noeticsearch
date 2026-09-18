@@ -26,6 +26,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Kubernetes secrets (fetched from production — never commit)
+/infra/secrets.yml
+
 # vercel
 .vercel
 
@@ -41,3 +44,6 @@ notes.txt
 .swc
 backups/
 stack-db.yml
+
+# Local Headlamp/kubectl kubeconfig (proxy credentials + token)
+/infra/kubeconfig.local.yaml

@@ -384,7 +384,7 @@
   "aboutLegal": {
     "title": "À propos",
     "paragraph1": "Le développement de NoeticSearch est piloté par Anne Alombert (Université Paris 8), Michaël Bourgatte (Université de Lorraine) et Laurent Tessier (ICP), dans le cadre d'une collaboration entre le projet <artec>ArTeC \"Ecologies dismédiatiques du numérique\"</artec> et le projet OASIS <oasis>(Open Audiovisual Science Innovation Schemes)</oasis>.",
-    "paragraph2": "L'application NoeticSearch est développée par <younes>Younès Benomar</younes> et hébergée sur les serveurs d'Huma-Num. Le code de Noetic Search est libre et open source. Il est disponible sur <github>GitHub</github> Heritage.",
+    "paragraph2": "L'application NoeticSearch est développée par <younes>Context212.com</younes> et hébergée sur les serveurs d'Huma-Num. Le code de Noetic Search est libre et open source. Il est disponible sur <github>GitHub</github> Heritage.",
     "paragraph3": "Pour la transcription automatique, l'application s'appuie sur le modèle de langage de Mistral AI."
   },
   "privacy": {

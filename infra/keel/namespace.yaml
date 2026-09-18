@@ -1,0 +1,7 @@
+# Keel — poll GHCR for newer semver tags (major policy on app Deployment).
+# Install via: kubectl apply -f https://raw.githubusercontent.com/keel-hq/keel/master/deploy/deployment.yaml
+# Plus this ServiceAccount RBAC if needed. Kept as a pointer + optional overlay.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keel

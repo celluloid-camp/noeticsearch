@@ -1,0 +1,30 @@
+# Configure k3s Traefik for Let's Encrypt (HTTP-01).
+# Applied into kube-system; not part of the noeticsearch kustomize root.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    ports:
+      web:
+        redirectTo:
+          port: websecure
+      websecure:
+        tls:
+          enabled: true
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          email: younes@0xzen.dev
+          storage: /data/acme.json
+          httpChallenge:
+            entryPoint: web
+    persistence:
+      enabled: true
+      name: traefik-acme
+      accessMode: ReadWriteOnce
+      size: 128Mi
+      path: /data
+      storageClass: local-path

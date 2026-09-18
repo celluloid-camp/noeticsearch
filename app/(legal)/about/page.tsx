@@ -44,7 +44,7 @@ export default async function AboutPage() {
             younes: (chunks) => (
               <Link
                 className="underline"
-                href="https://www.linkedin.com/in/younes0x53/"
+                href="https://context212.com"
                 rel="noreferrer"
                 target="_blank"
               >

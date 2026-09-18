@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: noeticsearch
+  labels:
+    app: noeticsearch
+  annotations:
+    keel.sh/policy: major
+    keel.sh/trigger: poll
+    keel.sh/pollSchedule: "@every 5m"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: noeticsearch
+  template:
+    metadata:
+      labels:
+        app: noeticsearch
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/celluloid-camp/noeticsearch:0.1.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: PORT
+              value: "3000"
+            - name: WORKFLOW_TARGET_WORLD
+              value: "@workflow/world-postgres"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: DATABASE_URL
+            - name: WORKFLOW_POSTGRES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: WORKFLOW_POSTGRES_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: REDIS_URL
+            - name: BETTER_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: BETTER_AUTH_SECRET
+            - name: MISTRAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: MISTRAL_API_KEY
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: ADMIN_EMAIL
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: ADMIN_PASSWORD
+            - name: NEXT_TELEMETRY_DISABLED
+              valueFrom:
+                secretKeyRef:
+                  name: noeticsearch
+                  key: NEXT_TELEMETRY_DISABLED
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: noeticsearch
+  labels:
+    app: noeticsearch
+spec:
+  selector:
+    app: noeticsearch
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

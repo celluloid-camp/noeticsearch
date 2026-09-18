@@ -1,0 +1,47 @@
+# Local development dependencies (Postgres + Redis).
+#
+#   docker compose up -d
+#   # or: podman compose up -d
+#
+# App connection strings (localhost):
+#   DATABASE_URL=postgres://noeticsearch:noeticsearch@127.0.0.1:5432/noeticsearch
+#   WORKFLOW_POSTGRES_URL=postgres://noeticsearch:noeticsearch@127.0.0.1:5432/noeticsearch
+#   REDIS_URL=redis://127.0.0.1:6379
+#
+# Data persists under ./data/ (gitignored).
+
+services:
+  postgres:
+    restart: unless-stopped
+    image: postgres:17-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-noeticsearch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-noeticsearch}
+      POSTGRES_DB: ${POSTGRES_DB:-noeticsearch}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-noeticsearch} -d ${POSTGRES_DB:-noeticsearch}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    restart: unless-stopped
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
