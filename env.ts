@@ -19,6 +19,8 @@ export const env = createEnv({
     /** release-please / Docker build tag (e.g. v0.1.5); optional for local dev */
     NEXT_PUBLIC_APP_VERSION: z.string().min(1).optional(),
   },
-  experimental__runtimeEnv: process.env,
+  experimental__runtimeEnv: {
+    NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+  },
   emptyStringAsUndefined: true,
 });

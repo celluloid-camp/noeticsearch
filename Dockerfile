@@ -26,7 +26,7 @@ ENV MISTRAL_API_KEY=dummy-key-for-build
 ENV ADMIN_EMAIL=admin@example.com
 ENV ADMIN_PASSWORD=dummy-password-for-build
 
-RUN bun run build
+RUN bun run typecheck && bun run build
 
 FROM oven/bun:1-slim AS runner
 
