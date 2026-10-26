@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beszel-agent
+  namespace: beszel
+  labels:
+    app: beszel-agent
+spec:
+  selector:
+    matchLabels:
+      app: beszel-agent
+  template:
+    metadata:
+      labels:
+        app: beszel-agent
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+        - name: beszel-agent
+          image: henrygd/beszel-agent:0.21.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 45876
+              hostPort: 45876
+              name: beszel
+          env:
+            - name: LISTEN
+              value: "45876"
+            - name: HUB_URL
+              value: "https://beszel-0x53.up.railway.app"
+            - name: KEY
+              valueFrom:
+                secretKeyRef:
+                  name: beszel-agent
+                  key: KEY
+            - name: TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: beszel-agent
+                  key: TOKEN
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/beszel-agent
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: data
+          hostPath:
+            path: /home/yvenaomar/k8s-data/beszel-agent
+            type: DirectoryOrCreate
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+          operator: Exists
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
+      restartPolicy: Always
