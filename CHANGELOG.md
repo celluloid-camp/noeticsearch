@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.7...v0.1.8) (2026-11-05)
+
+
+### Bug Fixes
+
+* **infra:** run postgres as uid 70 to skip gosu hang on kernel 7.0.0-42 ([#65](https://github.com/celluloid-camp/noeticsearch/issues/65)) ([4a9376a](https://github.com/celluloid-camp/noeticsearch/commit/4a9376a536481e826374268d7ecdcf8a7f188a65))
+
 ## [0.1.7](https://github.com/celluloid-camp/noeticsearch/compare/v0.1.6...v0.1.7) (2026-09-18)
 
 
