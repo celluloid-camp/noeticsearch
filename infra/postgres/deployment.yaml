@@ -51,6 +51,11 @@ spec:
       labels:
         app: postgres
     spec:
+      # Run as the image's postgres user (uid 70) so the entrypoint skips gosu,
+      # which hangs at 100% CPU on kernel 7.0.0-42.
+      securityContext:
+        runAsUser: 70
+        runAsGroup: 70
       containers:
         - name: postgres
           image: postgres:17-alpine
