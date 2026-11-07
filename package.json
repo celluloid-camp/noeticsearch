@@ -99,7 +99,7 @@
     "usehooks-ts": "^3.1.1",
     "vaul": "^1.1.2",
     "workflow": "^4.3.1",
-    "xlsx": "^0.18.5",
+    "@e965/xlsx": "^0.20.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
